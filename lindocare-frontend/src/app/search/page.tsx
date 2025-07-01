@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { getCurrentUserEmail } from '../../components/Header';
+import Image from 'next/image';
 
 // Template products (should match those in category page)
 const productsData = [
@@ -170,7 +171,7 @@ const SearchPage = () => {
               {recommended.map((product) => (
                 <div key={product.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
                   <div className="relative mb-3">
-                    <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" />
+                    <Image src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" width={160} height={160} />
                     {product.tags.map((tag) => (
                       <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
                     ))}
@@ -208,7 +209,7 @@ const SearchPage = () => {
         {/* Search Results */}
         {q && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24">
-            <p className="mt-4 text-blue-900 text-lg font-semibold">No products found for "{q}".</p>
+            <p className="mt-4 text-blue-900 text-lg font-semibold">No products found for &quot;{q}&quot;.</p>
             <p className="text-blue-500">Try a different search term.</p>
             <Link href="/" className="mt-6 px-6 py-2 rounded-full bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition">Go Home</Link>
           </div>
@@ -218,7 +219,7 @@ const SearchPage = () => {
             {results.map((product) => (
               <div key={product.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
                 <div className="relative mb-3">
-                  <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" />
+                  <Image src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" width={160} height={160} />
                   {product.tags.map((tag) => (
                     <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
                   ))}
