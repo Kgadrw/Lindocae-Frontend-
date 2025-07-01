@@ -112,7 +112,7 @@ export default function CartPage() {
         {subtotal >= freeShippingThreshold ? (
           <span className="text-sm text-green-700 font-semibold">🎉 Congratulations! You qualify for <span className="text-yellow-500 font-bold">FREE Shipping</span>!</span>
         ) : (
-          <span className="text-sm text-gray-700">You're <span className="text-yellow-500 font-semibold">${remaining.toFixed(2)}</span> away from FREE Shipping!</span>
+          <span className="text-sm text-gray-700">You&apos;re <span className="text-yellow-500 font-semibold">${remaining.toFixed(2)}</span> away from FREE Shipping!</span>
         )}
         <div className="w-full h-2 bg-yellow-100 rounded-full overflow-hidden">
           <div className="h-full bg-yellow-400 transition-all duration-300" style={{ width: `${progress * 100}%` }} />
