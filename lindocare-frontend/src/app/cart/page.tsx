@@ -4,10 +4,21 @@ import { Lock, Gift, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { getCurrentUserEmail } from '../../components/Header';
 
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  quantity?: number;
+  color?: string;
+  size?: string;
+  lowStock?: boolean;
+}
+
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<Product[]>([]);
   const [userEmail, setUserEmail] = useState('');
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     function loadCart() {
@@ -59,7 +70,7 @@ export default function CartPage() {
     } catch {
       cart = [];
     }
-    const updated = cart.filter((item: any) => item.id !== id);
+    const updated = cart.filter((item: Product) => item.id !== id);
     localStorage.setItem(cartKey, JSON.stringify(updated));
     setCartItems(updated);
     window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
@@ -76,7 +87,7 @@ export default function CartPage() {
     } catch {
       cart = [];
     }
-    const idx = cart.findIndex((item: any) => item.id === id);
+    const idx = cart.findIndex((item: Product) => item.id === id);
     if (idx > -1) {
       cart[idx].quantity = Math.max(1, (cart[idx].quantity || 1) + delta);
       if (cart[idx].quantity === 0) {
@@ -117,7 +128,7 @@ export default function CartPage() {
             cartItems.map(item => (
               <div key={item.id} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  <img src={item.image} alt={item.name} className="object-cover w-full h-full" />
+                  <Image src={item.image} alt={item.name} className="object-cover w-full h-full" />
                 </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
                   <div className="font-semibold text-gray-800 text-base sm:text-lg">{item.name}</div>
