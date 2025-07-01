@@ -18,37 +18,16 @@ const sidebarOptions = [
   { label: "Seller Login", icon: <LogIn size={18} color="#F4E029" />, href: "/seller-login" },
 ];
 
-// Template orders data
-const ordersData = [
-  { id: 'ORD-001', date: '2024-06-01', status: 'Delivered', total: 129.99, items: 2 },
-  { id: 'ORD-002', date: '2024-05-20', status: 'Shipped', total: 59.49, items: 1 },
-  { id: 'ORD-003', date: '2024-05-10', status: 'Processing', total: 249.00, items: 3 },
-];
-
-// Template products for wishlist
-const productsData = [
-  { id: 1, name: 'Sorelle Natural Pinewood Crib', price: 526.63, image: 'https://images.pexels.com/photos/459225/pexels-photo-459225.jpeg' },
-  { id: 2, name: 'Premium Changing Table', price: 289.99, image: 'https://images.pexels.com/photos/3933276/pexels-photo-3933276.jpeg' },
-  { id: 3, name: 'Comfort Rocking Chair', price: 459.0, image: 'https://images.pexels.com/photos/3933275/pexels-photo-3933275.jpeg' },
-  { id: 4, name: 'Baby Dresser & Changer', price: 399.99, image: 'https://images.pexels.com/photos/3933277/pexels-photo-3933277.jpeg' },
-  { id: 5, name: 'Portable Baby Playpen', price: 179.99, image: 'https://images.pexels.com/photos/3933278/pexels-photo-3933278.jpeg' },
-  { id: 6, name: 'Organic Crib Mattress', price: 299.99, image: 'https://images.pexels.com/photos/3933279/pexels-photo-3933279.jpeg' },
-];
-
 const SettingsPage = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [theme, setTheme] = useState("light");
   const [language, setLanguage] = useState("en");
   const [success, setSuccess] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [wishlist, setWishlist] = useState<number[]>([]);
 
   // Refs for scrolling
-  const ordersRef = useRef<HTMLDivElement>(null);
-  const wishlistRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,14 +37,10 @@ const SettingsPage = () => {
     setAvatar((email && localStorage.getItem(`userAvatar:${email}`)) || "");
     setTheme(localStorage.getItem("userTheme") || "light");
     setLanguage(localStorage.getItem("userLang") || "en");
-    // Load wishlist
-    const saved = localStorage.getItem('wishlist');
-    setWishlist(saved ? JSON.parse(saved) : []);
   }, []);
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setAvatarFile(e.target.files[0]);
       const reader = new FileReader();
       reader.onload = (ev) => {
         if (ev.target && typeof ev.target.result === 'string') {
@@ -91,14 +66,6 @@ const SettingsPage = () => {
     localStorage.setItem("userLang", language);
     setSuccess("Your settings have been saved!");
     setTimeout(() => setSuccess(""), 2500);
-  };
-
-  // Sidebar scroll handler
-  const handleSidebarClick = (href: string) => {
-    setSidebarOpen(false);
-    if (href === "#orders" && ordersRef.current) ordersRef.current.scrollIntoView({ behavior: 'smooth' });
-    else if (href === "#wishlist" && wishlistRef.current) wishlistRef.current.scrollIntoView({ behavior: 'smooth' });
-    else if (href === "#settings" && settingsRef.current) settingsRef.current.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (

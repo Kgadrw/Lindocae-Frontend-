@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Heart, ShoppingCart, User, Globe, Menu, Home, List, ChevronDown, MessageCircle, CreditCard, Tag, Settings, HelpCircle, Accessibility, LogIn, Coins } from 'lucide-react';
+import { Heart, ShoppingCart, User, Home, List, ChevronDown, MessageCircle, CreditCard, Tag, Settings, HelpCircle, Accessibility, LogIn, Coins } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import LoginModal from './LoginModal';
 
@@ -278,8 +278,8 @@ const Header = () => {
             style={{ color: pathname === '/account' ? activeColor : iconColor }}
             onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)}
           >
-            {user && user.avatar ? (
-              <Image src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
+            {user ? (
+              <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
             ) : (
               <User size={22} color={pathname === '/account' ? activeColor : iconColor} strokeWidth={2.5} fill={pathname === '/account' ? activeColor : iconColor} />
             )}
@@ -288,7 +288,7 @@ const Header = () => {
           {dropdownOpen && user && (
             <div ref={dropdownRef} className="absolute right-0 top-14 z-50 bg-white rounded-2xl shadow-2xl p-0 w-72 flex flex-col border border-yellow-200 animate-fade-in" style={{ minWidth: 260 }}>
               <div className="flex flex-col items-center pt-6 pb-2 px-6 border-b border-gray-100">
-                <Image src={user.avatar} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" width={48} height={48} />
+                <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" width={48} height={48} />
                 <span className="font-semibold text-blue-900 text-base mb-1">Welcome back, {user.name}</span>
                 <button onClick={handleSignOut} className="text-blue-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
               </div>
@@ -414,8 +414,8 @@ const Header = () => {
           </button>
         </Link>
         <button onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)} className="flex flex-col items-center text-gray-700 hover:text-yellow-500 focus:text-yellow-500">
-          {user && user.avatar ? (
-            <Image src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
+          {user ? (
+            <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
           ) : (
             <User size={24} />
           )}
@@ -425,7 +425,7 @@ const Header = () => {
         {dropdownOpen && user && (
           <div ref={dropdownRef} className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-0 w-64 flex flex-col border border-yellow-200 animate-fade-in md:hidden" style={{ minWidth: 200 }}>
             <div className="flex flex-col items-start pt-4 pb-1 px-4 border-b border-gray-100">
-              <Image src={user.avatar} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" width={36} height={36} />
+              <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" width={36} height={36} />
               <span className="font-semibold text-blue-900 text-sm mb-1">Welcome back, {user.name}</span>
               <button onClick={handleSignOut} className="text-blue-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
             </div>
