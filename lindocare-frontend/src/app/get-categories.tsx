@@ -20,7 +20,7 @@ const GetCategoriesPage = () => {
         if (!res.ok) throw new Error('Server error');
         const data = await res.json();
         setCategories(data);
-      } catch (err) {
+      } catch {
         setError('Failed to fetch categories.');
       } finally {
         setLoading(false);
