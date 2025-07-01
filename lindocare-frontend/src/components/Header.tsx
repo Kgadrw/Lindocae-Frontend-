@@ -279,7 +279,7 @@ const Header = () => {
             onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)}
           >
             {user && user.avatar ? (
-              <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" />
+              <Image src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
             ) : (
               <User size={22} color={pathname === '/account' ? activeColor : iconColor} strokeWidth={2.5} fill={pathname === '/account' ? activeColor : iconColor} />
             )}
@@ -288,7 +288,7 @@ const Header = () => {
           {dropdownOpen && user && (
             <div ref={dropdownRef} className="absolute right-0 top-14 z-50 bg-white rounded-2xl shadow-2xl p-0 w-72 flex flex-col border border-yellow-200 animate-fade-in" style={{ minWidth: 260 }}>
               <div className="flex flex-col items-center pt-6 pb-2 px-6 border-b border-gray-100">
-                <img src={user.avatar} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" />
+                <Image src={user.avatar} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" width={48} height={48} />
                 <span className="font-semibold text-blue-900 text-base mb-1">Welcome back, {user.name}</span>
                 <button onClick={handleSignOut} className="text-blue-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
               </div>
@@ -317,13 +317,13 @@ const Header = () => {
           >
             <span className="flex items-center gap-1">
               {selectedLanguage === 'en' && (
-                <img src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="English" width={22} height={22} className="rounded-full" />
+                <Image src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="English" width={22} height={22} className="rounded-full" />
               )}
               {selectedLanguage === 'fr' && (
-                <img src="https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" alt="French" width={22} height={22} className="rounded-full" />
+                <Image src="https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" alt="French" width={22} height={22} className="rounded-full" />
               )}
               {selectedLanguage === 'rw' && (
-                <img src="https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg" alt="Kinyarwanda" width={22} height={22} className="rounded-full" />
+                <Image src="https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg" alt="Kinyarwanda" width={22} height={22} className="rounded-full" />
               )}
               <ChevronDown size={16} className="text-gray-400" />
             </span>
@@ -341,21 +341,21 @@ const Header = () => {
                     className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg border ${selectedLanguage === 'en' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} hover:bg-blue-100 transition`}
                     onClick={() => { setSelectedLanguage('en'); setLanguageModalOpen(false); }}
                   >
-                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="English" width={24} height={24} />
+                    <Image src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="English" width={24} height={24} />
                     <span className="font-medium text-gray-700">English</span>
                   </button>
                   <button
                     className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg border ${selectedLanguage === 'fr' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} hover:bg-blue-100 transition`}
                     onClick={() => { setSelectedLanguage('fr'); setLanguageModalOpen(false); }}
                   >
-                    <img src="https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" alt="French" width={24} height={24} />
+                    <Image src="https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" alt="French" width={24} height={24} />
                     <span className="font-medium text-gray-700">Français</span>
                   </button>
                   <button
                     className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg border ${selectedLanguage === 'rw' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} hover:bg-blue-100 transition`}
                     onClick={() => { setSelectedLanguage('rw'); setLanguageModalOpen(false); }}
                   >
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg" alt="Kinyarwanda" width={24} height={24} />
+                    <Image src="https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg" alt="Kinyarwanda" width={24} height={24} />
                     <span className="font-medium text-gray-700">Kinyarwanda</span>
                   </button>
                 </div>
@@ -415,7 +415,7 @@ const Header = () => {
         </Link>
         <button onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)} className="flex flex-col items-center text-gray-700 hover:text-yellow-500 focus:text-yellow-500">
           {user && user.avatar ? (
-            <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" />
+            <Image src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
           ) : (
             <User size={24} />
           )}
@@ -425,7 +425,7 @@ const Header = () => {
         {dropdownOpen && user && (
           <div ref={dropdownRef} className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-0 w-64 flex flex-col border border-yellow-200 animate-fade-in md:hidden" style={{ minWidth: 200 }}>
             <div className="flex flex-col items-start pt-4 pb-1 px-4 border-b border-gray-100">
-              <img src={user.avatar} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" />
+              <Image src={user.avatar} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" width={36} height={36} />
               <span className="font-semibold text-blue-900 text-sm mb-1">Welcome back, {user.name}</span>
               <button onClick={handleSignOut} className="text-blue-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
             </div>

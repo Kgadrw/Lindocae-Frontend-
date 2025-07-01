@@ -3,6 +3,7 @@ import React, { useState, useEffect, ChangeEvent, useRef } from "react";
 import Link from "next/link";
 import { getCurrentUserEmail } from '../../components/Header';
 import { List, Coins, MessageCircle, CreditCard, Tag, Heart, Settings, HelpCircle, Accessibility, LogIn } from 'lucide-react';
+import Image from 'next/image';
 
 const sidebarOptions = [
   { label: "My Orders", icon: <List size={18} color="#F4E029" />, href: "/orders" },
@@ -138,7 +139,7 @@ const SettingsPage = () => {
               <h2 className="text-lg font-bold text-blue-800 mb-1">Personal Details</h2>
               <div className="flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex flex-col items-center gap-1">
-                  <img src={avatar || "/lindo.png"} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-yellow-400" />
+                  <Image src={avatar || "/lindo.png"} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-yellow-400" width={56} height={56} />
                   <label className="text-blue-700 text-xs font-medium cursor-pointer hover:underline">
                     Change Avatar
                     <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />

@@ -139,7 +139,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
                     onChange={e => setImage(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
                   />
                   {image && (
-                    <img src={URL.createObjectURL(image)} alt="Preview" className="mt-2 w-16 h-16 rounded-full object-cover border-2 border-yellow-400" />
+                    <Image src={URL.createObjectURL(image)} alt="Preview" width={64} height={64} className="mt-2 w-16 h-16 rounded-full object-cover border-2 border-yellow-400" />
                   )}
                 </label>
               </div>
@@ -196,9 +196,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
         </form>
         {error && <div className="text-red-500 text-sm mb-2 text-center">{error}</div>}
         <div className="flex items-center justify-center gap-4 mb-4">
-          <button aria-label="Sign in with Google" className="hover:scale-110 transition"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" width={28} height={28} /></button>
-          <button aria-label="Sign in with Apple" className="hover:scale-110 transition"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/apple/apple-original.svg" alt="Apple" width={28} height={28} /></button>
-          <button aria-label="Sign in with Facebook" className="hover:scale-110 transition"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/facebook/facebook-original.svg" alt="Facebook" width={28} height={28} /></button>
+          <button aria-label="Sign in with Google" className="hover:scale-110 transition"><Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" width={28} height={28} /></button>
+          <button aria-label="Sign in with Apple" className="hover:scale-110 transition"><Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/apple/apple-original.svg" alt="Apple" width={28} height={28} /></button>
+          <button aria-label="Sign in with Facebook" className="hover:scale-110 transition"><Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/facebook/facebook-original.svg" alt="Facebook" width={28} height={28} /></button>
           <button aria-label="Sign in with X" className="hover:scale-110 transition"><TwitterXIcon /></button>
         </div>
         <div className="flex items-center gap-2 mb-2 text-gray-600 text-sm">
