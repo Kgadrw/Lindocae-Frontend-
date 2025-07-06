@@ -27,7 +27,7 @@ const CreateCategoryPage = () => {
       } else {
         setError('Server error. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

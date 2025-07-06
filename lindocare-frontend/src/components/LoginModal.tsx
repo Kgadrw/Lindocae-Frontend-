@@ -98,7 +98,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
         setError("Server error. Please try again later.");
         setLoading(false);
       }
-    } catch (err) {
+    } catch {
       setError("Network error. Please try again.");
       setLoading(false);
     }
