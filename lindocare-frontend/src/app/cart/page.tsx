@@ -128,7 +128,7 @@ export default function CartPage() {
             cartItems.map(item => (
               <div key={item.id} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  <Image src={item.image} alt={item.name} className="object-cover w-full h-full" />
+                  <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
                 </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
                   <div className="font-semibold text-gray-800 text-base sm:text-lg">{item.name}</div>

@@ -36,6 +36,23 @@ const productsData = [
   { id: 6, name: 'Organic Crib Mattress' },
 ];
 
+// Move updateUser outside so it can be called from anywhere
+function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: string; avatar?: string }>>) {
+  if (typeof window !== 'undefined') {
+    const email = localStorage.getItem('userEmail');
+    let name = '';
+    let avatar = '';
+    if (email) {
+      name = localStorage.getItem(`userName:${email}`) || '';
+      avatar = localStorage.getItem(`userAvatar:${email}`) || '';
+    }
+    console.log('[updateUser] email:', email, 'name:', name, 'avatar:', avatar);
+    if (name && avatar) setUser({ name, avatar });
+    else if (name) setUser({ name, avatar: undefined });
+    else setUser(null);
+  }
+}
+
 const Header = () => {
   const pathname = usePathname();
   const router = useRouter();
@@ -66,23 +83,12 @@ const Header = () => {
 
   // On mount, restore user from localStorage if available
   React.useEffect(() => {
-    function updateUser() {
-      if (typeof window !== 'undefined') {
-        const email = localStorage.getItem('userEmail');
-        let name = '';
-        let avatar = '';
-        if (email) {
-          name = localStorage.getItem(`userName:${email}`) || '';
-          avatar = localStorage.getItem(`userAvatar:${email}`) || '';
-        }
-        if (name && avatar) setUser({ name, avatar });
-        else if (name) setUser({ name, avatar: undefined });
-        else setUser(null);
-      }
+    function handleStorage() {
+      updateUser(setUser);
     }
-    updateUser();
-    window.addEventListener('storage', updateUser);
-    return () => window.removeEventListener('storage', updateUser);
+    updateUser(setUser);
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   // Cart count effect
@@ -128,9 +134,28 @@ const Header = () => {
       }
     }, 100);
   };
+
+  // Helper to close dropdown and perform an action
+  const handleDropdownAction = (action: () => void) => {
+    setDropdownOpen(false);
+    action();
+  };
+
   const handleSignOut = () => {
+    const email = localStorage.getItem('userEmail');
+    console.log('[handleSignOut] Signing out user:', email);
     setUser(null);
+    setDropdownOpen(false);
     localStorage.removeItem('userEmail');
+    if (email) {
+      localStorage.removeItem(`userName:${email}`);
+      localStorage.removeItem(`userAvatar:${email}`);
+      localStorage.removeItem(`cart:${email}`);
+      localStorage.removeItem(`wishlist_${email}`);
+    }
+    window.dispatchEvent(new StorageEvent('storage', { key: 'userEmail' }));
+    updateUser(setUser);
+    router.push('/');
   };
 
   const handleSearch = (e?: React.FormEvent | React.KeyboardEvent) => {
@@ -290,20 +315,29 @@ const Header = () => {
               <div className="flex flex-col items-center pt-6 pb-2 px-6 border-b border-gray-100">
                 <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" width={48} height={48} />
                 <span className="font-semibold text-blue-900 text-base mb-1">Welcome back, {user.name}</span>
-                <button onClick={handleSignOut} className="text-blue-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
+                <button onMouseDown={handleSignOut} className="text-blue-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
               </div>
               <div className="flex flex-col gap-1 py-2 px-2">
-                <Link href="/orders" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><List size={18} color="#F4E029" /> My Orders</Link>
-                <Link href="/coins" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Coins size={18} color="#F4E029" /> My Coins</Link>
-                <Link href="/messages" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><MessageCircle size={18} color="#F4E029" /> Message Center</Link>
-                <Link href="/payments" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><CreditCard size={18} color="#F4E029" /> Payments</Link>
-                <Link href="/wishlist" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Heart size={18} color="#F4E029" /> Wish list</Link>
-                <Link href="/coupons" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Tag size={18} color="#F4E029" /> My coupon</Link>
+                <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><List size={18} color="#F4E029" /> My Orders</Link>
+                <Link href="/coins" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coins')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Coins size={18} color="#F4E029" /> My Coins</Link>
+                <Link href="/messages" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/messages')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><MessageCircle size={18} color="#F4E029" /> Message Center</Link>
+                <Link href="/payments" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/payments')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><CreditCard size={18} color="#F4E029" /> Payments</Link>
+                <Link href="/wishlist" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/wishlist')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Heart size={18} color="#F4E029" /> Wish list</Link>
+                <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Tag size={18} color="#F4E029" /> My coupon</Link>
                 <div className="border-t border-gray-100 my-2" />
-                <Link href="/settings" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Settings size={18} color="#F4E029" /> Settings</Link>
-                <Link href="/help" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><HelpCircle size={18} color="#F4E029" /> Help center</Link>
-                <Link href="/accessibility" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Accessibility size={18} color="#F4E029" /> Accessibility</Link>
-                <Link href="/seller-login" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><LogIn size={18} color="#F4E029" /> Seller Login</Link>
+                <Link
+                  href="/settings"
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    handleDropdownAction(() => router.push('/settings'));
+                  }}
+                  className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"
+                >
+                  <Settings size={18} color="#F4E029" /> Settings
+                </Link>
+                <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><HelpCircle size={18} color="#F4E029" /> Help center</Link>
+                <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><Accessibility size={18} color="#F4E029" /> Accessibility</Link>
+                <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-900 text-sm font-medium"><LogIn size={18} color="#F4E029" /> Seller Login</Link>
               </div>
             </div>
           )}
@@ -427,20 +461,18 @@ const Header = () => {
             <div className="flex flex-col items-start pt-4 pb-1 px-4 border-b border-gray-100">
               <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" width={36} height={36} />
               <span className="font-semibold text-blue-900 text-sm mb-1">Welcome back, {user.name}</span>
-              <button onClick={handleSignOut} className="text-blue-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
+              <button onMouseDown={handleSignOut} className="text-blue-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
             </div>
             <div className="flex flex-col gap-0.5 py-1 px-1">
-              <Link href="/orders" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><List size={15} color="#F4E029" /> My Orders</Link>
-              <Link href="/coins" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Coins size={15} color="#F4E029" /> My Coins</Link>
-              <Link href="/messages" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><MessageCircle size={15} color="#F4E029" /> Message Center</Link>
-              <Link href="/payments" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><CreditCard size={15} color="#F4E029" /> Payments</Link>
-              <Link href="/wishlist" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Heart size={15} color="#F4E029" /> Wish list</Link>
-              <Link href="/coupons" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Tag size={15} color="#F4E029" /> My coupon</Link>
-              <div className="border-t border-gray-100 my-1" />
-              <Link href="/settings" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Settings size={15} color="#F4E029" /> Settings</Link>
-              <Link href="/help" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><HelpCircle size={15} color="#F4E029" /> Help center</Link>
-              <Link href="/accessibility" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Accessibility size={15} color="#F4E029" /> Accessibility</Link>
-              <Link href="/seller-login" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><LogIn size={15} color="#F4E029" /> Seller Login</Link>
+              <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><List size={15} color="#F4E029" /> My Orders</Link>
+              <Link href="/coins" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coins')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Coins size={15} color="#F4E029" /> My Coins</Link>
+              <Link href="/messages" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/messages')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><MessageCircle size={15} color="#F4E029" /> Message Center</Link>
+              <Link href="/payments" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/payments')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><CreditCard size={15} color="#F4E029" /> Payments</Link>
+              <Link href="/wishlist" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/wishlist')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Heart size={15} color="#F4E029" /> Wish list</Link>
+              <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Tag size={15} color="#F4E029" /> My coupon</Link>
+              <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><HelpCircle size={15} color="#F4E029" /> Help center</Link>
+              <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><Accessibility size={15} color="#F4E029" /> Accessibility</Link>
+              <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 text-xs font-medium"><LogIn size={15} color="#F4E029" /> Seller Login</Link>
             </div>
           </div>
         )}
