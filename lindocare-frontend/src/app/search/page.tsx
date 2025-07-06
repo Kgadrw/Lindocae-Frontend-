@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { getCurrentUserEmail } from '../../components/Header';
 import Image from 'next/image';
+import { Suspense } from "react";
 
 // Template products (should match those in category page)
 const productsData = [
@@ -258,4 +259,10 @@ const SearchPage = () => {
   );
 };
 
-export default SearchPage; 
+export default function SearchPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPage />
+    </Suspense>
+  );
+} 
