@@ -9,23 +9,6 @@ import LoginModal from './LoginModal';
 const iconColor = "#222";
 const activeColor = "#F4E029";
 
-// Template categories for header (replace with API data later)
-const headerCategories = [
-  'Cribs',
-  'Changing Tables',
-  'Rocking Chairs',
-  'Baby Dressers',
-  'Playpens & Playards',
-  'Baby Furniture',
-  'Nursery',
-  'Apparel',
-  'Toys',
-  'Bath & Skincare',
-  'Safety',
-  'Maternity',
-  'Gifts',
-];
-
 // Add template products for suggestions
 const productsData = [
   { id: 1, name: 'Sorelle Natural Pinewood Crib' },
@@ -53,7 +36,8 @@ function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: 
   }
 }
 
-const Header = () => {
+// 1. Accept categories as a prop
+const Header = ({ categories, loading }: { categories?: { _id?: string; name: string }[], loading?: boolean }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -399,23 +383,27 @@ const Header = () => {
         </div>
       </div>
       {/* Desktop Navigation Links */}
-      <nav className="hidden md:flex flex-wrap border-t border-gray-300 justify-center gap-4 py-2 text-gray-700 text-sm font-medium">
-        {headerCategories.map(cat => (
-          <Link key={cat} href={`/category/${encodeURIComponent(cat)}`} className="hover:text-yellow-500">
-            {cat}
+      <nav className="hidden md:flex flex-wrap border-t border-gray-300 justify-center gap-4 py-2 text-gray-700 text-sm font-semibold">
+        {loading ? (
+          <span className="text-blue-400 animate-pulse">Loading categories...</span>
+        ) : (categories && categories.length > 0) ? categories.map(cat => (
+          <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="hover:text-yellow-500 font-semibold">
+            {cat.name}
           </Link>
-        ))}
+        )) : null}
       </nav>
       {/* Mobile Nav Drawer */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 transition-opacity duration-200 ${navOpen ? 'block md:hidden' : 'hidden'}`} onClick={() => setNavOpen(false)} />
       <nav className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-200 ${navOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden`}>
         <button className="absolute top-4 right-4 p-2" onClick={() => setNavOpen(false)} aria-label="Close navigation">✕</button>
         <div className="flex flex-col mt-12">
-          {headerCategories.map(cat => (
-            <Link key={cat} href={`/category/${encodeURIComponent(cat)}`} className="block hover:text-yellow-500 px-4 py-3 text-[#3B82F6] text-base font-medium border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
-              {cat}
+          {loading ? (
+            <span className="text-blue-400 animate-pulse px-4 py-3">Loading categories...</span>
+          ) : (categories && categories.length > 0) ? categories.map(cat => (
+            <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="block hover:text-yellow-500 px-4 py-3 text-[#3B82F6] text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
+              {cat.name}
             </Link>
-          ))}
+          )) : null}
         </div>
       </nav>
       {/* Bottom Navigation Bar for Mobile */}

@@ -77,7 +77,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
       formData.append('gender', gender);
       formData.append('password', password);
       formData.append('role', 'vendor');
-      const res = await fetch("https://lindo-project.onrender.com/user/Register", {
+      const res = await fetch("https://lindo-project.onrender.co/user/Register", {
         method: "POST",
         body: formData,
       });
@@ -144,45 +144,58 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
                 </label>
               </div>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="First Name"
-                  className="w-1/2 rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder:text-[#2056a7] placeholder:font-medium text-[#2056a7] font-medium"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Last Name"
-                  className="w-1/2 rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder:text-[#2056a7] placeholder:font-medium text-[#2056a7] font-medium"
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    className="w-1/2 rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                  />
+                  <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">First Name</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    className="w-1/2 rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                  />
+                  <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Last Name</label>
+                </div>
               </div>
-              <input
-                type="text"
-                placeholder="Gender"
-                className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder:text-[#2056a7] placeholder:font-medium text-[#2056a7] font-medium"
-                value={gender}
-                onChange={e => setGender(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Gender"
+                  className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
+                  value={gender}
+                  onChange={e => setGender(e.target.value)}
+                />
+                <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Gender</label>
+              </div>
             </>
           )}
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder:text-[#2056a7] placeholder:font-medium text-[#2056a7] font-medium"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              type="email"
+              placeholder="Email"
+              className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+            <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Email</label>
+          </div>
           <div className="relative w-full">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
-              className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder:text-[#2056a7] placeholder:font-medium text-[#2056a7] font-medium pr-12"
+              className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium pr-12"
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
+            <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Password</label>
             <button
               type="button"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2056a7]"

@@ -5,13 +5,16 @@
   --foreground: #171717;
   --lindo-yellow: #FFD600;
   --lindo-blue: #174EA6;
+  --font-inter: 'Inter', Arial, Helvetica, sans-serif;
+  --font-montserrat: 'Montserrat', Arial, Helvetica, sans-serif;
+  --font-permanent-marker: 'Permanent Marker', cursive;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,5 +27,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter);
 }

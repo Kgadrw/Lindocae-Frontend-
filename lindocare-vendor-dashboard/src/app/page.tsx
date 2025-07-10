@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { List, Box, ShoppingCart, Megaphone, Star, Link as LinkIcon, LogOut, Receipt, Image as ImageIcon, Upload } from 'lucide-react';
+import { List, Box, ShoppingCart, Megaphone, Star, Link as LinkIcon, LogOut, Receipt, Image as ImageIcon, Upload, Users as UsersIcon } from 'lucide-react';
 import Image from 'next/image';
+import React from "react"; // Added missing import for React
+import Sidebar from '../components/Sidebar';
+import StatsCards from '../components/StatsCards';
+import CategoriesSection from '../components/CategoriesSection';
 
 interface Vendor {
   id: number;
@@ -38,19 +42,11 @@ interface Order {
   status: string;
 }
 
-const SIDEBAR_SECTIONS = [
-  { key: 'categories', label: 'Categories', icon: () => <List size={18} className="mr-2" /> },
-  { key: 'products', label: 'Products', icon: () => <Box size={18} className="mr-2" /> },
-  { key: 'orders', label: 'Orders', icon: () => <Receipt size={18} className="mr-2" /> },
-  { key: 'cart', label: 'Cart', icon: () => <ShoppingCart size={18} className="mr-2" /> },
-  { key: 'banners', label: 'Banners', icon: () => <Megaphone size={18} className="mr-2" /> },
-  { key: 'recommendations', label: 'Recommendations', icon: () => <Star size={18} className="mr-2" /> },
-  { key: 'footer', label: 'Footer', icon: () => <LinkIcon size={18} className="mr-2" /> },
-];
+type SidebarSection = { key: string; label: string; icon: () => React.ReactNode };
 
 export default function AdminDashboard() {
+  // Move activeSection to the very top
   const [activeSection, setActiveSection] = useState('categories');
-
   // Vendors state
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [editing, setEditing] = useState<number | null>(null);
@@ -92,6 +88,14 @@ export default function AdminDashboard() {
   const [prodFormLoading, setProdFormLoading] = useState(false);
   const [prodFormError, setProdFormError] = useState('');
   const [prodImage, setProdImage] = useState<File | null>(null);
+  const [prodImagePreview, setProdImagePreview] = useState<string | null>(null);
+  // Add missing product delete state
+  const [prodToDelete, setProdToDelete] = useState<Product | null>(null);
+  const [prodDeleteLoading, setProdDeleteLoading] = useState(false);
+  const [prodDeleteError, setProdDeleteError] = useState('');
+
+  // Add this after the other useState hooks
+  const [expandedCategories, setExpandedCategories] = useState<{ [catId: string]: boolean }>({});
 
   // --- AUTH ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -103,6 +107,147 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState('');
+
+  // Banner state
+  const [bannerForm, setBannerForm] = useState({ title: '', subTitle: '', categoryId: '', images: [] as File[] });
+  const [bannerFormLoading, setBannerFormLoading] = useState(false);
+  const [bannerFormError, setBannerFormError] = useState('');
+  const [bannerFormSuccess, setBannerFormSuccess] = useState('');
+  const [bannerImagePreview, setBannerImagePreview] = useState<string[] | null>(null);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [bannerLoading, setBannerLoading] = useState(false);
+  const [bannerError, setBannerError] = useState('');
+  const [expandedBannerId, setExpandedBannerId] = useState<string | null>(null);
+  const [bannerProducts, setBannerProducts] = useState<{ [bannerId: string]: Product[] }>({});
+  const [bannerProductsLoading, setBannerProductsLoading] = useState<{ [bannerId: string]: boolean }>({});
+  const [bannerProductsError, setBannerProductsError] = useState<{ [bannerId: string]: string }>({});
+  const [bannerEditId, setBannerEditId] = useState<string | null>(null);
+  const [showBannerForm, setShowBannerForm] = useState(false);
+  // Add missing banner delete state
+  const [bannerToDelete, setBannerToDelete] = useState<any | null>(null);
+  const [bannerDeleteLoading, setBannerDeleteLoading] = useState(false);
+  const [bannerDeleteError, setBannerDeleteError] = useState('');
+
+  // Cart state
+  const [cart, setCart] = useState<any[]>([]);
+  const [cartLoading, setCartLoading] = useState(false);
+  const [cartError, setCartError] = useState('');
+
+  // API Explorer state
+  const [apiEndpoints, setApiEndpoints] = useState<string[]>([]);
+  const [apiExplorerError, setApiExplorerError] = useState('');
+  const [showApiExplorer, setShowApiExplorer] = useState(false);
+
+  // Users state
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+  const [userEditId, setUserEditId] = useState<string | null>(null);
+  const [userFormOpen, setUserFormOpen] = useState(false);
+  const [userForm, setUserForm] = useState<any>({});
+  const [userFormLoading, setUserFormLoading] = useState(false);
+  const [userFormError, setUserFormError] = useState('');
+
+  // 1. Add state for category to delete
+  const [catToDelete, setCatToDelete] = useState<Category | null>(null);
+  const [catDeleteLoading, setCatDeleteLoading] = useState(false);
+  const [catDeleteError, setCatDeleteError] = useState('');
+
+  // --- User Form Handlers ---
+  const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, files, type } = e.target as any;
+    if (name === "image" && files && files[0]) {
+      setUserForm((f: any) => ({ ...f, image: files[0] }));
+    } else {
+      setUserForm((f: any) => ({ ...f, [name]: value }));
+    }
+  };
+
+  const handleUserImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUserForm((f: any) => ({ ...f, image: e.target.files[0] }));
+    }
+  };
+
+  const handleUserFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUserFormLoading(true);
+    setUserFormError('');
+    try {
+      const formData = new FormData();
+      if (userForm.image) formData.append('image', userForm.image);
+      formData.append('firstName', userForm.firstName || '');
+      formData.append('lastName', userForm.lastName || '');
+      formData.append('email', userForm.email || '');
+      formData.append('gender', userForm.gender || '');
+      if (userForm.password) formData.append('password', userForm.password);
+      formData.append('role', userForm.role || 'user');
+      let res;
+      if (userEditId) {
+        // Update user
+        res = await fetch(`https://lindo-project.onrender.com/user/updateUserById/${userEditId}`,
+          { method: 'PUT', body: formData });
+        if (!res.ok) throw new Error('Failed to update user');
+      } else {
+        // Create user
+        res = await fetch('https://lindo-project.onrender.com/user/Register',
+          { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Failed to create user');
+      }
+      setUserForm({});
+      setUserEditId(null);
+      setUserFormOpen(false);
+      // Refresh users
+      setUsersLoading(true);
+      fetch('https://lindo-project.onrender.com/user/getAllUsers')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setUsers(data);
+          else if (data && Array.isArray(data.users)) setUsers(data.users);
+          else setUsers([]);
+        })
+        .catch(() => setUsersError('Failed to fetch users.'))
+        .finally(() => setUsersLoading(false));
+    } catch (err: any) {
+      setUserFormError(err.message || 'Error');
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  // User delete state
+  const [userToDelete, setUserToDelete] = useState<any | null>(null);
+  const [userDeleteLoading, setUserDeleteLoading] = useState(false);
+  const [userDeleteError, setUserDeleteError] = useState('');
+
+  // --- User Delete Handlers ---
+  const handleUserDelete = (user: any) => {
+    setUserToDelete(user);
+    setUserDeleteError('');
+  };
+
+  const cancelUserDelete = () => {
+    setUserToDelete(null);
+    setUserDeleteError('');
+  };
+
+  const confirmUserDelete = async () => {
+    if (!userToDelete) return;
+    setUserDeleteLoading(true);
+    setUserDeleteError('');
+    try {
+      const res = await fetch(`https://lindo-project.onrender.com/user/deleteUserById/${userToDelete._id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete user');
+      setUsers(users => users.filter(u => u._id !== userToDelete._id));
+      setUserToDelete(null);
+    } catch (err: any) {
+      setUserDeleteError(err.message || 'Error deleting user');
+    } finally {
+      setUserDeleteLoading(false);
+    }
+  };
 
   // On mount, check sessionStorage for auth
   useEffect(() => {
@@ -129,40 +274,30 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fetch all users on mount
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      setFetchError(null);
-      try {
-        const res = await fetch("http://localhost:5000/user");
-        if (!res.ok) throw new Error("Failed to fetch users");
-        const data = await res.json();
-        // Map API users to Vendor type
-        const users: Vendor[] = data.map((u: any) => ({
-          id: u.id || u._id || Date.now() + Math.random(),
-          name: (u.firstName || "") + " " + (u.lastName || ""),
-          email: u.email,
-          phone: u.phone || "-",
-        }));
-        setVendors(users);
-      } catch (err) {
-        setFetchError("Could not load users from server.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
-  }, []);
-
   // Fetch categories
   useEffect(() => {
     if (activeSection !== 'categories') return;
     setCatLoading(true);
     setCatError('');
-    fetch('http://localhost:5000/category/getAllCategories')
+    const token = getAuthToken();
+    fetch('https://lindo-project.onrender.com/category/getAllCategories', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
-      .then(data => setCategories(data))
+      .then(data => {
+        let cats: any[] = [];
+        if (Array.isArray(data)) {
+          cats = data;
+        } else if (data && Array.isArray(data.categories)) {
+          cats = data.categories;
+        }
+        const filteredCats = cats.map((cat: any) => ({
+          _id: cat._id || '',
+          name: typeof cat.name === 'string' ? cat.name : '',
+          description: typeof cat.description === 'string' ? cat.description : ''
+        }));
+        setCategories(filteredCats);
+      })
       .catch(() => setCatError('Failed to fetch categories.'))
       .finally(() => setCatLoading(false));
   }, [activeSection]);
@@ -172,9 +307,21 @@ export default function AdminDashboard() {
     if (activeSection !== 'products') return;
     setProdLoading(true);
     setProdError('');
-    fetch('http://localhost:5000/product/getAllProduct')
+    const token = getAuthToken();
+    fetch('https://lindo-project.onrender.com/product/getAllProduct', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
-      .then(data => setProducts(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else if (data && Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else {
+          setProducts([]);
+          setProdError('Unexpected response format from server.');
+        }
+      })
       .catch(() => setProdError('Failed to fetch products.'))
       .finally(() => setProdLoading(false));
   }, [activeSection]);
@@ -184,11 +331,60 @@ export default function AdminDashboard() {
     if (activeSection !== 'orders') return;
     setOrdersLoading(true);
     setOrdersError('');
-    fetch('http://localhost:5000/order/getAllOrders')
+    const token = getAuthToken();
+    fetch('https://lindo-project.onrender.com/api/order', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
-      .then(data => setOrders(data))
+      .then(data => setOrders(Array.isArray(data) ? data : (data.orders || [])))
       .catch(() => setOrdersError('Failed to fetch orders.'))
       .finally(() => setOrdersLoading(false));
+  }, [activeSection]);
+
+  // Fetch all banners when Banners section is active
+  useEffect(() => {
+    if (activeSection !== 'banners') return;
+    setBannerLoading(true);
+    setBannerError('');
+    fetch('https://lindo-project.onrender.com/banner/getAllBanners')
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.banners)) setBanners(data.banners);
+        else setBanners([]);
+      })
+      .catch(() => setBannerError('Failed to fetch banners.'))
+      .finally(() => setBannerLoading(false));
+  }, [activeSection, bannerFormSuccess]);
+
+  // Fetch cart when Cart section is active
+  useEffect(() => {
+    if (activeSection !== 'cart') return;
+    setCartLoading(true);
+    setCartError('');
+    const token = getAuthToken();
+    fetch('https://lindo-project.onrender.com/api/cart', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setCart(Array.isArray(data) ? data : (data.cart || [])))
+      .catch(() => setCartError('Failed to fetch cart.'))
+      .finally(() => setCartLoading(false));
+  }, [activeSection]);
+
+  // Fetch users
+  useEffect(() => {
+    if (activeSection !== 'users') return;
+    setUsersLoading(true);
+    setUsersError('');
+    fetch('https://lindo-project.onrender.com/user/getAllUsers')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setUsers(data);
+        else if (data && Array.isArray(data.users)) setUsers(data.users);
+        else setUsers([]);
+      })
+      .catch(() => setUsersError('Failed to fetch users.'))
+      .finally(() => setUsersLoading(false));
   }, [activeSection]);
 
   const handleEdit = (vendor: Vendor) => {
@@ -236,7 +432,7 @@ export default function AdminDashboard() {
     formData.append("password", registerForm.password);
     formData.append("role", "vendor");
     try {
-      const res = await fetch("http://localhost:5000/user/Register", {
+      const res = await fetch("https://lindo-project.onrender.com/user/Register", {
         method: "POST",
         body: formData,
       });
@@ -273,20 +469,28 @@ export default function AdminDashboard() {
     e.preventDefault();
     setCatFormLoading(true);
     setCatFormError('');
+    const token = getAuthToken();
     try {
+      let res;
       if (catEditId) {
         // Update
-        const res = await fetch(`http://localhost:5000/category/updateCategoryById/${catEditId}`, {
+        res = await fetch(`https://lindo-project.onrender.com/category/updateCategoryById/${catEditId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(catForm),
         });
         if (!res.ok) throw new Error('Failed to update category');
       } else {
         // Create
-        const res = await fetch('http://localhost:5000/category/createCategory', {
+        res = await fetch('https://lindo-project.onrender.com/category/createCategory', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(catForm),
         });
         if (!res.ok) throw new Error('Failed to create category');
@@ -296,9 +500,11 @@ export default function AdminDashboard() {
       setCatFormOpen(false);
       // Refresh
       setCatLoading(true);
-      fetch('http://localhost:5000/category/getAllCategories')
+      fetch('https://lindo-project.onrender.com/category/getAllCategories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
         .then(res => res.json())
-        .then(data => setCategories(data))
+        .then(data => setCategories(Array.isArray(data) ? data : (data.categories || [])))
         .catch(() => setCatError('Failed to fetch categories.'))
         .finally(() => setCatLoading(false));
     } catch (err: any) {
@@ -312,15 +518,40 @@ export default function AdminDashboard() {
     setCatForm({ name: cat.name, description: cat.description });
     setCatFormOpen(true);
   };
-  const handleCatDelete = async (id: string) => {
-    if (!window.confirm('Delete this category?')) return;
-    setCatLoading(true);
-    await fetch(`http://localhost:5000/category/deleteCategory/${id}`, { method: 'DELETE' });
-    fetch('http://localhost:5000/category/getAllCategories')
-      .then(res => res.json())
-      .then(data => setCategories(data))
-      .catch(() => setCatError('Failed to fetch categories.'))
-      .finally(() => setCatLoading(false));
+  // 2. Update handleCatDelete to show modal instead of immediate confirm
+  const handleCatDelete = (cat: Category) => {
+    setCatToDelete(cat);
+    setCatDeleteError('');
+  };
+  const cancelCatDelete = () => {
+    setCatToDelete(null);
+    setCatDeleteError('');
+  };
+  const confirmCatDelete = async () => {
+    if (!catToDelete) return;
+    setCatDeleteLoading(true);
+    setCatDeleteError('');
+    const token = getAuthToken();
+    try {
+      const res = await fetch(`https://lindo-project.onrender.com/category/deleteCategory/${catToDelete._id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete category');
+      // Refresh categories
+      fetch('https://lindo-project.onrender.com/category/getAllCategories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => setCategories(Array.isArray(data) ? data : (data.categories || [])))
+        .catch(() => setCatError('Failed to fetch categories.'))
+        .finally(() => setCatLoading(false));
+      setCatToDelete(null);
+    } catch (err: any) {
+      setCatDeleteError(err.message || 'Error deleting category');
+    } finally {
+      setCatDeleteLoading(false);
+    }
   };
   const handleCatImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -335,28 +566,34 @@ export default function AdminDashboard() {
     setProdForm(f => ({ ...f, [name]: type === 'number' ? Number(value) : value }));
   };
   const handleProdImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) setProdImage(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) {
+      setProdImage(e.target.files[0]);
+      setProdImagePreview(URL.createObjectURL(e.target.files[0]));
+    }
   };
   const handleProdFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProdFormLoading(true);
     setProdFormError('');
+    const token = getAuthToken();
     try {
       const formData = new FormData();
       if (prodImage) formData.append('image', prodImage);
       Object.entries(prodForm).forEach(([k, v]) => formData.append(k, String(v)));
+      let res;
       if (prodEditId) {
-        // Update
-        const res = await fetch('http://localhost:5000/product/updateProductById', {
+        // Update by ID in path
+        res = await fetch(`https://lindo-project.onrender.com/product/updateProductById/${prodEditId}`, {
           method: 'PUT',
-          body: JSON.stringify({ ...prodForm, id: prodEditId }),
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData,
         });
         if (!res.ok) throw new Error('Failed to update product');
       } else {
         // Create
-        const res = await fetch('http://localhost:5000/product/createProduct', {
+        res = await fetch('https://lindo-project.onrender.com/product/createProduct', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
         });
         if (!res.ok) throw new Error('Failed to create product');
@@ -365,11 +602,23 @@ export default function AdminDashboard() {
       setProdEditId(null);
       setProdFormOpen(false);
       setProdImage(null);
+      setProdImagePreview(null);
       // Refresh
       setProdLoading(true);
-      fetch('http://localhost:5000/product/getAllProduct')
+      fetch('https://lindo-project.onrender.com/product/getAllProduct', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
         .then(res => res.json())
-        .then(data => setProducts(data))
+        .then(data => {
+          if (Array.isArray(data)) {
+            setProducts(data);
+          } else if (data && Array.isArray(data.products)) {
+            setProducts(data.products);
+          } else {
+            setProducts([]);
+            setProdError('Unexpected response format from server.');
+          }
+        })
         .catch(() => setProdError('Failed to fetch products.'))
         .finally(() => setProdLoading(false));
     } catch (err: any) {
@@ -383,15 +632,48 @@ export default function AdminDashboard() {
     setProdForm(prod);
     setProdFormOpen(true);
   };
-  const handleProdDelete = async (id: string) => {
-    if (!window.confirm('Delete this product?')) return;
-    setProdLoading(true);
-    await fetch(`http://localhost:5000/product/deleteProductById/${id}`, { method: 'DELETE' });
-    fetch('http://localhost:5000/product/getAllProduct')
-      .then(res => res.json())
-      .then(data => setProducts(data))
-      .catch(() => setProdError('Failed to fetch products.'))
-      .finally(() => setProdLoading(false));
+  const handleProdDelete = (prod: Product) => {
+    setProdToDelete(prod);
+    setProdDeleteError('');
+  };
+  const cancelProdDelete = () => {
+    setProdToDelete(null);
+    setProdDeleteError('');
+  };
+  const confirmProdDelete = async () => {
+    if (!prodToDelete) return;
+    setProdDeleteLoading(true);
+    setProdDeleteError('');
+    const token = getAuthToken();
+    try {
+      const res = await fetch(`https://lindo-project.onrender.com/product/deleteProductById/${prodToDelete._id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete product');
+      // Refresh products
+      fetch('https://lindo-project.onrender.com/product/getAllProduct', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setProducts(data);
+          } else if (data && Array.isArray(data.products)) {
+            setProducts(data.products);
+          } else {
+            setProducts([]);
+            setProdError('Unexpected response format from server.');
+          }
+        })
+        .catch(() => setProdError('Failed to fetch products.'))
+        .finally(() => setProdLoading(false));
+      setProdToDelete(null);
+    } catch (err: any) {
+      setProdDeleteError(err.message || 'Error deleting product');
+    } finally {
+      setProdDeleteLoading(false);
+    }
   };
 
   // Logout handler
@@ -403,382 +685,957 @@ export default function AdminDashboard() {
     if (typeof window !== 'undefined') sessionStorage.removeItem('admin-auth');
   };
 
+  // Banner CRUD handlers
+  const handleBannerEdit = (banner: any) => {
+    setBannerEditId(banner._id);
+    setBannerForm({
+      title: banner.title || '',
+      subTitle: banner.subTitle || '',
+      categoryId: banner.category?._id || banner.category || '',
+      images: [], // User must re-upload images to update
+    });
+    setBannerImagePreview(banner.images || []);
+  };
+
+  const handleBannerFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBannerFormLoading(true);
+    setBannerFormError('');
+    setBannerFormSuccess('');
+    try {
+      const formData = new FormData();
+      formData.append('title', bannerForm.title);
+      formData.append('subTitle', bannerForm.subTitle);
+      formData.append('categoryId', bannerForm.categoryId);
+      if (bannerForm.images && bannerForm.images.length > 0) {
+        bannerForm.images.forEach(img => formData.append('images', img));
+      }
+      let res;
+      if (bannerEditId) {
+        // Update
+        res = await fetch(`https://lindo-project.onrender.com/banner/updateBanner/${bannerEditId}`,
+          { method: 'PUT', body: formData });
+        if (res.status === 404) {
+          setBannerFormError('Banner not found. It may have been deleted.');
+          // Refresh banners list
+          setBannerLoading(true);
+          fetch('https://lindo-project.onrender.com/banner/getAllBanners')
+            .then(res => res.json())
+            .then(data => {
+              if (data && Array.isArray(data.banners)) setBanners(data.banners);
+              else setBanners([]);
+            })
+            .catch(() => setBannerError('Failed to fetch banners.'))
+            .finally(() => setBannerLoading(false));
+          setBannerFormLoading(false);
+          return;
+        }
+      } else {
+        // Create
+        res = await fetch('https://lindo-project.onrender.com/banner/createBanner',
+          { method: 'POST', body: formData });
+      }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setBannerFormSuccess(bannerEditId ? 'Banner updated successfully!' : 'Banner created successfully!');
+        setBannerForm({ title: '', subTitle: '', categoryId: '', images: [] });
+        setBannerImagePreview(null);
+        setBannerEditId(null);
+        // Auto-close modal after creation
+        if (!bannerEditId) setShowBannerForm(false);
+        // Always refresh banners list after update
+        setBannerLoading(true);
+        fetch('https://lindo-project.onrender.com/banner/getAllBanners')
+          .then(res => res.json())
+          .then(data => {
+            if (data && Array.isArray(data.banners)) setBanners(data.banners);
+            else setBanners([]);
+          })
+          .catch(() => setBannerError('Failed to fetch banners.'))
+          .finally(() => setBannerLoading(false));
+      } else {
+        setBannerFormError(data.message || (bannerEditId ? 'Failed to update banner' : 'Failed to create banner'));
+      }
+    } catch (err: any) {
+      setBannerFormError(err.message || 'Network error');
+    } finally {
+      setBannerFormLoading(false);
+    }
+  };
+
+  const handleBannerFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, files } = e.target as any;
+    if (name === 'images' && files && files.length > 0) {
+      setBannerForm(f => ({ ...f, images: Array.from(files) }));
+      setBannerImagePreview(Array.from(files).map((file: File) => URL.createObjectURL(file)));
+    } else {
+      setBannerForm(f => ({ ...f, [name]: value }));
+    }
+  };
+
+  // Banner delete handler
+  const handleBannerDelete = (banner: any) => {
+    setBannerToDelete(banner);
+    setBannerDeleteError('');
+  };
+  const cancelBannerDelete = () => {
+    setBannerToDelete(null);
+    setBannerDeleteError('');
+  };
+  const confirmBannerDelete = async () => {
+    if (!bannerToDelete) return;
+    setBannerDeleteLoading(true);
+    setBannerDeleteError('');
+    try {
+      const res = await fetch(`https://lindo-project.onrender.com/banner/deleteBanner/${bannerToDelete._id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete banner');
+      // Refresh banners
+      fetch('https://lindo-project.onrender.com/banner/getAllBanners')
+        .then(res => res.json())
+        .then(data => {
+          if (data && Array.isArray(data.banners)) setBanners(data.banners);
+          else setBanners([]);
+        })
+        .catch(() => setBannerError('Failed to fetch banners.'))
+        .finally(() => setBannerLoading(false));
+      setBannerToDelete(null);
+    } catch (err: any) {
+      setBannerDeleteError(err.message || 'Error deleting banner');
+    } finally {
+      setBannerDeleteLoading(false);
+    }
+  };
+
+  // Fetch products for a banner
+  const handleViewProducts = async (bannerId: string) => {
+    setExpandedBannerId(expandedBannerId === bannerId ? null : bannerId);
+    if (bannerProducts[bannerId] || expandedBannerId === bannerId) return; // Already loaded or closing
+    setBannerProductsLoading(prev => ({ ...prev, [bannerId]: true }));
+    setBannerProductsError(prev => ({ ...prev, [bannerId]: '' }));
+    try {
+      const res = await fetch(`https://lindo-project.onrender.com/api/banner/${bannerId}/products`);
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const data = await res.json();
+      setBannerProducts(prev => ({ ...prev, [bannerId]: Array.isArray(data) ? data : (data.products || []) }));
+    } catch (err: any) {
+      setBannerProductsError(prev => ({ ...prev, [bannerId]: err.message || 'Error' }));
+    } finally {
+      setBannerProductsLoading(prev => ({ ...prev, [bannerId]: false }));
+    }
+  };
+
+  // Cart handlers
+  const handleAddToCart = async (productId: string, quantity: number = 1) => {
+    setCartLoading(true);
+    setCartError('');
+    const token = getAuthToken();
+    await fetch('https://lindo-project.onrender.com/api/cart/addToCart', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ productId, quantity })
+    });
+    // Refresh cart
+    fetch('https://lindo-project.onrender.com/api/cart', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setCart(Array.isArray(data) ? data : (data.cart || [])))
+      .catch(() => setCartError('Failed to fetch cart.'))
+      .finally(() => setCartLoading(false));
+  };
+
+  const handleRemoveFromCart = async (productId: string) => {
+    setCartLoading(true);
+    setCartError('');
+    const token = getAuthToken();
+    await fetch(`https://lindo-project.onrender.com/api/cart/${productId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    // Refresh cart
+    fetch('https://lindo-project.onrender.com/api/cart', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setCart(Array.isArray(data) ? data : (data.cart || [])))
+      .catch(() => setCartError('Failed to fetch cart.'))
+      .finally(() => setCartLoading(false));
+  };
+
+  // API Explorer handlers
+  const fetchApiEndpoints = async () => {
+    setApiExplorerError('');
+    setApiEndpoints([]);
+    setShowApiExplorer(true);
+    try {
+      let res = await fetch('https://lindo-project.onrender.com/openapi.json');
+      if (!res.ok) {
+        res = await fetch('https://lindo-project.onrender.com/swagger.json');
+      }
+      if (!res.ok) throw new Error('OpenAPI/Swagger spec not found');
+      const data = await res.json();
+      if (data.paths) {
+        setApiEndpoints(Object.keys(data.paths));
+      } else {
+        setApiExplorerError('No endpoints found in spec.');
+      }
+    } catch (err: any) {
+      setApiExplorerError(err.message || 'Failed to fetch API spec.');
+    }
+  };
+
+  // Utility to safely render only strings/numbers
+  function safeRender(val: any) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string' || typeof val === 'number') return val;
+    return '';
+  }
+
+  // Utility to get auth token
+  const getAuthToken = () => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+    }
+    return '';
+  };
+
+  // Fix: Use React.createElement for icons to avoid JSX parsing issues
+  const SIDEBAR_SECTIONS: SidebarSection[] = [
+    { key: 'categories', label: 'Categories', icon: () => React.createElement(List, { size: 18, className: 'mr-2' }) },
+    { key: 'products', label: 'Products', icon: () => React.createElement(Box, { size: 18, className: 'mr-2' }) },
+    { key: 'orders', label: 'Orders', icon: () => React.createElement(Receipt, { size: 18, className: 'mr-2' }) },
+    { key: 'cart', label: 'Cart', icon: () => React.createElement(ShoppingCart, { size: 18, className: 'mr-2' }) },
+    { key: 'banners', label: 'Banners', icon: () => React.createElement(Megaphone, { size: 18, className: 'mr-2' }) },
+    { key: 'users', label: 'Users', icon: () => React.createElement(UsersIcon, { size: 18, className: 'mr-2' }) },
+    { key: 'recommendations', label: 'Recommendations', icon: () => React.createElement(Star, { size: 18, className: 'mr-2' }) },
+    { key: 'footer', label: 'Footer', icon: () => React.createElement(LinkIcon, { size: 18, className: 'mr-2' }) },
+  ];
+
   // --- UI ---
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-yellow-50 to-blue-100">
-      {/* Auth Modal */}
-      {showAuth && !isAuthenticated && (
-        <div className="fixed inset-0 bg-blue-900 bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative border-2 border-yellow-300">
-            <Image src="/lindo.png" alt="Lindocare Logo" width={48} height={48} className="mb-3" />
-            <h2 className="text-lg font-bold text-blue-700 mb-1">Admin Login</h2>
-            <p className="text-yellow-500 font-medium mb-3 text-xs">Please login to access dashboard</p>
-            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-3 w-full">
-              <div className="relative">
-                <input
-                  type="text"
-                  name="username"
-                  placeholder="Username"
-                  value={authForm.username}
-                  onChange={handleAuthChange}
-                  className="peer border border-yellow-200 rounded px-2 py-1 text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  autoFocus
-                  required
-                />
-                <label htmlFor="username" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Username</label>
-              </div>
-              <div className="relative">
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  value={authForm.password}
-                  onChange={handleAuthChange}
-                  className="peer border border-yellow-200 rounded px-2 py-1 text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  required
-                />
-                <label htmlFor="password" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Password</label>
-              </div>
-              {authError && <div className="text-red-500 text-center text-xs">{authError}</div>}
-              <button type="submit" className="bg-yellow-400 text-blue-900 px-3 py-1.5 rounded hover:bg-yellow-500 transition font-semibold text-sm">Login</button>
-            </form>
-            <div className="mt-3 text-xs text-blue-400">Hint: admin / admin</div>
-          </div>
-        </div>
-      )}
-      {/* Sidebar */}
-      <aside className="sticky top-0 h-screen w-60 bg-white shadow p-6 flex flex-col gap-8 z-10 border-r border-yellow-200">
-        <div className="flex items-center justify-center mb-8">
-          <Image src="/lindo.png" alt="Lindocare Logo" width={64} height={64} />
-        </div>
-        <nav className="flex flex-col gap-1">
-          {SIDEBAR_SECTIONS.map(sec => (
-            <button
-              key={sec.key}
-              className={`flex items-center text-left px-3 py-2 rounded-lg font-medium text-sm transition-all duration-150 ${activeSection === sec.key ? 'bg-yellow-100 text-blue-900 shadow-sm' : 'text-blue-700 hover:bg-yellow-50'}`}
-              onClick={() => setActiveSection(sec.key)}
-            >
-              {sec.icon()} {sec.label}
-            </button>
-          ))}
-        </nav>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 mt-8 px-3 py-2 rounded-lg text-sm font-medium text-blue-500 hover:bg-yellow-50 transition border border-transparent hover:border-yellow-200"
-        >
-          <LogOut size={16} /> Logout
-        </button>
-        <div className="mt-auto text-xs text-blue-300">Lindocare &copy; 2024</div>
-      </aside>
-      {/* Main Content */}
-      <main className="flex-1 p-8 flex flex-col gap-8 text-sm">
-        {activeSection === 'categories' && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Categories</h2>
-              <button
-                className="bg-purple-600 text-white px-4 py-2 rounded shadow hover:bg-purple-700 transition"
-                onClick={() => { setCatFormOpen(true); setCatEditId(null); setCatForm({ name: '', description: '' }); }}
-              >+ Add Category</button>
-            </div>
-            {catLoading ? (
-              <div className="text-center text-gray-500 py-8">Loading categories...</div>
-            ) : catError ? (
-              <div className="text-center text-red-500 py-8">{catError}</div>
-            ) : (
-              <table className="min-w-full text-sm bg-white rounded-lg shadow overflow-hidden">
-                <thead className="bg-purple-100">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Name</th>
-                    <th className="px-4 py-2 text-left">Description</th>
-                    <th className="px-4 py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categories.map(cat => (
-                    <tr key={cat._id} className="border-b last:border-none">
-                      <td className="px-4 py-2">{cat.name}</td>
-                      <td className="px-4 py-2">{cat.description}</td>
-                      <td className="px-4 py-2 flex gap-2">
-                        <button className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600" onClick={() => handleCatEdit(cat)}>Edit</button>
-                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => handleCatDelete(cat._id)}>Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {/* Category Form Modal */}
-            {catFormOpen && (
+    <>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-blue-50 to-purple-100">
+        <div className="flex flex-1 pt-0">
+          {/* Sidebar */}
+          <Sidebar
+            activeSection={activeSection}
+            setActiveSection={setActiveSection}
+            handleLogout={handleLogout}
+            SIDEBAR_SECTIONS={SIDEBAR_SECTIONS}
+          />
+          {/* Main Content */}
+          <main className="flex-1 p-10 flex flex-col gap-8 bg-gradient-to-br from-white/80 via-blue-50/60 to-purple-100/60 ml-64">
+            {/* Auth Modal */}
+            {showAuth && !isAuthenticated && (
               <>
-                <div className="fixed inset-0 bg-blue-900/20 z-40" />
-                <div className="absolute left-1/2 top-24 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full flex flex-col gap-4">
-                  <button className="absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-xl" onClick={() => setCatFormOpen(false)} aria-label="Close">×</button>
-                  <h3 className="text-xl font-bold mb-2 text-blue-700">{catEditId ? 'Edit' : 'Add'} Category</h3>
-                  <form onSubmit={handleCatFormSubmit} className="flex flex-col gap-4">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="name"
-                        id="cat-name"
-                        value={catForm.name}
-                        onChange={handleCatFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Category Name"
-                        required
-                      />
-                      <label htmlFor="cat-name" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Category Name</label>
-                    </div>
-                    <div className="relative">
-                      <textarea
-                        name="description"
-                        id="cat-desc"
-                        value={catForm.description}
-                        onChange={handleCatFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Description"
-                        required
-                      />
-                      <label htmlFor="cat-desc" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Description</label>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="cat-image" className="flex items-center gap-2 cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
-                        <Upload size={18} /> Upload Image
-                      </label>
-                      <input id="cat-image" name="image" type="file" accept="image/*" className="hidden" onChange={handleCatImageChange} />
-                      {catImagePreview && <img src={catImagePreview} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="tag"
-                        id="cat-tag"
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="e.g. Featured, Sale, New, etc."
-                        // onChange={handleCatTagChange} // implement if you want to use tags/colors
-                      />
-                      <label htmlFor="cat-tag" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Tag/Color (optional)</label>
-                    </div>
-                    {catFormError && <div className="text-red-500 text-sm text-center">{catFormError}</div>}
-                    <button type="submit" className="bg-yellow-400 text-blue-900 px-4 py-2 rounded hover:bg-yellow-500 transition font-semibold text-sm" disabled={catFormLoading}>{catEditId ? 'Update' : 'Add'} Category</button>
-                  </form>
+                <div className="fixed inset-0 bg-gray-900 bg-opacity-40 flex items-center justify-center z-50">
+                  <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-xs flex flex-col items-center relative border border-blue-200">
+                    <Image src="/lindo.png" alt="Lindocare Logo" width={48} height={48} className="mb-3 rounded-full border border-gray-200" style={{ width: 'auto', height: 'auto' }} />
+                    <h2 className="text-lg font-bold text-blue-900 mb-1">Admin Login</h2>
+                    <p className="text-blue-500 font-medium mb-3 text-xs">Please login to access dashboard</p>
+                    <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4 w-full">
+                      <div className="flex flex-col gap-1 mb-2">
+                        <label htmlFor="login-username" className="text-blue-900 text-sm font-medium mb-1">Username</label>
+                        <input
+                          type="text"
+                          name="username"
+                          id="login-username"
+                          value={authForm.username}
+                          onChange={handleAuthChange}
+                          className="border border-blue-200 rounded px-3 py-2 text-sm bg-white/80 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300 w-full"
+                          autoFocus
+                          required
+                          aria-label="Username"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 mb-2">
+                        <label htmlFor="login-password" className="text-blue-900 text-sm font-medium mb-1">Password</label>
+                        <input
+                          type="password"
+                          name="password"
+                          id="login-password"
+                          value={authForm.password}
+                          onChange={handleAuthChange}
+                          className="border border-blue-200 rounded px-3 py-2 text-sm bg-white/80 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300 w-full"
+                          required
+                          aria-label="Password"
+                        />
+                      </div>
+                      {authError && <div className="text-red-500 text-center text-xs font-semibold bg-red-50 border border-red-200 rounded py-1">{authError}</div>}
+                      <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full transition font-semibold text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-300">Login</button>
+                    </form>
+                    <div className="mt-3 text-xs text-gray-400">Hint: admin / admin</div>
+                  </div>
                 </div>
               </>
             )}
-          </section>
-        )}
-        {activeSection === 'products' && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Products</h2>
-              <button
-                className="bg-purple-600 text-white px-4 py-2 rounded shadow hover:bg-purple-700 transition"
-                onClick={() => { setProdFormOpen(true); setProdEditId(null); setProdForm({}); setProdImage(null); }}
-              >+ Add Product</button>
-            </div>
-            {prodLoading ? (
-              <div className="text-center text-gray-500 py-8">Loading products...</div>
-            ) : prodError ? (
-              <div className="text-center text-red-500 py-8">{prodError}</div>
-            ) : (
-              <table className="min-w-full text-sm bg-white rounded-lg shadow overflow-hidden">
-                <thead className="bg-purple-100">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Name</th>
-                    <th className="px-4 py-2 text-left">Description</th>
-                    <th className="px-4 py-2 text-left">Price</th>
-                    <th className="px-4 py-2 text-left">Category</th>
-                    <th className="px-4 py-2 text-left">Stock Type</th>
-                    <th className="px-4 py-2 text-left">Quantity</th>
-                    <th className="px-4 py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map(prod => (
-                    <tr key={prod._id} className="border-b last:border-none">
-                      <td className="px-4 py-2">{prod.name}</td>
-                      <td className="px-4 py-2">{prod.description}</td>
-                      <td className="px-4 py-2">${prod.price}</td>
-                      <td className="px-4 py-2">{prod.category}</td>
-                      <td className="px-4 py-2">{prod.stockType}</td>
-                      <td className="px-4 py-2">{prod.quantity}</td>
-                      <td className="px-4 py-2 flex gap-2">
-                        <button className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600" onClick={() => handleProdEdit(prod)}>Edit</button>
-                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => handleProdDelete(prod._id)}>Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {/* Product Form Modal */}
-            {prodFormOpen && (
-              <>
-                <div className="fixed inset-0 bg-blue-900/20 z-40" />
-                <div className="absolute left-1/2 top-24 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full flex flex-col gap-4">
-                  <button className="absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-xl" onClick={() => setProdFormOpen(false)} aria-label="Close">×</button>
-                  <h3 className="text-xl font-bold mb-2 text-blue-700">{prodEditId ? 'Edit' : 'Add'} Product</h3>
-                  <form onSubmit={handleProdFormSubmit} className="flex flex-col gap-4">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="name"
-                        id="prod-name"
-                        value={prodForm.name || ''}
-                        onChange={handleProdFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Product Name"
-                        required
-                      />
-                      <label htmlFor="prod-name" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Product Name</label>
+            {/* Stats Cards Row */}
+            <StatsCards
+              categoriesCount={categories.length}
+              productsCount={products.length}
+              ordersCount={orders.length}
+              bannersCount={banners.length}
+              usersCount={users.length}
+            />
+            {/* Main Sections as Cards */}
+            <div className="grid grid-cols-1 gap-8">
+              {activeSection === 'categories' && (
+                <>
+                  <CategoriesSection
+                    categories={categories}
+                    products={products}
+                    catLoading={catLoading}
+                    catError={catError}
+                    expandedCategories={expandedCategories}
+                    setExpandedCategories={setExpandedCategories}
+                    handleCatEdit={handleCatEdit}
+                    handleCatDelete={handleCatDelete}
+                    setCatFormOpen={setCatFormOpen}
+                    setCatEditId={setCatEditId}
+                    setCatForm={setCatForm}
+                    safeRender={safeRender}
+                  />
+                  {catFormOpen && (
+                    <>
+                      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={() => { setCatFormOpen(false); setCatEditId(null); setCatForm({ name: '', description: '' }); setCatImage(null); setCatImagePreview(null); }} />
+                      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-yellow-200 animate-modal-pop overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <button className="absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-xl" onClick={() => { setCatFormOpen(false); setCatEditId(null); setCatForm({ name: '', description: '' }); setCatImage(null); setCatImagePreview(null); }} aria-label="Close">×</button>
+                        <h3 className="text-xl font-bold mb-2 text-blue-700">{catEditId ? 'Edit' : 'Add'} Category</h3>
+                        <form onSubmit={handleCatFormSubmit} className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="cat-name" className="text-blue-900 text-sm font-medium mb-1">Category Name</label>
+                            <input
+                              type="text"
+                              name="name"
+                              id="cat-name"
+                              value={catForm.name}
+                              onChange={handleCatFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="cat-desc" className="text-blue-900 text-sm font-medium mb-1">Description</label>
+                            <textarea
+                              name="description"
+                              id="cat-desc"
+                              value={catForm.description}
+                              onChange={handleCatFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2 mb-2">
+                            <label htmlFor="cat-image" className="text-blue-900 text-sm font-medium mb-1">Category Image</label>
+                            <label htmlFor="cat-image" className="flex items-center gap-2 cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
+                              <Upload size={18} /> Upload Image
+                            </label>
+                            <input id="cat-image" name="image" type="file" accept="image/*" className="hidden" onChange={handleCatImageChange} />
+                            {catImagePreview && <img src={catImagePreview} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />}
+                          </div>
+                          {catFormError && <div className="text-red-500 text-sm text-center">{catFormError}</div>}
+                          <button type="submit" className="bg-yellow-400 text-blue-900 px-4 py-2 rounded hover:bg-yellow-500 transition font-semibold text-sm" disabled={catFormLoading}>{catEditId ? 'Update' : 'Add'} Category</button>
+                        </form>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+              {activeSection === 'products' && (
+                <section className="bg-white/90 backdrop-blur rounded-2xl shadow-md p-6 border border-yellow-100">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="font-bold text-2xl text-blue-900">Products</span>
+                      {/* Add filter/search/sort controls here if needed */}
                     </div>
-                    <div className="relative">
-                      <textarea
-                        name="description"
-                        id="prod-desc"
-                        value={prodForm.description || ''}
-                        onChange={handleProdFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Description"
-                        required
-                      />
-                      <label htmlFor="prod-desc" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Description</label>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="price"
-                        id="prod-price"
-                        value={prodForm.price || ''}
-                        onChange={handleProdFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Price"
-                        required
-                      />
-                      <label htmlFor="prod-price" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Price</label>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="category"
-                        id="prod-category"
-                        value={prodForm.category || ''}
-                        onChange={handleProdFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Category"
-                        required
-                      />
-                      <label htmlFor="prod-category" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Category</label>
-                    </div>
-                    <div className="relative">
-                      <select
-                        name="stockType"
-                        id="prod-stockType"
-                        value={prodForm.stockType || ''}
-                        onChange={handleProdFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        required
-                      >
-                        <option value="" disabled hidden></option>
-                        <option value="in_store">In Store</option>
-                        <option value="online">Online</option>
-                      </select>
-                      <label htmlFor="prod-stockType" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Stock Type</label>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="quantity"
-                        id="prod-quantity"
-                        value={prodForm.quantity || ''}
-                        onChange={handleProdFormChange}
-                        className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        placeholder="Quantity"
-                        required
-                      />
-                      <label htmlFor="prod-quantity" className="absolute left-3 top-2 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-xs">Quantity</label>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="prod-image" className="flex items-center gap-2 cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
-                        <Upload size={18} /> Upload Image
-                      </label>
-                      <input id="prod-image" name="image" type="file" accept="image/*" className="hidden" onChange={handleProdImageChange} />
-                      {prodImagePreview && <img src={prodImagePreview} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />}
-                    </div>
-                    {prodFormError && <div className="text-red-500 text-sm text-center">{prodFormError}</div>}
-                    <button type="submit" className="bg-yellow-400 text-blue-900 px-4 py-2 rounded hover:bg-yellow-500 transition font-semibold text-sm" disabled={prodFormLoading}>{prodEditId ? 'Update' : 'Add'} Product</button>
-                  </form>
-                </div>
-              </>
-            )}
-          </section>
-        )}
-        {activeSection === 'orders' && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Orders</h2>
-            </div>
-            {ordersLoading ? (
-              <div className="text-center text-gray-500 py-8">Loading orders...</div>
-            ) : ordersError ? (
-              <div className="text-center text-red-500 py-8">{ordersError}</div>
-            ) : (
-              <table className="min-w-full text-sm bg-white rounded-lg shadow overflow-hidden">
-                <thead className="bg-yellow-100">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Order ID</th>
-                    <th className="px-4 py-2 text-left">User</th>
-                    <th className="px-4 py-2 text-left">Items</th>
-                    <th className="px-4 py-2 text-left">Total</th>
-                    <th className="px-4 py-2 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map(order => (
-                    <tr key={order._id} className="border-b last:border-none">
-                      <td className="px-4 py-2">{order._id}</td>
-                      <td className="px-4 py-2">{order.user}</td>
-                      <td className="px-4 py-2">
-                        <ul className="list-disc pl-4">
-                          {order.items.map((item, idx) => (
-                            <li key={idx}>{item.name} x{item.quantity} (${item.price})</li>
+                    <button
+                      className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2"
+                      onClick={() => { setProdFormOpen(true); setProdEditId(null); setProdForm({}); setProdImage(null); }}
+                    >
+                      + Add Product
+                    </button>
+                  </div>
+                  {prodLoading ? (
+                    <div className="text-center text-gray-500 py-8">Loading products...</div>
+                  ) : prodError ? (
+                    <div className="text-center text-red-500 py-8">{prodError}</div>
+                  ) : (
+                    Array.isArray(products) && products.length > 0 ? (
+                      <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white">
+                        <table className="min-w-full text-sm text-left">
+                          <thead className="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Image</th>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Product Name</th>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Price</th>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Category</th>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Stock</th>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Status</th>
+                              <th className="px-4 py-3 font-semibold text-gray-700">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {products.map(prod => (
+                              <tr key={prod._id} className="hover:bg-gray-50 transition">
+                                <td className="px-4 py-2">
+                                  {Array.isArray(prod.image) && prod.image.length > 0 ? (
+                                    <img src={prod.image[0]} alt={safeRender(prod.name)} className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                  ) : prod.image ? (
+                                    <img src={prod.image} alt={safeRender(prod.name)} className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                  ) : (
+                                    <img src="/lindo.png" alt="No image" className="w-12 h-12 object-cover rounded border border-gray-200 opacity-60" />
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 font-medium text-blue-900">{safeRender(prod.name)}</td>
+                                <td className="px-4 py-2 text-yellow-700 font-semibold">${safeRender(prod.price)}</td>
+                                <td className="px-4 py-2 text-blue-600">{safeRender(prod.category)}</td>
+                                <td className="px-4 py-2 text-gray-700">{safeRender(prod.quantity)}</td>
+                                <td className="px-4 py-2">
+                                  <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Active</span>
+                                </td>
+                                <td className="px-4 py-2 flex gap-2">
+                                  <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition" onClick={() => handleProdEdit(prod)}>Edit</button>
+                                  <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition" onClick={() => handleProdDelete(prod)}>Delete</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500 py-8">No products found.</div>
+                      
+                    )
+                  )}
+                  {/* Product Form Modal */}
+                  {prodFormOpen && (
+                    <>
+                      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={() => { setProdFormOpen(false); setProdImage(null); setProdImagePreview(null); }} />
+                      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/80 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-yellow-200 animate-modal-pop overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <button className="absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-xl" onClick={() => { setProdFormOpen(false); setProdImage(null); setProdImagePreview(null); }} aria-label="Close">×</button>
+                        <h3 className="text-xl font-bold mb-2 text-blue-700">{prodEditId ? 'Edit' : 'Add'} Product</h3>
+                        <form onSubmit={handleProdFormSubmit} className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="prod-name" className="text-blue-900 text-sm font-medium mb-1">Product Name</label>
+                            <input
+                              type="text"
+                              name="name"
+                              id="prod-name"
+                              value={prodForm.name || ''}
+                              onChange={handleProdFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="prod-desc" className="text-blue-900 text-sm font-medium mb-1">Description</label>
+                            <textarea
+                              name="description"
+                              id="prod-desc"
+                              value={prodForm.description || ''}
+                              onChange={handleProdFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="prod-price" className="text-blue-900 text-sm font-medium mb-1">Price</label>
+                            <input
+                              type="number"
+                              name="price"
+                              id="prod-price"
+                              value={prodForm.price || ''}
+                              onChange={handleProdFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="prod-category" className="text-blue-900 text-sm font-medium mb-1">Category</label>
+                            <select
+                              name="category"
+                              id="prod-category"
+                              value={prodForm.category || ''}
+                              onChange={handleProdFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            >
+                              <option value="" disabled>Select a category</option>
+                              {categories.map(cat => (
+                                <option key={cat._id} value={cat._id}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="prod-stockType" className="text-blue-900 text-sm font-medium mb-1">Stock Type</label>
+                            <select
+                              name="stockType"
+                              id="prod-stockType"
+                              value={prodForm.stockType || ''}
+                              onChange={handleProdFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            >
+                              <option value="" disabled hidden>Select stock type</option>
+                              <option value="in_store">In Store</option>
+                              <option value="online">Online</option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="prod-quantity" className="text-blue-900 text-sm font-medium mb-1">Quantity</label>
+                            <input
+                              type="number"
+                              name="quantity"
+                              id="prod-quantity"
+                              value={prodForm.quantity || ''}
+                              onChange={handleProdFormChange}
+                              className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2 mb-2">
+                            <label htmlFor="prod-image" className="text-blue-900 text-sm font-medium mb-1">Product Image</label>
+                            <label htmlFor="prod-image" className="flex items-center gap-2 cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
+                              <Upload size={18} /> Upload Image
+                            </label>
+                            <input id="prod-image" name="image" type="file" accept="image/*" className="hidden" onChange={handleProdImageChange} />
+                            {prodImagePreview && <img src={prodImagePreview} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />}
+                          </div>
+                          {prodFormError && <div className="text-red-500 text-sm text-center">{prodFormError}</div>}
+                          <button type="submit" className="bg-yellow-400 text-blue-900 px-4 py-2 rounded hover:bg-yellow-500 transition font-semibold text-sm" disabled={prodFormLoading}>{prodEditId ? 'Update' : 'Add'} Product</button>
+                        </form>
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
+              {activeSection === 'orders' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-green-50">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">Orders</h2>
+                  </div>
+                  {ordersLoading ? (
+                    <div className="text-center text-gray-500 py-8">Loading orders...</div>
+                  ) : ordersError ? (
+                    <div className="text-center text-red-500 py-8">{ordersError}</div>
+                  ) : (
+                    <table className="min-w-full text-sm bg-white rounded-lg shadow overflow-hidden">
+                      <thead className="bg-yellow-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Order ID</th>
+                          <th className="px-4 py-2 text-left">User</th>
+                          <th className="px-4 py-2 text-left">Items</th>
+                          <th className="px-4 py-2 text-left">Total</th>
+                          <th className="px-4 py-2 text-left">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map(order => (
+                          <tr key={order._id} className="border-b last:border-none">
+                            <td className="px-4 py-2">{order._id}</td>
+                            <td className="px-4 py-2">{order.user}</td>
+                            <td className="px-4 py-2">
+                              <ul className="list-disc pl-4">
+                                {order.items.map((item, idx) => (
+                                  <li key={idx}>{item.name} x{item.quantity} (${item.price})</li>
+                                ))}
+                              </ul>
+                            </td>
+                            <td className="px-4 py-2">${order.total}</td>
+                            <td className="px-4 py-2">{order.status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              )}
+              {activeSection === 'cart' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-gray-50">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Cart</h2>
+                  {cartLoading ? (
+                    <div className="text-center text-gray-500 py-8">Loading cart...</div>
+                  ) : cartError ? (
+                    <div className="text-center text-red-500 py-8">{cartError}</div>
+                  ) : cart.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">Your cart is empty.</div>
+                  ) : (
+                    <table className="min-w-full text-sm bg-white rounded-lg shadow overflow-hidden">
+                      <thead className="bg-yellow-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Product</th>
+                          <th className="px-4 py-2 text-left">Quantity</th>
+                          <th className="px-4 py-2 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cart.map((item: any) => (
+                          <tr key={item.productId} className="border-b last:border-none">
+                            <td className="px-4 py-2">{item.productName || item.productId}</td>
+                            <td className="px-4 py-2">{item.quantity}</td>
+                            <td className="px-4 py-2">
+                              <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => handleRemoveFromCart(item.productId)}>Remove</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              )}
+              {activeSection === 'banners' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-orange-50">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">Banners</h2>
+                    <button
+                      className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2"
+                      onClick={() => {
+                        setShowBannerForm(v => !v);
+                        if (!showBannerForm) {
+                          setBannerForm({ title: '', subTitle: '', categoryId: '', images: [] });
+                          setBannerImagePreview(null);
+                          setBannerEditId(null);
+                          setBannerFormError('');
+                          setBannerFormSuccess('');
+                        }
+                      }}
+                    >
+                      {showBannerForm ? 'Cancel' : '+ Create Banner'}
+                    </button>
+                  </div>
+                  {showBannerForm && (
+                    <form onSubmit={handleBannerFormSubmit} className="flex flex-col gap-4 max-w-md bg-white p-6 rounded-lg shadow mb-8">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="title"
+                          placeholder=" "
+                          value={bannerForm.title}
+                          onChange={handleBannerFormChange}
+                          className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          required
+                        />
+                        <label htmlFor="banner-title" className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Title</label>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="subTitle"
+                          placeholder=" "
+                          value={bannerForm.subTitle}
+                          onChange={handleBannerFormChange}
+                          className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          required
+                        />
+                        <label htmlFor="banner-subTitle" className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Subtitle</label>
+                      </div>
+                      <div className="relative">
+                        <label htmlFor="banner-categoryId" className="block mb-1 font-medium text-blue-900">Category</label>
+                        <select
+                          name="categoryId"
+                          placeholder=" "
+                          value={bannerForm.categoryId}
+                          onChange={handleBannerFormChange}
+                          className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          required
+                        >
+                          <option value="" disabled>Select a category</option>
+                          {categories.map(cat => (
+                            <option key={cat._id} value={cat._id}>{cat.name}</option>
                           ))}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="banner-images" className="flex items-center gap-2 cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
+                          <Upload size={18} /> Upload Images
+                        </label>
+                        <input id="banner-images" name="images" type="file" accept="image/*" className="hidden" multiple onChange={handleBannerFormChange} />
+                        {bannerImagePreview && bannerImagePreview.map((preview, index) => (
+                          <img key={index} src={preview} alt={`Preview ${index + 1}`} className="mt-2 rounded shadow w-24 h-24 object-cover" />
+                        ))}
+                      </div>
+                      {bannerFormError && <div className="text-red-500 text-sm text-center">{bannerFormError}</div>}
+                      {bannerFormSuccess && <div className="text-green-600 text-sm text-center">{bannerFormSuccess}</div>}
+                      <button type="submit" className="bg-yellow-400 text-blue-900 px-4 py-2 rounded hover:bg-yellow-500 transition font-semibold text-sm" disabled={bannerFormLoading}>{bannerEditId ? 'Update Banner' : 'Create Banner'}</button>
+                      {bannerEditId && (
+                        <button type="button" className="text-xs text-gray-400 underline mt-1" onClick={() => { setBannerEditId(null); setBannerForm({ title: '', subTitle: '', categoryId: '', images: [] }); setBannerImagePreview(null); setBannerFormSuccess(''); setShowBannerForm(false); }}>Cancel Edit</button>
+                      )}
+                    </form>
+                  )}
+                  {/* Banner List */}
+                  {bannerLoading ? (
+                    <div className="text-center text-gray-500 py-8">Loading banners...</div>
+                  ) : bannerError ? (
+                    <div className="text-center text-red-500 py-8">{bannerError}</div>
+                  ) : banners.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">No banners found.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                      {banners.map((banner, idx) => (
+                        <div key={banner._id} className="bg-white rounded-lg shadow p-4 flex flex-col gap-2 border border-yellow-100">
+                          {banner.images && banner.images.length > 0 && (
+                            <img src={banner.images[0]} alt={banner.title} className="w-full h-48 object-cover rounded border border-gray-200 mb-2" />
+                          )}
+                          <div className="flex flex-col items-start mt-4">
+                            <div className="font-bold text-blue-900 text-base truncate mb-2">{banner.title}</div>
+                            {banner.subTitle && (
+                              <a href="#" className="flex items-center text-xs text-blue-500 hover:text-blue-700 transition underline underline-offset-2 cursor-pointer" style={{marginTop: '0.25rem'}}>
+                                <span>{banner.subTitle}</span>
+                                <span className="ml-1">→</span>
+                              </a>
+                            )}
+                          </div>
+                          <div className="text-xs text-blue-500 truncate mt-1">Category: {banner.category && typeof banner.category === 'object' ? banner.category.name : banner.category}</div>
+                          <div className="text-xs text-gray-400">Created: {new Date(banner.createdAt).toLocaleString()}</div>
+                          <div className="flex flex-row gap-2 justify-end mt-2">
+                            <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs font-semibold transition" onClick={() => { handleBannerEdit(banner); setShowBannerForm(true); }}>Edit</button>
+                            <button className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs font-semibold transition" onClick={() => handleBannerDelete(banner)}>Delete</button>
+                            <button className="bg-yellow-400 text-blue-900 px-3 py-1 rounded hover:bg-yellow-500 text-xs font-semibold transition" onClick={() => handleViewProducts(banner._id)}>
+                              {expandedBannerId === banner._id ? 'Hide Products' : 'View Products'}
+                            </button>
+                          </div>
+                          {expandedBannerId === banner._id && (
+                            <div className="mt-3">
+                              {bannerProductsLoading[banner._id] ? (
+                                <div className="text-gray-500">Loading products...</div>
+                              ) : bannerProductsError[banner._id] ? (
+                                <div className="text-red-500">{bannerProductsError[banner._id]}</div>
+                              ) : bannerProducts[banner._id] && bannerProducts[banner._id].length > 0 ? (
+                                <ul className="divide-y divide-yellow-100">
+                                  {bannerProducts[banner._id].map(prod => (
+                                    <li key={prod._id} className="py-2 flex items-center gap-3">
+                                      {prod.image && <img src={prod.image} alt={prod.name} className="w-12 h-12 object-cover rounded" />}
+                                      <div>
+                                        <div className="font-semibold text-blue-800">{prod.name}</div>
+                                        <div className="text-xs text-gray-500">{prod.description}</div>
+                                        <div className="text-yellow-700 font-bold text-xs">${prod.price}</div>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <div className="text-gray-400">No products found for this banner.</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+              {activeSection === 'recommendations' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-blue-50">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Recommendations</h2>
+                  <div className="text-gray-500">Recommendation management coming soon...</div>
+                </section>
+              )}
+              {activeSection === 'footer' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-gray-50">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Footer</h2>
+                  <div className="text-gray-500">Footer management coming soon...</div>
+                </section>
+              )}
+              {activeSection === 'settings' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-gray-50">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Settings</h2>
+                  <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition font-semibold text-sm mb-4" onClick={fetchApiEndpoints}>Show API Endpoints</button>
+                  {showApiExplorer && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded shadow border border-gray-200">
+                      <h3 className="text-lg font-bold mb-2 text-blue-700">API Endpoints</h3>
+                      {apiExplorerError ? (
+                        <div className="text-red-500">{apiExplorerError}</div>
+                      ) : apiEndpoints.length > 0 ? (
+                        <ul className="list-disc pl-6 text-sm text-gray-700">
+                          {apiEndpoints.map(ep => <li key={ep}>{ep}</li>)}
                         </ul>
-                      </td>
-                      <td className="px-4 py-2">${order.total}</td>
-                      <td className="px-4 py-2">{order.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-        )}
-        {activeSection === 'cart' && (
-          <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Cart</h2>
-            <div className="text-gray-500">Cart management coming soon...</div>
-          </section>
-        )}
-        {activeSection === 'banners' && (
-          <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Banners</h2>
-            <div className="text-gray-500">Banner management coming soon...</div>
-          </section>
-        )}
-        {activeSection === 'recommendations' && (
-          <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Recommendations</h2>
-            <div className="text-gray-500">Recommendation management coming soon...</div>
-          </section>
-        )}
-        {activeSection === 'footer' && (
-          <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Footer</h2>
-            <div className="text-gray-500">Footer management coming soon...</div>
-          </section>
-        )}
-      </main>
-    </div>
+                      ) : (
+                        <div className="text-gray-500">No endpoints found.</div>
+                      )}
+                      <button className="mt-4 text-xs text-blue-500 underline" onClick={() => setShowApiExplorer(false)}>Close</button>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {activeSection === 'users' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-blue-50">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">Users</h2>
+                    <button
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2"
+                      onClick={() => { setUserFormOpen(true); setUserEditId(null); setUserForm({}); }}
+                    >
+                      + Add User
+                    </button>
+                  </div>
+                  {usersLoading ? (
+                    <div className="text-center text-gray-500 py-8">Loading users...</div>
+                  ) : usersError ? (
+                    <div className="text-center text-red-500 py-8">{usersError}</div>
+                  ) : users.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">No users found.</div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white">
+                      <table className="min-w-full text-sm text-left">
+                        <thead className="bg-gray-50 sticky top-0 z-10">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold text-gray-700">Image</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700">Name</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700">Email</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700">Role</th>
+                            <th className="px-4 py-3 font-semibold text-gray-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {users.map((user: any) => (
+                            <tr key={user._id} className="hover:bg-gray-50 transition">
+                              <td className="px-4 py-2">
+                                {Array.isArray(user.image) && user.image.length > 0 ? (
+                                  <img src={user.image[0]} alt={user.firstName} className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                ) : user.image ? (
+                                  <img src={user.image} alt={user.firstName} className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                ) : (
+                                  <img src="/lindo.png" alt="No image" className="w-12 h-12 object-cover rounded border border-gray-200 opacity-60" />
+                                )}
+                              </td>
+                              <td className="px-4 py-2 font-medium text-blue-900">{user.firstName} {user.lastName}</td>
+                              <td className="px-4 py-2 text-blue-600">{user.email}</td>
+                              <td className="px-4 py-2 text-purple-700">{user.role}</td>
+                              <td className="px-4 py-2 flex gap-2">
+                                <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition" onClick={() => { setUserEditId(user._id); setUserForm(user); setUserFormOpen(true); }}>Edit</button>
+                                <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition" onClick={() => handleUserDelete(user)}>Delete</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {/* User Form Modal */}
+                  {userFormOpen && (
+                    <>
+                      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={() => { setUserFormOpen(false); setUserEditId(null); setUserForm({}); }} />
+                      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-blue-200 animate-modal-pop overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <button className="absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-xl" onClick={() => { setUserFormOpen(false); setUserEditId(null); setUserForm({}); }} aria-label="Close">×</button>
+                        <h3 className="text-xl font-bold mb-2 text-blue-700">{userEditId ? 'Edit' : 'Add'} User</h3>
+                        <form onSubmit={handleUserFormSubmit} className="flex flex-col gap-4">
+                          <div className="relative">
+                            <input type="text" name="firstName" placeholder=" " value={userForm.firstName || ''} onChange={handleUserFormChange} className="peer border border-blue-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300" required />
+                            <label className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">First Name</label>
+                          </div>
+                          <div className="relative">
+                            <input type="text" name="lastName" placeholder=" " value={userForm.lastName || ''} onChange={handleUserFormChange} className="peer border border-blue-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300" required />
+                            <label className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Last Name</label>
+                          </div>
+                          <div className="relative">
+                            <input type="email" name="email" placeholder=" " value={userForm.email || ''} onChange={handleUserFormChange} className="peer border border-blue-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300" required />
+                            <label className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Email</label>
+                          </div>
+                          <div className="relative">
+                            <input type="password" name="password" placeholder=" " value={userForm.password || ''} onChange={handleUserFormChange} className="peer border border-blue-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300" required={!userEditId} />
+                            <label className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Password{userEditId ? ' (leave blank to keep unchanged)' : ''}</label>
+                          </div>
+                          <div className="relative">
+                            <select name="gender" placeholder=" " value={userForm.gender || ''} onChange={handleUserFormChange} className="peer border border-blue-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
+                              <option value="" disabled>Select Gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          <div className="relative">
+                            <select name="role" placeholder=" " value={userForm.role || 'user'} onChange={handleUserFormChange} className="peer border border-blue-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                              <option value="vendor">Vendor</option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label htmlFor="user-image" className="flex items-center gap-2 cursor-pointer bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
+                              <Upload size={18} /> Upload Image
+                            </label>
+                            <input id="user-image" name="image" type="file" accept="image/*" className="hidden" onChange={handleUserImageChange} />
+                            {userForm.image && typeof userForm.image === 'object' && userForm.image instanceof File && (
+                              <img src={URL.createObjectURL(userForm.image)} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />
+                            )}
+                            {userForm.image && typeof userForm.image === 'string' && (
+                              <img src={userForm.image} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />
+                            )}
+                          </div>
+                          {userFormError && <div className="text-red-500 text-sm text-center">{userFormError}</div>}
+                          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold text-sm" disabled={userFormLoading}>{userFormLoading ? (userEditId ? 'Updating...' : 'Creating...') : (userEditId ? 'Update User' : 'Create User')}</button>
+                        </form>
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+      {userToDelete && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-red-200 animate-modal-pop">
+            <h3 className="text-xl font-bold mb-2 text-red-700">Delete User</h3>
+            <div className="text-gray-700 mb-4">Are you sure you want to delete <span className="font-bold">{userToDelete.firstName} {userToDelete.lastName}</span>?</div>
+            {userDeleteError && <div className="text-red-500 text-sm text-center">{userDeleteError}</div>}
+            <div className="flex gap-4 justify-end">
+              <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold text-sm" onClick={cancelUserDelete} disabled={userDeleteLoading}>Cancel</button>
+              <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition font-semibold text-sm" onClick={confirmUserDelete} disabled={userDeleteLoading}>{userDeleteLoading ? 'Deleting...' : 'Delete'}</button>
+            </div>
+          </div>
+        </>
+      )}
+      {catToDelete && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={cancelCatDelete} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-red-200 animate-modal-pop" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-2 text-red-700">Delete Category</h3>
+            <div className="text-gray-700 mb-4">Are you sure you want to delete <span className="font-bold">{catToDelete.name}</span>?</div>
+            {catDeleteError && <div className="text-red-500 text-sm text-center">{catDeleteError}</div>}
+            <div className="flex gap-4 justify-end">
+              <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold text-sm" onClick={cancelCatDelete} disabled={catDeleteLoading}>Cancel</button>
+              <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition font-semibold text-sm" onClick={confirmCatDelete} disabled={catDeleteLoading}>{catDeleteLoading ? 'Deleting...' : 'Delete'}</button>
+            </div>
+          </div>
+        </>
+      )}
+      {prodToDelete && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={cancelProdDelete} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-red-200 animate-modal-pop" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-2 text-red-700">Delete Product</h3>
+            <div className="text-gray-700 mb-4">Are you sure you want to delete <span className="font-bold">{prodToDelete.name}</span>?</div>
+            {prodDeleteError && <div className="text-red-500 text-sm text-center">{prodDeleteError}</div>}
+            <div className="flex gap-4 justify-end">
+              <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold text-sm" onClick={cancelProdDelete} disabled={prodDeleteLoading}>Cancel</button>
+              <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition font-semibold text-sm" onClick={confirmProdDelete} disabled={prodDeleteLoading}>{prodDeleteLoading ? 'Deleting...' : 'Delete'}</button>
+            </div>
+          </div>
+        </>
+      )}
+      {bannerToDelete && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={cancelBannerDelete} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-red-200 animate-modal-pop" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-2 text-red-700">Delete Banner</h3>
+            <div className="text-gray-700 mb-4">Are you sure you want to delete <span className="font-bold">{bannerToDelete.title}</span>?</div>
+            {bannerDeleteError && <div className="text-red-500 text-sm text-center">{bannerDeleteError}</div>}
+            <div className="flex gap-4 justify-end">
+              <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold text-sm" onClick={cancelBannerDelete} disabled={bannerDeleteLoading}>Cancel</button>
+              <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition font-semibold text-sm" onClick={confirmBannerDelete} disabled={bannerDeleteLoading}>{bannerDeleteLoading ? 'Deleting...' : 'Delete'}</button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
