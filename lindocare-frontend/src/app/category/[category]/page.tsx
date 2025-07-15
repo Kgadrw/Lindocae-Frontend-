@@ -109,7 +109,8 @@ const CategoryPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState(productsData);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
@@ -129,12 +130,28 @@ const CategoryPage = () => {
   const categoryParam = params.category;
   const categoryName = decodeURIComponent(Array.isArray(categoryParam) ? categoryParam[0] : categoryParam || 'Baby Furniture');
 
+  useEffect(() => {
+    // Fetch real products for this category
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`https://lindo-project.onrender.com/product/getProductsByCategory?category=${encodeURIComponent(categoryName)}`);
+        const data = await res.json();
+        if (Array.isArray(data)) setProducts(data);
+        else if (data && Array.isArray(data.products)) setProducts(data.products);
+        else setProducts([]);
+      } catch {
+        setProducts([]);
+      }
+    };
+    fetchProducts();
+  }, [categoryName]);
+
   // Filtering logic
   React.useEffect(() => {
-    let filtered = [...productsData];
+    let filtered = [...products];
     // Delivery filter
     if (selectedDelivery.length > 0) {
-      filtered = filtered.filter(p => selectedDelivery.some(d => p.delivery.includes(d)));
+      filtered = filtered.filter(p => selectedDelivery.some(d => p.delivery && p.delivery.includes(d)));
     }
     // Price filter
     if (priceMin) filtered = filtered.filter(p => p.price >= parseFloat(priceMin));
@@ -145,7 +162,7 @@ const CategoryPage = () => {
     else if (sort === 'newest') filtered = filtered.slice().reverse();
     // (Popular: default order)
     setFilteredProducts(filtered);
-  }, [selectedDelivery, sort, priceMin, priceMax]);
+  }, [products, selectedDelivery, sort, priceMin, priceMax]);
 
   React.useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
@@ -168,6 +185,7 @@ const CategoryPage = () => {
     setWishlist((prev) => {
       const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
       localStorage.setItem('wishlist', JSON.stringify(updated));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'wishlist' }));
       return updated;
     });
   };
@@ -284,7 +302,7 @@ const CategoryPage = () => {
           {/* Main Content */}
           <main className="flex-1">
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-blue-900">{categoryName} <span className="text-blue-400 text-base font-normal">({filteredProducts.length} products)</span></h1>
+              <h1 className="text-2xl font-bold text-blue-900">{categoryName} <span className="text-blue-400 text-base font-normal">({products.length} products)</span></h1>
               <div className="flex items-center gap-2">
                 <span className="text-blue-700 text-sm">Sort by:</span>
                 <select className="rounded-lg border px-2 py-1 text-sm text-blue-900" value={sort} onChange={e => setSort(e.target.value)}>

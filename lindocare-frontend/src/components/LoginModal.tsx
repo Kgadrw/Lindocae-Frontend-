@@ -28,8 +28,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState("");
-  const [image, setImage] = useState<File | null>(null);
   const [success, setSuccess] = useState("");
+  const [icons, setIcons] = useState<any[]>([]);
+  const [iconsLoading, setIconsLoading] = useState(true);
+  const [iconsError, setIconsError] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   // Async Gravatar URL generator
   async function getGravatarUrl(email: string) {
@@ -63,14 +67,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!firstName || !lastName || !email || !gender || !password) {
+    if (!firstName || !lastName || !email || !gender || !password || !confirmPassword) {
       setError("All fields are required.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('image', image || '');
       formData.append('firstName', firstName);
       formData.append('lastName', lastName);
       formData.append('email', email);
@@ -83,9 +90,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
       });
       if (res.status === 201) {
         setLoading(false);
-        setFirstName(""); setLastName(""); setGender(""); setEmail(""); setPassword(""); setImage(null);
+        setFirstName(""); setLastName(""); setGender(""); setEmail(""); setPassword(""); setConfirmPassword("");
         setSuccess("Registration successful!");
-        const avatar = image ? URL.createObjectURL(image) : await getGravatarUrl(email);
+        const avatar = await getGravatarUrl(email);
         setTimeout(() => {
           setSuccess("");
           if (onLoginSuccess) onLoginSuccess(firstName, avatar, email);
@@ -102,6 +109,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
       setError("Network error. Please try again.");
       setLoading(false);
     }
+  };
+
+  // Add Google login handler
+  const handleGoogleLogin = () => {
+    window.location.href = 'https://lindo-project.onrender.com/auth/google';
   };
 
   if (!open) return null;
@@ -124,96 +136,145 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
             </div>
           </div>
         )}
-        <Image src="/lindo.png" alt="Lindo Logo" width={90} height={36} className="mb-2" />
+        <Image src="/lindo.png" alt="Lindo Logo" width={90} height={36} className="mb-2" style={{ width: 90, height: 'auto' }} />
         <h2 className="text-xl font-bold text-gray-700 mb-4">{isRegister ? 'Register' : 'Register/Sign in'}</h2>
         <form className="w-full flex flex-col gap-4 mb-4" onSubmit={isRegister ? handleRegister : handleLogin}>
-          {isRegister && (
+          {!isRegister && (
             <>
-              <div className="flex flex-col gap-2 items-center">
-                <label className="flex flex-col items-center cursor-pointer">
-                  <span className="flex items-center gap-2 text-[#2056a7] font-medium"><Upload size={20} /> {image ? 'Change Image' : 'Upload Image'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => setImage(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
-                  />
-                  {image && (
-                    <Image src={URL.createObjectURL(image)} alt="Preview" width={64} height={64} className="mt-2 w-16 h-16 rounded-full object-cover border-2 border-yellow-400" />
-                  )}
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="First Name"
-                    className="w-1/2 rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
-                    value={firstName}
-                    onChange={e => setFirstName(e.target.value)}
-                  />
-                  <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">First Name</label>
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Last Name"
-                    className="w-1/2 rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
-                    value={lastName}
-                    onChange={e => setLastName(e.target.value)}
-                  />
-                  <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Last Name</label>
-                </div>
-              </div>
-              <div className="relative">
+              <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Email</label>
                 <input
-                  type="text"
-                  placeholder="Gender"
-                  className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
-                  value={gender}
-                  onChange={e => setGender(e.target.value)}
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                  required
                 />
-                <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Gender</label>
               </div>
+              <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 pr-8 text-sm text-blue-900 placeholder:text-blue-400"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
+                    onClick={() => setShowPassword(v => !v)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" className="w-full rounded-full bg-yellow-400 text-white font-bold py-2 text-base mt-2 shadow hover:bg-yellow-500 transition" disabled={loading}>{loading ? 'Signing in...' : 'Signin'}</button>
+              <div className="flex items-center my-2">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="mx-2 text-gray-400 text-xs">or</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div>
+              <button type="button" onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-gray-700 font-semibold py-2 text-base shadow hover:bg-gray-50 transition">
+                <Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" width={24} height={24} />
+                Continue with Google
+              </button>
             </>
           )}
-          <div className="relative">
+          {isRegister && (
+            <>
+              <div className="mb-2 flex gap-2">
+                <div className="flex-1">
+                  <label className="block mb-0.5 text-blue-700 font-medium text-sm">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                    required
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block mb-0.5 text-blue-700 font-medium text-sm">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Gender</label>
+                <select
+                  name="gender"
+                  value={gender}
+                  onChange={e => setGender(e.target.value)}
+                  className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                  required
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Email</label>
             <input
               type="email"
-              placeholder="Email"
-              className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium"
+                  name="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
+                  className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                  required
             />
-            <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Email</label>
           </div>
-          <div className="relative w-full">
+              <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Password</label>
+                <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              className="w-full rounded-full border-2 border-yellow-400 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-300 placeholder-transparent peer text-[#2056a7] font-medium pr-12"
+                    name="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
+                    className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 pr-8 text-sm text-blue-900 placeholder:text-blue-400"
+                    required
             />
-            <label className="absolute left-4 top-2 text-blue-700 pointer-events-none transition-all duration-200 px-1 peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-focus:-top-4 peer-focus:text-xs peer:not(:placeholder-shown):-top-4 peer:not(:placeholder-shown):text-xs peer-focus:text-blue-700">Password</label>
             <button
               type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2056a7]"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
               onClick={() => setShowPassword(v => !v)}
               tabIndex={-1}
             >
-              {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          <button type="submit" className="w-full rounded-full bg-yellow-400 text-white font-bold py-2 text-lg mt-2 shadow hover:bg-yellow-500 transition" disabled={loading}>{loading ? 'Signing in...' : isRegister ? 'Register' : 'Signin'}</button>
+              </div>
+              <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Confirm Password</label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                  required
+                />
+                {confirmPassword && password !== confirmPassword && (
+                  <div className="text-red-500 text-xs mt-0.5">Passwords do not match</div>
+                )}
+              </div>
+            </>
+          )}
         </form>
         {error && <div className="text-red-500 text-sm mb-2 text-center">{error}</div>}
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <button aria-label="Sign in with Google" className="hover:scale-110 transition"><Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" width={28} height={28} /></button>
-          <button aria-label="Sign in with Apple" className="hover:scale-110 transition"><Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/apple/apple-original.svg" alt="Apple" width={28} height={28} /></button>
-          <button aria-label="Sign in with Facebook" className="hover:scale-110 transition"><Image src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/facebook/facebook-original.svg" alt="Facebook" width={28} height={28} /></button>
-          <button aria-label="Sign in with X" className="hover:scale-110 transition"><TwitterXIcon /></button>
-        </div>
         <div className="flex items-center gap-2 mb-2 text-gray-600 text-sm">
           <span>Location:</span>
           <span className="font-semibold">Rwanda</span>

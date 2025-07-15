@@ -4,8 +4,46 @@ import LoginModal from '../components/LoginModal';
 import { getCurrentUserEmail } from '../components/Header';
 import { Heart } from 'lucide-react';
 import Header from '../components/Header';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import useSWR from 'swr';
+import BannersSection from '../components/home/BannersSection';
+import CategoriesSlider from '../components/home/CategoriesSlider';
+import AdsSection from '../components/home/AdsSection';
+import IconsRow from '../components/home/IconsRow';
+import NewArrivalsSection from '../components/home/NewArrivalsSection';
+
+// Add helpers for wishlist backend logic
+function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token');
+}
+function getUserIdFromToken() {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId || payload.id || payload._id || payload.user || null;
+  } catch {
+    return null;
+  }
+}
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+const safeFetcher = async (url: string, fallback: any) => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Not OK');
+    return await res.json();
+  } catch (e) {
+    return fallback;
+  }
+};
 
 export default function Home() {
+  const router = useRouter();
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [catLoading, setCatLoading] = useState(true);
@@ -16,10 +54,102 @@ export default function Home() {
   const [toastMsg, setToastMsg] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMsg, setLoginMsg] = useState('');
-  const [wishlist, setWishlist] = useState<number[]>([]);
-  const [banners, setBanners] = useState<any[]>([]);
-  const [bannerLoading, setBannerLoading] = useState(true);
-  const [bannerError, setBannerError] = useState('');
+  // Wishlist state as string[] for product IDs
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const { data: banners, error: bannerError, isLoading: bannerLoading } = useSWR('https://lindo-project.onrender.com/banner/getAllBanners', fetcher);
+  // Update ads fetch to use the correct endpoint and handle as array
+  const { data: ads, error: adsError, isLoading: adsLoading } = useSWR('https://lindo-project.onrender.com/adds/getAds', fetcher);
+  // Update icons fetch to use the correct endpoint and handle as array
+  const { data: icons, error: iconsError, isLoading: iconsLoading } = useSWR('https://lindo-project.onrender.com/icons/getIcons', fetcher);
+
+  // Add a state to track if the loader should be shown
+  const [showLoader, setShowLoader] = useState(false);
+  const [loaderDone, setLoaderDone] = useState(false);
+
+  // Add a single loading state for all data
+  const allLoading = catLoading || prodLoading || bannerLoading || adsLoading || iconsLoading;
+
+  // Add state for category slider
+  const [catSlide, setCatSlide] = useState(0);
+  const catsPerSlide = 4;
+  const totalCatSlides = Math.ceil(categories.length / catsPerSlide);
+  const handlePrevCat = () => setCatSlide(s => Math.max(0, s - 1));
+  const handleNextCat = () => setCatSlide(s => Math.min(totalCatSlides - 1, s + 1));
+
+  // Add state for toggling all products
+  // Remove showAllProducts state and toggle logic
+
+  // Add filter/sort state for arrivals
+  const [sort, setSort] = useState('popular');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
+  const sortOptions = [
+    { value: 'popular', label: 'Popular' },
+    { value: 'priceLow', label: 'Price: Low to High' },
+    { value: 'priceHigh', label: 'Price: High to Low' },
+    { value: 'newest', label: 'Newest' },
+  ];
+  const handleDeliveryChange = (option: string) => {
+    setSelectedDelivery(prev => prev.includes(option) ? prev.filter(d => d !== option) : [...prev, option]);
+  };
+  const handleClearAll = () => {
+    setSelectedDelivery([]);
+    setSort('popular');
+    setPriceMin('');
+    setPriceMax('');
+  };
+  // Filter and sort products for display
+  const filteredProducts = (() => {
+    let filtered = [...products];
+    // Delivery filter
+    if (selectedDelivery.length > 0) {
+      filtered = filtered.filter(p => selectedDelivery.some(d => p.delivery && p.delivery.includes(d)));
+    }
+    // Price filter
+    if (priceMin) filtered = filtered.filter(p => p.price >= parseFloat(priceMin));
+    if (priceMax) filtered = filtered.filter(p => p.price <= parseFloat(priceMax));
+    // Sorting
+    if (sort === 'priceLow') filtered.sort((a, b) => a.price - b.price);
+    else if (sort === 'priceHigh') filtered.sort((a, b) => b.price - a.price);
+    else if (sort === 'newest') filtered = filtered.slice().reverse();
+    // (Popular: default order)
+    return filtered;
+  })();
+
+  // WhatsApp support modal and button visibility
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showWhatsappBtn, setShowWhatsappBtn] = useState(false);
+  const [modalExpanded, setModalExpanded] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (!sessionStorage.getItem('whatsappSupportModalShown')) {
+        setShowSupportModal(true);
+        setModalExpanded(true);
+        sessionStorage.setItem('whatsappSupportModalShown', 'true');
+      }
+      const handleScroll = () => {
+        // Hide WhatsApp button on hero (top 500px), show after
+        setShowWhatsappBtn(window.scrollY > 500);
+      };
+      window.addEventListener('scroll', handleScroll);
+      handleScroll();
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Only show the loader if it hasn't been shown in this session
+    if (typeof window !== 'undefined') {
+      if (!sessionStorage.getItem('lindoLoaderShown')) {
+        setShowLoader(true);
+        sessionStorage.setItem('lindoLoaderShown', 'true');
+      } else {
+        setShowLoader(false);
+        setLoaderDone(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setCatLoading(true);
@@ -50,32 +180,95 @@ export default function Home() {
       .finally(() => setProdLoading(false));
   }, []);
 
+  // Fetch wishlist on mount
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem('wishlist');
-    setWishlist(saved ? JSON.parse(saved) : []);
+    async function fetchWishlist() {
+      const token = getAuthToken();
+      const userId = getUserIdFromToken();
+      if (token && userId) {
+        try {
+          const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+            headers: {
+              'accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) throw new Error('Failed to fetch wishlist');
+          const data = await res.json();
+          setWishlist((data.products || []).map((p: any) => p._id || p.id));
+        } catch {
+          setWishlist([]);
+        }
+      } else {
+        // Guest: fallback to localStorage
+        const email = getCurrentUserEmail();
+        const key = email ? `wishlist_${email}` : 'wishlist';
+        const saved = localStorage.getItem(key);
+        const ids = saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+        setWishlist(ids);
+      }
+    }
+    fetchWishlist();
   }, []);
 
-  useEffect(() => {
-    setBannerLoading(true);
-    setBannerError('');
-    fetch('https://lindo-project.onrender.com/banner/getAllBanners')
-      .then(res => res.json())
-      .then(data => {
-        if (data && Array.isArray(data.banners)) setBanners(data.banners);
-        else setBanners([]);
-      })
-      .catch(() => setBannerError('Failed to fetch banners.'))
-      .finally(() => setBannerLoading(false));
-  }, []);
-
-  const toggleWishlist = (id: number) => {
-    setWishlist((prev) => {
-      const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-      localStorage.setItem('wishlist', JSON.stringify(updated));
-      return updated;
-    });
-  };
+  // Toggle wishlist handler
+  async function toggleWishlist(id: string) {
+    const token = getAuthToken();
+    const userId = getUserIdFromToken();
+    if (token && userId) {
+      try {
+        const res = await fetch('https://lindo-project.onrender.com/wishlist/toggleWishlistProduct', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ productId: id }),
+        });
+        if (!res.ok) {
+          let data = {};
+          try { data = await res.json(); } catch {}
+          if (res.status === 401) {
+            // Clear auth and show login modal
+            localStorage.removeItem('token');
+            localStorage.removeItem('userEmail');
+            setLoginMsg('Your session has expired. Please log in again to use the wishlist.');
+            setLoginOpen(true);
+            setWishlist((prev) => prev.filter(pid => pid !== id)); // Optionally remove from UI
+            return;
+          }
+          setToastMsg((data as any).message || 'Failed to update wishlist.');
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 1200);
+          return;
+        }
+        // Refetch wishlist from backend
+        const wishlistRes = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+          headers: {
+            'accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const wishlistData = await wishlistRes.json();
+        setWishlist((wishlistData.products || []).map((p: any) => p._id || p.id));
+      } catch (err) {
+        setToastMsg('Network error. Please try again.');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      }
+    } else {
+      // Guest: fallback to localStorage
+      const email = getCurrentUserEmail();
+      const key = email ? `wishlist_${email}` : 'wishlist';
+      setWishlist((prev) => {
+        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
+        localStorage.setItem(key, JSON.stringify(updated));
+        window.dispatchEvent(new StorageEvent('storage', { key }));
+        return updated;
+      });
+    }
+  }
 
   // Add to cart handler (adapted from category page)
   const handleAddToCart = (product: any) => {
@@ -113,6 +306,14 @@ export default function Home() {
     setTimeout(() => setShowToast(false), 1200);
   };
 
+  if (showLoader && !loaderDone) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <Image src="/lindo.png" alt="Lindocare Logo" width={120} height={120} className="animate-pulse" style={{ width: 120, height: 'auto' }} />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="px-4 md:px-8 lg:px-16 py-6 md:py-10 flex flex-col gap-8">
@@ -125,217 +326,83 @@ export default function Home() {
           </div>
         )}
         {/* Hero Section (Banners) */}
-        <section className="w-full mb-4">
-          {bannerLoading ? (
-            <div className="text-center text-gray-500 py-8">Loading banners...</div>
-          ) : bannerError ? (
-            <div className="text-center text-red-500 py-8">{bannerError}</div>
-          ) : banners.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">No banners found.</div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                {/* Main large banner */}
-                <div className="md:col-span-2 bg-white rounded-2xl shadow p-0 flex items-center justify-center h-64 overflow-hidden relative">
-                  {banners[0]?.images?.[0] && (
-                    <img src={banners[0].images[0]} alt={banners[0].title} className="absolute inset-0 w-full h-full object-cover rounded-2xl" />
-                  )}
-                  {/* Title at top center */}
-                  <div className="absolute top-0 left-0 w-full flex flex-col items-center pt-6 z-10">
-                    <span className="text-3xl font-bold text-yellow-500 drop-shadow-lg bg-white/70 px-4 py-1 rounded-full shadow-md text-center">{banners[0]?.title}</span>
-                    {/* Hide subtitle for the first banner */}
-                    {/* {banners[0]?.subTitle && <span className="text-base text-blue-900 mt-2 drop-shadow bg-white/60 px-3 py-1 rounded-full shadow text-center">{banners[0].subTitle}</span>} */}
-                  </div>
-                </div>
-                {/* Two vertical banners on the right */}
-                {[1,2].map(i => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-2xl shadow p-0 flex flex-col h-64 overflow-hidden relative group transition-transform duration-300 animate-fade-in"
-                    style={{ animationDelay: `${i * 100}ms` }}
-                  >
-                    {banners[i]?.images?.[0]
-                      ? (
-                        <>
-                          <img
-                            src={banners[i].images[0]}
-                            alt={banners[i].title}
-                            className="absolute inset-0 w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105 group-hover:brightness-90"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent rounded-2xl transition-opacity duration-300 group-hover:opacity-80" />
-                          <div className="absolute bottom-0 left-0 w-full flex flex-col items-start px-4 pb-4 z-10">
-                            <a href="#" className="flex items-center text-lg font-bold text-white drop-shadow-lg transition group-hover:text-yellow-300">
-                              <span>{banners[i].title}</span>
-                              <span className="ml-2 text-xl transition-transform group-hover:translate-x-1">→</span>
-                            </a>
-                            {banners[i].subTitle && (
-                              <span className="text-xs text-white mt-2 drop-shadow">{banners[i].subTitle}</span>
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100 rounded-2xl">No Banner</div>
-                      )}
-                  </div>
-                ))}
-              </div>
-              {/* Row of smaller banners below */}
-              {banners.length > 3 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {banners.slice(3, 7).map((banner, idx) => (
-                    <div
-                      key={banner._id || idx}
-                      className="bg-white rounded-2xl shadow p-0 flex flex-col h-40 overflow-hidden relative group transition-transform duration-300 animate-fade-in"
-                      style={{ animationDelay: `${(idx + 3) * 100}ms` }}
-                    >
-                      {banner.images && banner.images[0]
-                        ? (
-                          <>
-                            <img
-                              src={banner.images[0]}
-                              alt={banner.title}
-                              className="absolute inset-0 w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105 group-hover:brightness-90"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent rounded-2xl transition-opacity duration-300 group-hover:opacity-80" />
-                            <div className="absolute bottom-0 left-0 w-full flex flex-col items-start px-3 pb-3 z-10">
-                              <a href="#" className="flex items-center text-base font-bold text-white drop-shadow-lg transition group-hover:text-yellow-300">
-                                <span>{banner.title}</span>
-                                <span className="ml-2 text-lg transition-transform group-hover:translate-x-1">→</span>
-                              </a>
-                              {banner.subTitle && (
-                                <span className="text-xs text-white mt-2 drop-shadow">{banner.subTitle}</span>
-                              )}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100 rounded-2xl">No Banner</div>
-                        )}
-                    </div>
-                  ))}
-                  {Array.from({length: Math.max(0, 4 - (banners.length - 3))}).map((_, idx) => (
-                    <div key={idx} className="bg-gray-100 rounded-2xl shadow h-40" />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </section>
-        {/* Category Cards */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          {catLoading ? (
-            <div className="col-span-4 text-center text-gray-500 py-8">Loading categories...</div>
-          ) : catError ? (
-            <div className="col-span-4 text-center text-red-500 py-8">{catError}</div>
-          ) : categories.length === 0 ? (
-            <div className="col-span-4 text-center text-gray-500 py-8">No categories found.</div>
-          ) : (
-            categories.map((cat, idx) => {
-              // Always treat cat.image as an array
-              let images = [];
-              if (Array.isArray(cat.image)) images = cat.image;
-              else if (cat.image) images = [cat.image];
-              return (
-                <div key={cat._id || idx} className="bg-white rounded-2xl shadow p-0 flex flex-col h-48 overflow-hidden min-h-0 min-w-0">
-                  {images.length > 0 ? (
-                    <div className="flex gap-1 w-full h-28 overflow-x-auto p-1 min-h-0 min-w-0">
-                      {images.map((img, i) => (
-                        <img
-                          key={i}
-                          src={img}
-                          alt={cat.name}
-                          className="h-24 w-24 object-contain rounded border border-gray-200 flex-shrink-0 bg-white transition-transform duration-300 hover:scale-105"
-                          style={{ width: '100%', height: '100%' }}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="flex flex-col items-start px-4 pt-2 pb-3">
-                    <span className="font-bold text-blue-700 text-base mb-1">{cat.name}</span>
-                    <span className="text-xs text-gray-500 text-left">{cat.description}</span>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </section>
+        <BannersSection banners={banners} bannerLoading={bannerLoading} bannerError={bannerError} />
+        {/* Category Cards as Slider */}
+        <CategoriesSlider
+          categories={categories}
+          catLoading={catLoading}
+          catError={catError}
+          catSlide={catSlide}
+          setCatSlide={setCatSlide}
+          catsPerSlide={catsPerSlide}
+          totalCatSlides={totalCatSlides}
+        />
         {/* Promo/Info Banners */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* TODO: Add Celebrate Dad and Organic & Eco-Friendly banners */}
-          <div className="bg-green-100 rounded-2xl shadow p-4 h-32 flex items-center justify-center">Celebrate Dad</div>
-          <div className="bg-green-200 rounded-2xl shadow p-4 h-32 flex items-center justify-center">Organic & Eco-Friendly</div>
-        </section>
+        <AdsSection ads={ads} adsLoading={adsLoading} adsError={adsError} />
         {/* Category Icons Row */}
-        <section className="flex flex-wrap gap-4 justify-center mb-4">
-          {/* TODO: Add category icons */}
-          <div className="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center">Icon 1</div>
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">Icon 2</div>
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">Icon 3</div>
-          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center">Icon 4</div>
-        </section>
+        <IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />
         {/* Product Grids */}
-        <section className="mb-4">
-          <h2 className="text-2xl font-bold mb-4 text-center text-blue-700">New Arrivals</h2>
-          {prodLoading ? (
-            <div className="text-center text-gray-500 py-8">Loading products...</div>
-          ) : prodError ? (
-            <div className="text-center text-red-500 py-8">{prodError}</div>
-          ) : products.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">No products found.</div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.slice(0, 8).map((prod, idx) => (
-                <div key={prod._id || prod.id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col">
-                  <div className="relative mb-3">
-                    {prod.image && (Array.isArray(prod.image) ? (
-                      <img src={prod.image[0]} alt={prod.name} className="w-full h-40 object-cover rounded-xl" />
-                    ) : (
-                      <img src={prod.image} alt={prod.name} className="w-full h-40 object-cover rounded-xl" />
-                    ))}
-                    {prod.tags && Array.isArray(prod.tags) && prod.tags.map((tag: string) => (
-                      <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
-                    ))}
-                    <button
-                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                      onClick={() => toggleWishlist(prod.id || prod._id)}
-                      aria-label="Add to wishlist"
-                    >
-                      <Heart
-                        size={20}
-                        color={wishlist.includes(prod.id || prod._id) ? '#F87171' : '#3B82F6'}
-                        fill={wishlist.includes(prod.id || prod._id) ? '#F87171' : 'none'}
-                        strokeWidth={2.2}
-                      />
-                    </button>
-                  </div>
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className="text-yellow-400">★</span>
-                      <span className="text-sm font-semibold text-blue-900">{prod.rating || 4.7}</span>
-                      <span className="text-xs text-blue-500">({prod.reviews || 12} reviews)</span>
-                    </div>
-                    <div className="font-bold text-blue-900 mb-1">{prod.name}</div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg font-bold text-blue-900">${prod.price?.toFixed ? prod.price.toFixed(2) : prod.price}</span>
-                      {prod.oldPrice && <span className="text-sm line-through text-blue-400">${prod.oldPrice}</span>}
-                    </div>
-                    <button className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition" onClick={() => handleAddToCart(prod)}>Add to Cart</button>
-                  </div>
-                </div>
-              ))}
+        <NewArrivalsSection
+          filteredProducts={filteredProducts}
+          prodLoading={prodLoading}
+          prodError={prodError}
+          wishlist={wishlist}
+          toggleWishlist={toggleWishlist}
+          handleAddToCart={handleAddToCart}
+          priceMin={priceMin}
+          setPriceMin={setPriceMin}
+          priceMax={priceMax}
+          setPriceMax={setPriceMax}
+          sort={sort}
+          setSort={setSort}
+          sortOptions={sortOptions}
+          handleClearAll={handleClearAll}
+        />
+      </div>
+      {/* WhatsApp Support Modal as Floating Button */}
+      {showSupportModal && (
+        <div className="fixed bottom-28 right-6 z-50">
+          {/* Collapsed: just the icon button */}
+          {!modalExpanded && (
+            <button
+              onClick={() => setModalExpanded(true)}
+              className="bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200 focus:outline-none"
+              aria-label="Show WhatsApp support info"
+            >
+              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
+                <circle cx="16" cy="16" r="16" fill="#25D366"/>
+                <path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/>
+              </svg>
+            </button>
+          )}
+          {/* Expanded: show the modal */}
+          {modalExpanded && (
+            <div className="bg-white border border-yellow-300 shadow-xl rounded-2xl px-6 py-4 flex items-center gap-4 animate-fade-in min-w-[320px]">
+              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8"><circle cx="16" cy="16" r="16" fill="#25D366"/><path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/></svg>
+              <div className="flex flex-col">
+                <span className="font-bold text-blue-900 text-base mb-1">Need help?</span>
+                <span className="text-sm text-blue-800">For any support, you can text us on WhatsApp at <span className="font-semibold text-green-600">+250 785 064 255</span>.</span>
+              </div>
+              <button onClick={() => { setShowSupportModal(false); setModalExpanded(false); }} className="ml-2 text-gray-400 hover:text-gray-700 text-xl font-bold focus:outline-none">×</button>
             </div>
           )}
-        </section>
-        <section className="mb-4">
-          <h2 className="text-2xl font-bold mb-4 text-center text-yellow-500">Bestsellers</h2>
-          {/* TODO: Add product grid for bestsellers */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-2xl shadow p-4 h-40 flex items-center justify-center">Bestseller 1</div>
-            <div className="bg-white rounded-2xl shadow p-4 h-40 flex items-center justify-center">Bestseller 2</div>
-            <div className="bg-white rounded-2xl shadow p-4 h-40 flex items-center justify-center">Bestseller 3</div>
-            <div className="bg-white rounded-2xl shadow p-4 h-40 flex items-center justify-center">Bestseller 4</div>
-          </div>
-        </section>
-      </div>
+        </div>
+      )}
+      {/* WhatsApp Support Button (only visible after hero) */}
+      {showWhatsappBtn && (
+        <a
+          href="https://wa.me/250785064255"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200"
+          aria-label="Chat with support on WhatsApp"
+        >
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
+            <circle cx="16" cy="16" r="16" fill="#25D366"/>
+            <path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/>
+          </svg>
+        </a>
+      )}
     </>
   );
 }

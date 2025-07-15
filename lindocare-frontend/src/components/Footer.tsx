@@ -2,7 +2,7 @@ import React from 'react';
 import { Instagram, Facebook, Youtube } from 'lucide-react';
 
 const Footer = () => (
-  <footer className="hidden md:block bg-white py-8 px-4 text-[#2056a7]">
+  <footer className="hidden md:block bg-white py-8 px-4 text-gray-700 border-t border-gray-300">
     <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
       <div>
         <h3 className="font-bold mb-2">Customer Service</h3>
@@ -41,7 +41,7 @@ const Footer = () => (
         <p className="text-xs font-normal">Stay connected for the latest updates</p>
       </div>
     </div>
-    <div className="text-center text-xs text-[#2056a7] mt-8 font-normal">
+    <div className="text-center text-xs text-gray-700 mt-8 font-normal">
       © 2025 Lindocare. All rights reserved.<br />
       <a href="#" className="hover:underline">Privacy Policy</a> | <a href="#" className="hover:underline">Terms of Use</a>
     </div>

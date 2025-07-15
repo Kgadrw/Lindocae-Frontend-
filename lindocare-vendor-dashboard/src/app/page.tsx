@@ -7,6 +7,9 @@ import React from "react"; // Added missing import for React
 import Sidebar from '../components/Sidebar';
 import StatsCards from '../components/StatsCards';
 import CategoriesSection from '../components/CategoriesSection';
+import Link from 'next/link';
+import AdCreateForm from '../components/AdCreateForm';
+import AdList from '../components/AdList';
 
 interface Vendor {
   id: number;
@@ -20,6 +23,8 @@ interface Category {
   _id: string;
   name: string;
   description: string;
+  image?: string;
+  count?: number;
 }
 
 interface Product {
@@ -123,6 +128,8 @@ export default function AdminDashboard() {
   const [bannerProductsError, setBannerProductsError] = useState<{ [bannerId: string]: string }>({});
   const [bannerEditId, setBannerEditId] = useState<string | null>(null);
   const [showBannerForm, setShowBannerForm] = useState(false);
+  const [showAdForm, setShowAdForm] = useState(false);
+  const [showIconForm, setShowIconForm] = useState(false);
   // Add missing banner delete state
   const [bannerToDelete, setBannerToDelete] = useState<any | null>(null);
   const [bannerDeleteLoading, setBannerDeleteLoading] = useState(false);
@@ -148,10 +155,85 @@ export default function AdminDashboard() {
   const [userFormLoading, setUserFormLoading] = useState(false);
   const [userFormError, setUserFormError] = useState('');
 
+  // ICONS STATE (add after other useState hooks)
+  const [icons, setIcons] = useState<any[]>([]);
+  const [iconsLoading, setIconsLoading] = useState(true);
+  const [iconsError, setIconsError] = useState('');
+  // Icon edit/delete state
+  const [iconEditId, setIconEditId] = useState<string | null>(null);
+  const [iconEditForm, setIconEditForm] = useState({
+    title: '',
+    categoryId: '',
+    image: null, // File or string (URL)
+  });
+  const [iconEditLoading, setIconEditLoading] = useState(false);
+  const [iconEditMsg, setIconEditMsg] = useState('');
+  const [iconToDelete, setIconToDelete] = useState<any | null>(null);
+  const [iconDeleteLoading, setIconDeleteLoading] = useState(false);
+  const [iconDeleteError, setIconDeleteError] = useState('');
+
   // 1. Add state for category to delete
   const [catToDelete, setCatToDelete] = useState<Category | null>(null);
   const [catDeleteLoading, setCatDeleteLoading] = useState(false);
   const [catDeleteError, setCatDeleteError] = useState('');
+
+  // Icon form state and handlers
+  const [iconForm, setIconForm] = useState({ title: '', categoryId: '', image: null });
+  const [iconFormMsg, setIconFormMsg] = useState('');
+  const [iconFormLoading, setIconFormLoading] = useState(false);
+
+  const handleIconFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, files, type } = e.target as any;
+    if (name === 'image' && files && files.length > 0) {
+      setIconForm((f: any) => ({ ...f, image: files[0] }));
+    } else {
+      setIconForm((f: any) => ({ ...f, [name]: value }));
+    }
+  };
+
+  const handleIconFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIconFormLoading(true);
+    setIconFormMsg('');
+    try {
+      const formData = new FormData();
+      formData.append('title', iconForm.title);
+      formData.append('categoryId', iconForm.categoryId);
+      if (iconForm.image) formData.append('image', iconForm.image);
+      const res = await fetch('https://lindo-project.onrender.com/icons/createIcon', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Failed to upload icon');
+      setIconForm({ title: '', categoryId: '', image: null });
+      setShowIconForm(false);
+      // Refresh icons
+      fetchIcons();
+    } catch (err: any) {
+      setIconFormMsg(err.message || 'Error uploading icon');
+    } finally {
+      setIconFormLoading(false);
+    }
+  };
+
+  // Fetch icons function
+  const fetchIcons = async () => {
+    setIconsLoading(true);
+    setIconsError('');
+    try {
+      const res = await fetch('https://lindo-project.onrender.com/icons/getIcons');
+      const data = await res.json();
+      if (Array.isArray(data)) setIcons(data);
+      else if (data && Array.isArray(data.icons)) setIcons(data.icons);
+      else setIcons([]);
+    } catch (err: any) {
+      setIconsError('Failed to fetch icons.');
+    } finally {
+      setIconsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchIcons(); }, []);
 
   // --- User Form Handlers ---
   const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -294,7 +376,9 @@ export default function AdminDashboard() {
         const filteredCats = cats.map((cat: any) => ({
           _id: cat._id || '',
           name: typeof cat.name === 'string' ? cat.name : '',
-          description: typeof cat.description === 'string' ? cat.description : ''
+          description: typeof cat.description === 'string' ? cat.description : '',
+          image: cat.image,
+          count: cat.count || 0,
         }));
         setCategories(filteredCats);
       })
@@ -469,31 +553,53 @@ export default function AdminDashboard() {
     e.preventDefault();
     setCatFormLoading(true);
     setCatFormError('');
+
+    // Validation: Ensure name and description are not empty
+    if (!catForm.name || !catForm.description) {
+      setCatFormError('Both name and description are required.');
+      setCatFormLoading(false);
+      return;
+    }
+
     const token = getAuthToken();
     try {
       let res;
       if (catEditId) {
         // Update
+        const formData = new FormData();
+        formData.append('name', catForm.name);
+        formData.append('description', catForm.description);
+        if (catImage) formData.append('image', catImage);
         res = await fetch(`https://lindo-project.onrender.com/category/updateCategoryById/${catEditId}`, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(catForm),
+          body: formData,
         });
-        if (!res.ok) throw new Error('Failed to update category');
+        if (!res.ok) {
+          let msg = 'Failed to update category';
+          try { msg = (await res.json()).message || msg; } catch {}
+          throw new Error(msg);
+        }
       } else {
         // Create
+        const formData = new FormData();
+        formData.append('name', catForm.name);
+        formData.append('description', catForm.description);
+        if (catImage) formData.append('image', catImage);
         res = await fetch('https://lindo-project.onrender.com/category/createCategory', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(catForm),
+          body: formData,
         });
-        if (!res.ok) throw new Error('Failed to create category');
+        if (!res.ok) {
+          let msg = 'Failed to create category';
+          try { msg = (await res.json()).message || msg; } catch {}
+          throw new Error(msg);
+        }
       }
       setCatForm({ name: '', description: '' });
       setCatEditId(null);
@@ -537,7 +643,38 @@ export default function AdminDashboard() {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to delete category');
+      if (!res.ok) {
+        let msg = `Failed to delete category (status: ${res.status})`;
+        try {
+          // Try to parse JSON error
+          const data = await res.json();
+          msg = (data.message ? `${data.message} (status: ${res.status})` : msg);
+        } catch {
+          // If not JSON, get raw text
+          try {
+            const text = await res.text();
+            if (text) msg = `${text} (status: ${res.status})`;
+          } catch {}
+        }
+        // If 404, auto-close modal and refresh
+        if (res.status === 404) {
+          setCatToDelete(null);
+          setCatDeleteLoading(false);
+          // Refresh categories
+          setCatLoading(true);
+          fetch('https://lindo-project.onrender.com/category/getAllCategories', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+            .then(res => res.json())
+            .then(data => setCategories(Array.isArray(data) ? data : (data.categories || [])))
+            .catch(() => setCatError('Failed to fetch categories.'))
+            .finally(() => setCatLoading(false));
+          return;
+        }
+        // Log the full response for debugging
+        console.error('Delete category error:', msg, res);
+        throw new Error(msg);
+      }
       // Refresh categories
       fetch('https://lindo-project.onrender.com/category/getAllCategories', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -575,11 +712,40 @@ export default function AdminDashboard() {
     e.preventDefault();
     setProdFormLoading(true);
     setProdFormError('');
+
+    // Strict validation for required fields
+    if (!prodForm.name || !prodForm.description || prodForm.price === undefined || prodForm.price === null || prodForm.category === undefined || prodForm.category === null || !prodForm.stockType || prodForm.quantity === undefined || prodForm.quantity === null) {
+      setProdFormError('All fields are required.');
+      setProdFormLoading(false);
+      return;
+    }
+
+    // Ensure correct types and values
+    const price = Number(prodForm.price);
+    const quantity = Number(prodForm.quantity);
+    const category = typeof prodForm.category === 'string' ? prodForm.category : (prodForm.category?.name || '');
+    if (!category) {
+      setProdFormError('Category is required and must be valid.');
+      setProdFormLoading(false);
+      return;
+    }
+    if (isNaN(price) || isNaN(quantity)) {
+      setProdFormError('Price and quantity must be numbers.');
+      setProdFormLoading(false);
+      return;
+    }
+
     const token = getAuthToken();
     try {
       const formData = new FormData();
       if (prodImage) formData.append('image', prodImage);
-      Object.entries(prodForm).forEach(([k, v]) => formData.append(k, String(v)));
+      formData.append('name', prodForm.name);
+      formData.append('description', prodForm.description);
+      formData.append('price', String(price));
+      formData.append('category', category);
+      formData.append('stockType', prodForm.stockType);
+      formData.append('quantity', String(quantity));
+
       let res;
       if (prodEditId) {
         // Update by ID in path
@@ -588,7 +754,11 @@ export default function AdminDashboard() {
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
         });
-        if (!res.ok) throw new Error('Failed to update product');
+        if (!res.ok) {
+          let msg = 'Failed to update product';
+          try { msg = (await res.json()).message || msg; } catch {}
+          throw new Error(msg);
+        }
       } else {
         // Create
         res = await fetch('https://lindo-project.onrender.com/product/createProduct', {
@@ -596,7 +766,11 @@ export default function AdminDashboard() {
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
         });
-        if (!res.ok) throw new Error('Failed to create product');
+        if (!res.ok) {
+          let msg = 'Failed to create product';
+          try { msg = (await res.json()).message || msg; } catch {}
+          throw new Error(msg);
+        }
       }
       setProdForm({});
       setProdEditId(null);
@@ -1160,14 +1334,14 @@ export default function AdminDashboard() {
                             <select
                               name="category"
                               id="prod-category"
-                              value={prodForm.category || ''}
+                              value={typeof prodForm.category === 'string' ? prodForm.category : ''}
                               onChange={handleProdFormChange}
                               className="border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                               required
                             >
                               <option value="" disabled>Select a category</option>
                               {categories.map(cat => (
-                                <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                <option key={cat._id} value={cat.name}>{cat.name}</option>
                               ))}
                             </select>
                           </div>
@@ -1289,145 +1463,114 @@ export default function AdminDashboard() {
                 </section>
               )}
               {activeSection === 'banners' && (
-                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-orange-50">
+                <>
+                  <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-orange-50 mb-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-semibold text-gray-800">Banners</h2>
-                    <button
-                      className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2"
-                      onClick={() => {
-                        setShowBannerForm(v => !v);
-                        if (!showBannerForm) {
-                          setBannerForm({ title: '', subTitle: '', categoryId: '', images: [] });
-                          setBannerImagePreview(null);
-                          setBannerEditId(null);
-                          setBannerFormError('');
-                          setBannerFormSuccess('');
-                        }
-                      }}
-                    >
-                      {showBannerForm ? 'Cancel' : '+ Create Banner'}
-                    </button>
+                      <button className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2" onClick={() => { setShowBannerForm(v => !v); if (!showBannerForm) { setBannerForm({ title: '', subTitle: '', categoryId: '', images: [] }); setBannerImagePreview(null); setBannerEditId(null); setBannerFormError(''); setBannerFormSuccess(''); } }}>Create Banner</button>
                   </div>
-                  {showBannerForm && (
-                    <form onSubmit={handleBannerFormSubmit} className="flex flex-col gap-4 max-w-md bg-white p-6 rounded-lg shadow mb-8">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="title"
-                          placeholder=" "
-                          value={bannerForm.title}
-                          onChange={handleBannerFormChange}
-                          className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          required
-                        />
-                        <label htmlFor="banner-title" className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Title</label>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="subTitle"
-                          placeholder=" "
-                          value={bannerForm.subTitle}
-                          onChange={handleBannerFormChange}
-                          className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          required
-                        />
-                        <label htmlFor="banner-subTitle" className="absolute left-3 top-4 pointer-events-none transition-all duration-200 bg-white px-1 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs">Subtitle</label>
-                      </div>
-                      <div className="relative">
-                        <label htmlFor="banner-categoryId" className="block mb-1 font-medium text-blue-900">Category</label>
-                        <select
-                          name="categoryId"
-                          placeholder=" "
-                          value={bannerForm.categoryId}
-                          onChange={handleBannerFormChange}
-                          className="peer border border-yellow-200 rounded px-3 py-2 w-full text-sm bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          required
-                        >
-                          <option value="" disabled>Select a category</option>
-                          {categories.map(cat => (
-                            <option key={cat._id} value={cat._id}>{cat.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label htmlFor="banner-images" className="flex items-center gap-2 cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-blue-700 px-3 py-2 rounded-lg font-medium w-fit">
-                          <Upload size={18} /> Upload Images
-                        </label>
-                        <input id="banner-images" name="images" type="file" accept="image/*" className="hidden" multiple onChange={handleBannerFormChange} />
-                        {bannerImagePreview && bannerImagePreview.map((preview, index) => (
-                          <img key={index} src={preview} alt={`Preview ${index + 1}`} className="mt-2 rounded shadow w-24 h-24 object-cover" />
-                        ))}
-                      </div>
-                      {bannerFormError && <div className="text-red-500 text-sm text-center">{bannerFormError}</div>}
-                      {bannerFormSuccess && <div className="text-green-600 text-sm text-center">{bannerFormSuccess}</div>}
-                      <button type="submit" className="bg-yellow-400 text-blue-900 px-4 py-2 rounded hover:bg-yellow-500 transition font-semibold text-sm" disabled={bannerFormLoading}>{bannerEditId ? 'Update Banner' : 'Create Banner'}</button>
-                      {bannerEditId && (
-                        <button type="button" className="text-xs text-gray-400 underline mt-1" onClick={() => { setBannerEditId(null); setBannerForm({ title: '', subTitle: '', categoryId: '', images: [] }); setBannerImagePreview(null); setBannerFormSuccess(''); setShowBannerForm(false); }}>Cancel Edit</button>
-                      )}
-                    </form>
-                  )}
-                  {/* Banner List */}
+                    {/* Banner List (restore previous grid or card layout here) */}
                   {bannerLoading ? (
                     <div className="text-center text-gray-500 py-8">Loading banners...</div>
                   ) : bannerError ? (
                     <div className="text-center text-red-500 py-8">{bannerError}</div>
-                  ) : banners.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">No banners found.</div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                      {banners.map((banner, idx) => (
-                        <div key={banner._id} className="bg-white rounded-lg shadow p-4 flex flex-col gap-2 border border-yellow-100">
-                          {banner.images && banner.images.length > 0 && (
-                            <img src={banner.images[0]} alt={banner.title} className="w-full h-48 object-cover rounded border border-gray-200 mb-2" />
-                          )}
-                          <div className="flex flex-col items-start mt-4">
-                            <div className="font-bold text-blue-900 text-base truncate mb-2">{banner.title}</div>
-                            {banner.subTitle && (
-                              <a href="#" className="flex items-center text-xs text-blue-500 hover:text-blue-700 transition underline underline-offset-2 cursor-pointer" style={{marginTop: '0.25rem'}}>
-                                <span>{banner.subTitle}</span>
-                                <span className="ml-1">→</span>
-                              </a>
-                            )}
-                          </div>
-                          <div className="text-xs text-blue-500 truncate mt-1">Category: {banner.category && typeof banner.category === 'object' ? banner.category.name : banner.category}</div>
-                          <div className="text-xs text-gray-400">Created: {new Date(banner.createdAt).toLocaleString()}</div>
-                          <div className="flex flex-row gap-2 justify-end mt-2">
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-bold mb-4 text-blue-900">Banners</h3>
+                        <div className="overflow-x-auto rounded-xl border border-yellow-100 bg-white mb-8">
+                          <table className="min-w-full text-sm text-left">
+                            <thead className="bg-yellow-50">
+                              <tr>
+                                <th className="px-4 py-3 font-semibold text-gray-700">Image</th>
+                                <th className="px-4 py-3 font-semibold text-gray-700">Title</th>
+                                <th className="px-4 py-3 font-semibold text-gray-700">Subtitle</th>
+                                <th className="px-4 py-3 font-semibold text-gray-700">Category</th>
+                                <th className="px-4 py-3 font-semibold text-gray-700">Created</th>
+                                <th className="px-4 py-3 font-semibold text-gray-700">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-yellow-100">
+                              {banners.length === 0 ? (
+                                <tr><td colSpan={6} className="text-center text-gray-500 py-8">No banners found.</td></tr>
+                              ) : banners.map((banner, idx) => (
+                                <tr key={banner._id} className="hover:bg-yellow-50 transition">
+                                  <td className="px-4 py-2">
+                                    {banner.images && banner.images.length > 0 ? (
+                                      <img src={banner.images[0]} alt={banner.title} className="w-16 h-16 object-cover rounded border border-gray-200" />
+                                    ) : (
+                                      <img src="/lindo.png" alt="No image" className="w-16 h-16 object-cover rounded border border-gray-200 opacity-60" />
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-2 font-medium text-blue-900">{banner.title}</td>
+                                  <td className="px-4 py-2 text-blue-600">{banner.subTitle}</td>
+                                  <td className="px-4 py-2 text-blue-600">{banner.category && typeof banner.category === 'object' ? banner.category.name : banner.category}</td>
+                                  <td className="px-4 py-2 text-gray-400">{new Date(banner.createdAt).toLocaleString()}</td>
+                                  <td className="px-4 py-2 flex flex-row gap-2">
                             <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs font-semibold transition" onClick={() => { handleBannerEdit(banner); setShowBannerForm(true); }}>Edit</button>
                             <button className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs font-semibold transition" onClick={() => handleBannerDelete(banner)}>Delete</button>
                             <button className="bg-yellow-400 text-blue-900 px-3 py-1 rounded hover:bg-yellow-500 text-xs font-semibold transition" onClick={() => handleViewProducts(banner._id)}>
                               {expandedBannerId === banner._id ? 'Hide Products' : 'View Products'}
                             </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                           </div>
-                          {expandedBannerId === banner._id && (
-                            <div className="mt-3">
-                              {bannerProductsLoading[banner._id] ? (
-                                <div className="text-gray-500">Loading products...</div>
-                              ) : bannerProductsError[banner._id] ? (
-                                <div className="text-red-500">{bannerProductsError[banner._id]}</div>
-                              ) : bannerProducts[banner._id] && bannerProducts[banner._id].length > 0 ? (
-                                <ul className="divide-y divide-yellow-100">
-                                  {bannerProducts[banner._id].map(prod => (
-                                    <li key={prod._id} className="py-2 flex items-center gap-3">
-                                      {prod.image && <img src={prod.image} alt={prod.name} className="w-12 h-12 object-cover rounded" />}
-                                      <div>
-                                        <div className="font-semibold text-blue-800">{prod.name}</div>
-                                        <div className="text-xs text-gray-500">{prod.description}</div>
-                                        <div className="text-yellow-700 font-bold text-xs">${prod.price}</div>
+                        <h3 className="text-lg font-bold mb-4 text-blue-900">Ads</h3>
+                        <div className="overflow-x-auto rounded-xl border border-yellow-100 bg-white">
+                          <AdList />
                                       </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <div className="text-gray-400">No products found for this banner.</div>
-                              )}
+                      </>
+                    )}
+                  </section>
+                  <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-blue-50 mb-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-semibold text-gray-800">Ads</h2>
+                      <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2" onClick={() => setShowAdForm(true)}>Create Ad</button>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                    {/* Ads List (restore previous grid or card layout here) */}
+                    <AdList />
+                  </section>
+                  <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-green-50">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-semibold text-gray-800">Icons</h2>
+                      <button className="bg-green-500 hover:bg-green-600 text-white font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2" onClick={() => setShowIconForm(true)}>Add Icon</button>
                     </div>
+                    {/* Icons grid (restore previous grid layout here) */}
+                    {iconsLoading ? (
+                      <div className="col-span-4 text-center text-gray-500 py-8">Loading icons...</div>
+                    ) : iconsError ? (
+                      <div className="col-span-4 text-center text-red-500 py-8">{iconsError}</div>
+                    ) : icons.length === 0 ? (
+                      <div className="col-span-4 text-center text-gray-500 py-8">No icons found.</div>
+                    ) : (
+                      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                        {icons.map((icon, idx) => {
+                          let image = '';
+                          if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
+                          else if (typeof icon.image === 'string') image = icon.image;
+                          const cat = categories.find(c => c._id === icon.categoryId);
+                          return (
+                            <div key={icon._id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center border border-green-100">
+                              {image ? (
+                                <img src={image} alt={icon.title} className="w-16 h-16 object-cover rounded-full mb-2 border border-green-200" />
+                              ) : (
+                                <div className="w-16 h-16 flex items-center justify-center bg-gray-100 text-gray-400 text-3xl rounded-full mb-2">🖼️</div>
+                              )}
+                              <div className="font-bold text-green-900 text-base mb-1 text-center">{icon.title}</div>
+                              <div className="text-xs text-green-700 text-center">{cat && typeof cat.name === 'string' ? cat.name : String(icon.categoryId)}</div>
+                              <div className="flex gap-2 mt-2">
+                                <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs font-semibold transition" onClick={() => handleIconEdit(icon)}>Edit</button>
+                                <button className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs font-semibold transition" onClick={() => handleIconDelete(icon)}>Delete</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </section>
                   )}
                 </section>
+                </>
               )}
               {activeSection === 'recommendations' && (
                 <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-blue-50">
@@ -1576,6 +1719,119 @@ export default function AdminDashboard() {
                   )}
                 </section>
               )}
+              {activeSection === 'icons' && (
+                <section className="bg-white/80 backdrop-blur rounded-2xl shadow-md p-8 border border-green-50">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">Icons</h2>
+                    <button className="bg-green-500 hover:bg-green-600 text-white font-semibold px-5 py-2 rounded-lg shadow transition text-sm flex items-center gap-2" onClick={() => setShowIconForm(true)}>Add Icon</button>
+                  </div>
+                  {iconsLoading ? (
+                    <div className="col-span-4 text-center text-gray-500 py-8">Loading icons...</div>
+                  ) : iconsError ? (
+                    <div className="col-span-4 text-center text-red-500 py-8">{iconsError}</div>
+                  ) : icons.length === 0 ? (
+                    <div className="col-span-4 text-center text-gray-500 py-8">No icons found.</div>
+                  ) : (
+                    <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                      {icons.map((icon, idx) => {
+                        let image = '';
+                        if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
+                        else if (typeof icon.image === 'string') image = icon.image;
+                        const cat = categories.find(c => c._id === icon.categoryId);
+                        return (
+                          <div key={icon._id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center border border-green-100">
+                            {image ? (
+                              <img src={image} alt={icon.title} className="w-16 h-16 object-cover rounded-full mb-2 border border-green-200" />
+                            ) : (
+                              <div className="w-16 h-16 flex items-center justify-center bg-gray-100 text-gray-400 text-3xl rounded-full mb-2">🖼️</div>
+                            )}
+                            <div className="font-bold text-green-900 text-base mb-1 text-center">{icon.title}</div>
+                            <div className="text-xs text-green-700 text-center">{cat && typeof cat.name === 'string' ? cat.name : String(icon.categoryId)}</div>
+                            <div className="flex gap-2 mt-2">
+                              <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs font-semibold transition" onClick={() => handleIconEdit(icon)}>Edit</button>
+                              <button className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs font-semibold transition" onClick={() => handleIconDelete(icon)}>Delete</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </section>
+                  )}
+                  {/* Edit Icon Modal */}
+                  {iconEditId && (
+                    <>
+                      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" onClick={cancelIconEdit} />
+                      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-green-200 animate-modal-pop overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <button className="absolute top-3 right-3 text-green-400 hover:text-green-700 text-xl" onClick={cancelIconEdit} aria-label="Close">×</button>
+                        <h3 className="text-xl font-bold mb-2 text-green-700">Edit Icon</h3>
+                        <form onSubmit={handleIconEditFormSubmit} className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="icon-title" className="text-green-900 text-sm font-medium mb-1">Title</label>
+                            <input
+                              type="text"
+                              name="title"
+                              id="icon-title"
+                              value={iconEditForm.title}
+                              onChange={handleIconEditFormChange}
+                              className="border border-green-200 rounded px-3 py-2 w-full text-sm bg-white text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+                              required
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="icon-category" className="text-green-900 text-sm font-medium mb-1">Category</label>
+                            <select
+                              name="categoryId"
+                              id="icon-category"
+                              value={iconEditForm.categoryId}
+                              onChange={handleIconEditFormChange}
+                              className="border border-green-200 rounded px-3 py-2 w-full text-sm bg-white text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+                              required
+                            >
+                              <option value="" disabled>Select category</option>
+                              {categories.map(cat => (
+                                <option key={cat._id} value={cat._id}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1 mb-2">
+                            <label htmlFor="icon-image" className="text-green-900 text-sm font-medium mb-1">Image</label>
+                            <input
+                              type="file"
+                              name="image"
+                              id="icon-image"
+                              accept="image/*"
+                              onChange={handleIconEditFormChange}
+                              className="border border-green-200 rounded px-3 py-2 w-full text-sm bg-white text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+                            />
+                            {iconEditForm.image && typeof iconEditForm.image === 'string' && (
+                              <img src={iconEditForm.image} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />
+                            )}
+                            {iconEditForm.image && iconEditForm.image instanceof File && (
+                              <img src={URL.createObjectURL(iconEditForm.image)} alt="Preview" className="mt-2 rounded shadow w-24 h-24 object-cover" />
+                            )}
+                          </div>
+                          {iconEditMsg && <div className="text-red-500 text-sm text-center">{iconEditMsg}</div>}
+                          <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold text-sm" disabled={iconEditLoading}>{iconEditLoading ? 'Updating...' : 'Update Icon'}</button>
+                        </form>
+                      </div>
+                    </>
+                  )}
+                  {/* Delete Icon Modal */}
+                  {iconToDelete && (
+                    <>
+                      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity animate-fade-in" />
+                      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 border border-red-200 animate-modal-pop">
+                        <h3 className="text-xl font-bold mb-2 text-red-700">Delete Icon</h3>
+                        <div className="text-gray-700 mb-4">Are you sure you want to delete <span className="font-bold">{iconToDelete.title}</span>?</div>
+                        {iconDeleteError && <div className="text-red-500 text-sm text-center">{iconDeleteError}</div>}
+                        <div className="flex gap-4 justify-end">
+                          <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold text-sm" onClick={cancelIconDelete} disabled={iconDeleteLoading}>Cancel</button>
+                          <button className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition font-semibold text-sm" onClick={confirmIconDelete} disabled={iconDeleteLoading}>{iconDeleteLoading ? 'Deleting...' : 'Delete'}</button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
             </div>
           </main>
         </div>
@@ -1636,6 +1892,85 @@ export default function AdminDashboard() {
           </div>
         </>
       )}
+      {showIconForm && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md flex flex-col items-center relative border border-green-200">
+            <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl" onClick={() => setShowIconForm(false)}>&times;</button>
+            <form onSubmit={handleIconFormSubmit} className="space-y-4 w-full">
+              <h2 className="text-xl font-bold mb-2 text-green-700">Add Icon</h2>
+              {iconFormMsg && <div className="mb-2 text-red-600 font-semibold">{iconFormMsg}</div>}
+              <div>
+                <label className="block mb-1 font-medium text-green-900">Title</label>
+                <input type="text" name="title" value={iconForm.title} onChange={handleIconFormChange} className="w-full border px-2 py-1 rounded text-green-900" required />
+              </div>
+              <div>
+                <label className="block mb-1 font-medium text-green-900">Category</label>
+                <select name="categoryId" value={iconForm.categoryId} onChange={handleIconFormChange} className="w-full border px-2 py-1 rounded text-green-900" required>
+                  <option value="" disabled>Select a category</option>
+                  {categories.map(cat => (
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium text-green-900">Image</label>
+                <input type="file" name="image" accept="image/*" onChange={handleIconFormChange} className="w-full" required />
+              </div>
+              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded" disabled={iconFormLoading}>{iconFormLoading ? 'Uploading...' : 'Upload Icon'}</button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
+
+const handleIconEdit = (icon: any) => {
+  if (!icon) return;
+  setIconEditId(icon._id);
+  setIconEditForm({
+    title: icon.title || '',
+    categoryId: icon.categoryId || '',
+    image: Array.isArray(icon.image) ? icon.image[0] : icon.image || null,
+  });
+  setIconEditMsg('');
+};
+
+const handleIconDelete = (icon: any) => {
+  if (!icon) return;
+  setIconToDelete(icon);
+  setIconDeleteError('');
+};
+
+// Add this inside AdminDashboard, after handleIconFormSubmit
+const handleIconEditFormSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIconEditLoading(true);
+  setIconEditMsg('');
+  try {
+    if (!iconEditId) throw new Error('No icon selected for editing.');
+    const formData = new FormData();
+    formData.append('title', iconEditForm.title);
+    formData.append('categoryId', iconEditForm.categoryId);
+    if (iconEditForm.image instanceof File) {
+      formData.append('image', iconEditForm.image);
+    }
+    const res = await fetch(`https://lindo-project.onrender.com/icons/updateIcon/${iconEditId}`, {
+      method: 'PUT',
+      body: formData,
+    });
+    if (!res.ok) {
+      let msg = 'Failed to update icon';
+      try { msg = (await res.json()).message || msg; } catch {}
+      throw new Error(msg);
+    }
+    setIconEditId(null);
+    setIconEditForm({ title: '', categoryId: '', image: null });
+    setShowIconForm(false);
+    fetchIcons();
+  } catch (err: any) {
+    setIconEditMsg(err.message || 'Error updating icon');
+  } finally {
+    setIconEditLoading(false);
+  }
+};

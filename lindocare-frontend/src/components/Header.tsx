@@ -5,19 +5,13 @@ import Link from 'next/link';
 import { Heart, ShoppingCart, User, Home, List, ChevronDown, MessageCircle, CreditCard, Tag, Settings, HelpCircle, Accessibility, LogIn, Coins } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import LoginModal from './LoginModal';
+import GuideTooltip from './GuideTooltip';
 
 const iconColor = "#222";
 const activeColor = "#F4E029";
 
 // Add template products for suggestions
-const productsData = [
-  { id: 1, name: 'Sorelle Natural Pinewood Crib' },
-  { id: 2, name: 'Premium Changing Table' },
-  { id: 3, name: 'Comfort Rocking Chair' },
-  { id: 4, name: 'Baby Dresser & Changer' },
-  { id: 5, name: 'Portable Baby Playpen' },
-  { id: 6, name: 'Organic Crib Mattress' },
-];
+// Remove template productsData
 
 // Move updateUser outside so it can be called from anywhere
 function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: string; avatar?: string }>>) {
@@ -36,8 +30,39 @@ function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: 
   }
 }
 
+async function fetchWishlistCountFromBackend() {
+  if (typeof window === 'undefined') return 0;
+  const token = localStorage.getItem('token');
+  if (!token) return 0;
+  try {
+    // Use the correct endpoint for user wishlist
+    const userId = (() => {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.userId || payload.id || payload._id || payload.user || null;
+      } catch {
+        return null;
+      }
+    })();
+    if (!userId) return 0;
+    const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+      headers: {
+        'accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (res.status === 401) return 0;
+    if (!res.ok) return 0;
+    const data = await res.json();
+    if (data && Array.isArray(data.products)) return data.products.length;
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 // 1. Accept categories as a prop
-const Header = ({ categories, loading }: { categories?: { _id?: string; name: string }[], loading?: boolean }) => {
+const Header = ({ categories: propCategories, loading }: { categories?: { _id?: string; name: string }[], loading?: boolean }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -45,14 +70,15 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [navOpen, setNavOpen] = useState(false);
-  const [languageModalOpen, setLanguageModalOpen] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const globeRef = useRef<HTMLButtonElement>(null);
   const [search, setSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<{id:number, name:string}[]>([]);
+  const [suggestions, setSuggestions] = useState<{type: 'product'|'category', id?: number|string, name:string}[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Add state for all products and categories
+  const [allProducts, setAllProducts] = useState<{id:number, name:string}[]>([]);
+  const [allCategories, setAllCategories] = useState<{_id?:string, name:string}[]>([]);
   const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   // Close dropdown on outside click
   React.useEffect(() => {
@@ -96,6 +122,55 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
     updateCartCount();
     window.addEventListener('storage', updateCartCount);
     return () => window.removeEventListener('storage', updateCartCount);
+  }, []);
+
+  useEffect(() => {
+    async function updateWishlistCount() {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const count = await fetchWishlistCountFromBackend();
+          setWishlistCount(count);
+          return;
+        }
+        const email = localStorage.getItem('userEmail');
+        const wishlistRaw = localStorage.getItem(email ? `wishlist_${email}` : 'wishlist');
+        try {
+          const wishlist = wishlistRaw ? JSON.parse(wishlistRaw) : [];
+          setWishlistCount(Array.isArray(wishlist) ? wishlist.length : 0);
+        } catch {
+          setWishlistCount(0);
+        }
+      }
+    }
+    updateWishlistCount();
+    const handleWishlistUpdate = () => updateWishlistCount();
+    window.addEventListener('storage', handleWishlistUpdate);
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
+    return () => {
+      window.removeEventListener('storage', handleWishlistUpdate);
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
+    };
+  }, []);
+
+  // Fetch all products and categories on mount
+  useEffect(() => {
+    fetch('https://lindo-project.onrender.com/product/getAllProduct')
+      .then(res => res.json())
+      .then(data => {
+        let prods = [];
+        if (Array.isArray(data)) prods = data;
+        else if (data && Array.isArray(data.products)) prods = data.products;
+        setAllProducts(prods.map((p:any) => ({ id: p.id || p._id, name: p.name })));
+      });
+    fetch('https://lindo-project.onrender.com/category/getAllCategories')
+      .then(res => res.json())
+      .then(data => {
+        let cats = [];
+        if (Array.isArray(data)) cats = data;
+        else if (data && Array.isArray(data.categories)) cats = data.categories;
+        setAllCategories(cats.map((c:any) => ({ _id: c._id, name: c.name })));
+      });
   }, []);
 
   // Simulate user info after login/register
@@ -145,6 +220,15 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
   const handleSearch = (e?: React.FormEvent | React.KeyboardEvent) => {
     if (e) e.preventDefault();
     if (search.trim()) {
+      // If matches a category, go to category page
+      const cat = allCategories.find(c => c.name.toLowerCase() === search.trim().toLowerCase());
+      if (cat) {
+        router.push(`/category/${encodeURIComponent(cat.name)}`);
+        setSearch('');
+        setShowSuggestions(false);
+        return;
+      }
+      // Otherwise, search products
       router.push(`/search?q=${encodeURIComponent(search.trim())}`);
       setSearch('');
       setShowSuggestions(false);
@@ -155,7 +239,10 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
     const value = e.target.value;
     setSearch(value);
     if (value.trim()) {
-      const filtered = productsData.filter(p => p.name.toLowerCase().includes(value.toLowerCase())).slice(0, 5);
+      // Search both products and categories
+      const prodMatches = allProducts.filter(p => p.name.toLowerCase().includes(value.toLowerCase())).map(p => ({ type: 'product', id: p.id, name: p.name }));
+      const catMatches = allCategories.filter(c => c.name.toLowerCase().includes(value.toLowerCase())).map(c => ({ type: 'category', id: c._id, name: c.name }));
+      const filtered = [...catMatches, ...prodMatches].slice(0, 7);
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
     } else {
@@ -163,10 +250,14 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
     }
   };
 
-  const handleSuggestionClick = (name: string) => {
+  const handleSuggestionClick = (name: string, type: 'product'|'category') => {
     setSearch(name);
-    router.push(`/search?q=${encodeURIComponent(name)}`);
     setShowSuggestions(false);
+    if (type === 'category') {
+      router.push(`/category/${encodeURIComponent(name)}`);
+    } else {
+      router.push(`/search?q=${encodeURIComponent(name)}`);
+    }
   };
 
   const handleBlur = () => {
@@ -192,6 +283,7 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
               ref={searchInputRef}
               placeholder="Find babycare essentials..."
               className="w-full rounded-full border text-blue-900 border-yellow-300 px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-yellow-300 text-sm shadow"
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
             />
             <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-yellow-500 p-1" aria-label="Search">
               <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -201,11 +293,13 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
             <ul className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
               {suggestions.map(s => (
                 <li
-                  key={s.id}
-                  className="px-4 py-2 cursor-pointer hover:bg-blue-50 text-blue-900"
-                  onMouseDown={() => handleSuggestionClick(s.name)}
+                  key={s.type + '-' + s.id + '-' + s.name}
+                  className="px-4 py-2 cursor-pointer hover:bg-blue-50 text-blue-900 flex items-center gap-2"
+                  onMouseDown={() => handleSuggestionClick(s.name, s.type)}
                 >
-                  {s.name}
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
+                  <span>{s.name}</span>
+                  <span className="text-xs text-gray-400 ml-auto">{s.type === 'category' ? 'Category' : 'Product'}</span>
                 </li>
               ))}
             </ul>
@@ -217,7 +311,7 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
         {/* Logo */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link href="/">
-            <Image src="/lindo.png" alt="Lindo Logo" width={110} height={44} priority className="focus:outline-none" />
+            <Image src="/lindo.png" alt="Lindo Logo" width={110} height={44} priority className="focus:outline-none" style={{ width: 110, height: 'auto' }} />
           </Link>
         </div>
         {/* Search Bar (desktop only) */}
@@ -233,6 +327,7 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
                 ref={searchInputRef}
                 placeholder="Find babycare essentials..."
                 className="w-full rounded-full border text-blue-900 border-yellow-300 px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-yellow-300 text-base"
+                onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
               />
               <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-yellow-500 p-1" aria-label="Search">
                 <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -242,11 +337,13 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
               <ul className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                 {suggestions.map(s => (
                   <li
-                    key={s.id}
-                    className="px-4 py-2 cursor-pointer hover:bg-blue-50 text-blue-900"
-                    onMouseDown={() => handleSuggestionClick(s.name)}
+                    key={s.type + '-' + s.id + '-' + s.name}
+                    className="px-4 py-2 cursor-pointer hover:bg-blue-50 text-blue-900 flex items-center gap-2"
+                    onMouseDown={() => handleSuggestionClick(s.name, s.type)}
                   >
-                    {s.name}
+                    <span className="inline-block w-2 h-2 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
+                    <span>{s.name}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{s.type === 'category' ? 'Category' : 'Product'}</span>
                   </li>
                 ))}
               </ul>
@@ -259,10 +356,15 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
           <Link href="/wishlist">
             <button
               aria-label="Wishlist"
-              className={`hover:bg-gray-100 active:bg-gray-200 rounded-full p-2 transition-colors flex flex-col items-center ${pathname === '/wishlist' ? 'underline decoration-yellow-400' : ''}`}
+              className={`hover:bg-gray-100 active:bg-gray-200 rounded-full p-2 transition-colors flex flex-col items-center relative ${pathname === '/wishlist' ? 'underline decoration-yellow-400' : ''}`}
               style={{ color: pathname === '/wishlist' ? activeColor : iconColor }}
             >
               <Heart size={22} color={pathname === '/wishlist' ? activeColor : iconColor} strokeWidth={2.5} fill={pathname === '/wishlist' ? activeColor : iconColor} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+                  {wishlistCount}
+                </span>
+              )}
             </button>
           </Link>
           {/* Cart */}
@@ -281,23 +383,26 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
             </button>
           </Link>
           {/* User */}
-          <button
-            aria-label="User"
-            className={`hover:bg-gray-100 active:bg-gray-200 rounded-full p-2 transition-colors flex flex-col items-center ${pathname === '/account' ? 'underline decoration-yellow-400' : ''}`}
-            style={{ color: pathname === '/account' ? activeColor : iconColor }}
-            onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)}
-          >
-            {user ? (
-              <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
-            ) : (
-              <User size={22} color={pathname === '/account' ? activeColor : iconColor} strokeWidth={2.5} fill={pathname === '/account' ? activeColor : iconColor} />
-            )}
-          </button>
+          <div className="relative">
+            <button
+              aria-label="User"
+              className={`hover:bg-gray-100 active:bg-gray-200 rounded-full p-2 transition-colors flex flex-col items-center ${pathname === '/account' ? 'underline decoration-yellow-400' : ''}`}
+              style={{ color: pathname === '/account' ? activeColor : iconColor }}
+              onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)}
+            >
+              {user ? (
+                <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} style={{ width: 32, height: 'auto' }} />
+              ) : (
+                <User size={22} color={pathname === '/account' ? activeColor : iconColor} strokeWidth={2.5} fill={pathname === '/account' ? activeColor : iconColor} />
+              )}
+            </button>
+            <GuideTooltip />
+          </div>
           {/* User Dropdown/Tooltip Modal (image UI) */}
           {dropdownOpen && user && (
             <div ref={dropdownRef} className="absolute right-0 top-14 z-50 bg-white rounded-2xl shadow-2xl p-0 w-72 flex flex-col border border-yellow-200 animate-fade-in" style={{ minWidth: 260 }}>
               <div className="flex flex-col items-center pt-6 pb-2 px-6 border-b border-gray-100">
-                <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" width={48} height={48} />
+                <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-yellow-400 mb-2" width={48} height={48} style={{ width: 48, height: 'auto' }} />
                 <span className="font-semibold text-blue-900 text-base mb-1">Welcome back, {user.name}</span>
                 <button onMouseDown={handleSignOut} className="text-blue-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
               </div>
@@ -325,68 +430,13 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
               </div>
             </div>
           )}
-          {/* Globe/Flag (desktop only) */}
-          <button
-            ref={globeRef}
-            aria-label="Language"
-            className={`hover:bg-gray-100 active:bg-gray-200 rounded-full p-2 transition-colors flex flex-col items-center relative ${pathname === '/language' ? 'underline decoration-yellow-400' : ''}`}
-            style={{ color: pathname === '/language' ? activeColor : iconColor }}
-            onClick={() => setLanguageModalOpen(true)}
-          >
-            <span className="flex items-center gap-1">
-              {selectedLanguage === 'en' && (
-                <Image src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="English" width={22} height={22} className="rounded-full" />
-              )}
-              {selectedLanguage === 'fr' && (
-                <Image src="https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" alt="French" width={22} height={22} className="rounded-full" />
-              )}
-              {selectedLanguage === 'rw' && (
-                <Image src="https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg" alt="Kinyarwanda" width={22} height={22} className="rounded-full" />
-              )}
-              <ChevronDown size={16} className="text-gray-400" />
-            </span>
-          </button>
-          {/* Language Modal (desktop only, popover near globe) */}
-          {languageModalOpen && (
-            <div className="absolute right-0 top-12 z-50">
-              <div className="relative bg-white rounded-2xl shadow-2xl p-4 w-56 flex flex-col items-center border border-yellow-200">
-                <button onClick={() => setLanguageModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700">
-                  <span className="text-2xl">×</span>
-                </button>
-                <h3 className="text-lg font-bold mb-4 text-blue-700">Select Language</h3>
-                <div className="flex flex-col gap-3 w-full">
-                  <button
-                    className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg border ${selectedLanguage === 'en' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} hover:bg-blue-100 transition`}
-                    onClick={() => { setSelectedLanguage('en'); setLanguageModalOpen(false); }}
-                  >
-                    <Image src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="English" width={24} height={24} />
-                    <span className="font-medium text-gray-700">English</span>
-                  </button>
-                  <button
-                    className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg border ${selectedLanguage === 'fr' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} hover:bg-blue-100 transition`}
-                    onClick={() => { setSelectedLanguage('fr'); setLanguageModalOpen(false); }}
-                  >
-                    <Image src="https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" alt="French" width={24} height={24} />
-                    <span className="font-medium text-gray-700">Français</span>
-                  </button>
-                  <button
-                    className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg border ${selectedLanguage === 'rw' ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} hover:bg-blue-100 transition`}
-                    onClick={() => { setSelectedLanguage('rw'); setLanguageModalOpen(false); }}
-                  >
-                    <Image src="https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg" alt="Kinyarwanda" width={24} height={24} />
-                    <span className="font-medium text-gray-700">Kinyarwanda</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
       {/* Desktop Navigation Links */}
       <nav className="hidden md:flex flex-wrap border-t border-gray-300 justify-center gap-4 py-2 text-gray-700 text-sm font-semibold">
         {loading ? (
           <span className="text-blue-400 animate-pulse">Loading categories...</span>
-        ) : (categories && categories.length > 0) ? categories.map(cat => (
+        ) : (propCategories && propCategories.length > 0) ? propCategories.map(cat => (
           <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="hover:text-yellow-500 font-semibold">
             {cat.name}
           </Link>
@@ -399,7 +449,7 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
         <div className="flex flex-col mt-12">
           {loading ? (
             <span className="text-blue-400 animate-pulse px-4 py-3">Loading categories...</span>
-          ) : (categories && categories.length > 0) ? categories.map(cat => (
+          ) : (propCategories && propCategories.length > 0) ? propCategories.map(cat => (
             <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="block hover:text-yellow-500 px-4 py-3 text-[#3B82F6] text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
               {cat.name}
             </Link>
@@ -430,14 +480,19 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
           </button>
         </Link>
         <Link href="/wishlist">
-          <button className="flex flex-col items-center text-gray-700 hover:text-yellow-500 focus:text-yellow-500">
+          <button className="flex flex-col items-center text-gray-700 hover:text-yellow-500 focus:text-yellow-500 relative">
             <Heart size={24} />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+                {wishlistCount}
+              </span>
+            )}
             <span className="text-xs">Wishlist</span>
           </button>
         </Link>
         <button onClick={() => user ? setDropdownOpen(v => !v) : setLoginOpen(true)} className="flex flex-col items-center text-gray-700 hover:text-yellow-500 focus:text-yellow-500">
           {user ? (
-            <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} />
+            <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" width={32} height={32} style={{ width: 32, height: 'auto' }} />
           ) : (
             <User size={24} />
           )}
@@ -447,7 +502,7 @@ const Header = ({ categories, loading }: { categories?: { _id?: string; name: st
         {dropdownOpen && user && (
           <div ref={dropdownRef} className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-0 w-64 flex flex-col border border-yellow-200 animate-fade-in md:hidden" style={{ minWidth: 200 }}>
             <div className="flex flex-col items-start pt-4 pb-1 px-4 border-b border-gray-100">
-              <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" width={36} height={36} />
+              <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-yellow-400 mb-1" width={36} height={36} style={{ width: 36, height: 'auto' }} />
               <span className="font-semibold text-blue-900 text-sm mb-1">Welcome back, {user.name}</span>
               <button onMouseDown={handleSignOut} className="text-blue-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
             </div>

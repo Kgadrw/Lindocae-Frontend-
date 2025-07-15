@@ -125,10 +125,14 @@ export default function CartPage() {
           {cartItems.length === 0 ? (
             <div className="text-blue-500 text-center py-12 text-lg font-semibold">Your cart is empty.</div>
           ) : (
-            cartItems.map(item => (
-              <div key={item.id} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
+            cartItems.map((item, idx) => (
+              <div key={`${item.id ?? 'noid'}-${idx}`} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
+                  {typeof item.image === 'string' && item.image.trim().length > 0 ? (
+                    <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">?</div>
+                  )}
                 </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
                   <div className="font-semibold text-gray-800 text-base sm:text-lg">{item.name}</div>
@@ -209,10 +213,14 @@ export default function CartPage() {
           {relatedProducts.length === 0 ? (
             <div className="text-gray-400 text-center col-span-4">No related products yet.</div>
           ) : (
-            relatedProducts.map(item => (
-              <div key={item.id} className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            relatedProducts.map((item, idx) => (
+              <div key={`${item.id ?? 'noid'}-${idx}`} className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 mb-2">
-                  <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
+                  {typeof item.image === 'string' && item.image.trim().length > 0 ? (
+                    <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">?</div>
+                  )}
                 </div>
                 <div className="font-medium text-gray-700 text-center text-sm mb-1">{item.name}</div>
                 <div className="text-yellow-500 font-bold text-base">${item.price.toFixed(2)}</div>

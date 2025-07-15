@@ -59,70 +59,31 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
       <div className="text-center text-red-500 py-8">{catError}</div>
     ) : (
       Array.isArray(categories) && categories.length > 0 ? (
-        <table className="min-w-full text-sm bg-white rounded-lg shadow overflow-hidden">
-          <thead className="bg-gradient-to-r from-blue-200 to-purple-200">
-            <tr>
-              <th className="px-4 py-2 text-left text-blue-900 font-bold">Name</th>
-              <th className="px-4 py-2 text-left text-purple-900 font-bold">Description</th>
-              <th className="px-4 py-2 text-left text-green-900 font-bold">Products</th>
-              <th className="px-4 py-2 text-center text-red-900 font-bold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map(cat => {
-              const catProducts = products.filter(p => p.category === cat._id);
-              const expanded = !!expandedCategories[cat._id];
-              return (
-                <React.Fragment key={cat._id}>
-                  <tr className="border-b last:border-none bg-gradient-to-r from-blue-50 to-purple-50">
-                    <td className="px-4 py-2 text-blue-800 font-semibold">{safeRender(cat.name)}</td>
-                    <td className="px-4 py-2 text-purple-800">{safeRender(cat.description)}</td>
-                    <td className="px-4 py-2">
-                      <button
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition ${expanded ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}
-                        onClick={() => setExpandedCategories(prev => ({ ...prev, [cat._id]: !prev[cat._id] }))}
-                      >
-                        {expanded ? 'Hide Products' : `Show Products (${catProducts.length})`}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2 flex gap-2 justify-center">
-                      <button className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 font-bold" onClick={() => handleCatEdit(cat)}>Edit</button>
-                      <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 font-bold" onClick={() => handleCatDelete(cat)}>Delete</button>
-                    </td>
-                  </tr>
-                  {expanded && catProducts.length > 0 && (
-                    <tr>
-                      <td colSpan={4} className="bg-white p-0">
-                        <table className="w-full text-xs bg-gredient-to-r from-green-50 to-blue-50 border-t border-green-200">
-                          <thead>
-                            <tr>
-                              <th className="px-3 py-1 text-left text-green-800 font-bold">Product Name</th>
-                              <th className="px-3 py-1 text-left text-yellow-800 font-bold">Price</th>
-                              <th className="px-3 py-1 text-left text-blue-800 font-bold">Stock</th>
-                              <th className="px-3 py-1 text-left text-purple-800 font-bold">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {catProducts.map(prod => (
-                              <tr key={prod._id} className="border-b last:border-none hover:bg-green-100/30">
-                                <td className="px-3 py-1 text-green-900 font-semibold">{safeRender(prod.name)}</td>
-                                <td className="px-3 py-1 text-yellow-900 font-semibold">${safeRender(prod.price)}</td>
-                                <td className="px-3 py-1 text-blue-900">{safeRender(prod.quantity)}</td>
-                                <td className="px-3 py-1">
-                                  <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-green-400 text-white">Active</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {categories.map(cat => (
+            <div key={cat._id} className="bg-white rounded-xl shadow-lg border border-blue-100 flex flex-col overflow-hidden hover:shadow-xl transition">
+              {/* Category Image */}
+              {cat.image ? (
+                <img
+                  src={cat.image}
+                  alt={cat.name}
+                  className="w-full h-40 object-cover object-center bg-gray-100"
+                />
+              ) : (
+                <div className="w-full h-40 flex items-center justify-center bg-gray-100 text-gray-400 text-4xl">🖼️</div>
+              )}
+              {/* Name and Description */}
+              <div className="flex-1 flex flex-col p-4">
+                <h3 className="text-lg font-bold text-blue-900 mb-2 truncate">{safeRender(cat.name)}</h3>
+                <p className="text-gray-700 text-sm mb-4 line-clamp-3">{safeRender(cat.description)}</p>
+                <div className="mt-auto flex gap-2">
+                  <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-bold text-xs" onClick={() => handleCatEdit(cat)}>Edit</button>
+                  <button className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 font-bold text-xs" onClick={() => handleCatDelete(cat)}>Delete</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="text-center text-gray-500 py-8">No categories found.</div>
       )

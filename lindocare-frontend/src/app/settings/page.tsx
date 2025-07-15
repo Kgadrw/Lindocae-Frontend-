@@ -106,7 +106,7 @@ const SettingsPage = () => {
               <h2 className="text-lg font-bold text-blue-800 mb-1">Personal Details</h2>
               <div className="flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex flex-col items-center gap-1">
-                  <Image src={avatar || "/lindo.png"} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-yellow-400" width={56} height={56} />
+                  <Image src={avatar || "/lindo.png"} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-yellow-400" width={56} height={56} style={{ width: 56, height: 'auto' }} />
                   <label className="text-blue-700 text-xs font-medium cursor-pointer hover:underline">
                     Change Avatar
                     <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
