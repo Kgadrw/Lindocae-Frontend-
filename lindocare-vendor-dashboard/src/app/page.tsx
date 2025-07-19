@@ -248,7 +248,7 @@ export default function AdminDashboard() {
 
   const handleUserImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setUserForm((f: any) => ({ ...f, image: e.target.files[0] }));
+      setUserForm((f: any) => ({ ...f, image: e.target.files![0] }));
     }
   };
 

@@ -12,7 +12,7 @@ const categories = [
   { name: 'Changing Tables', count: 140 },
   { name: 'Rocking Chairs', count: 95 },
   { name: 'Baby Dressers', count: 87 },
-  { name: 'Playpens & Playards', count: 77 },
+  { name: 'Playpens &amp; Playards', count: 77 },
 ];
 
 // Template products (replace with API data later)
