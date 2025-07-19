@@ -347,14 +347,9 @@ export default function AdminDashboard() {
   };
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (authForm.username === 'admin' && authForm.password === 'admin') {
-      setIsAuthenticated(true);
-      setShowAuth(false);
-      setAuthError('');
-      if (typeof window !== 'undefined') sessionStorage.setItem('admin-auth', 'true');
-    } else {
-      setAuthError('Invalid credentials.');
-    }
+    // TODO: Implement proper authentication system
+    // Remove hardcoded admin credentials for security
+    setAuthError('Authentication system needs to be implemented.');
   };
 
   // Fetch categories
