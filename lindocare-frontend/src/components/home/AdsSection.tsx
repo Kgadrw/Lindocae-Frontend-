@@ -22,18 +22,14 @@ const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) =>
 
   return (
     <section className="w-full mb-8">
-      {/* Section Title */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Special Offers & Promotions</h2>
-        <p className="text-gray-600">Discover amazing deals on premium baby products</p>
-      </div>
+    
       
       {adsLoading ? (
-        <div className="text-center text-gray-500 py-8">Loading ads...</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : adsError ? (
         <div className="text-center text-red-500 py-8">{typeof adsError === 'string' ? adsError : adsError?.message || String(adsError)}</div>
       ) : ads?.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No ads found.</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* First Ad */}

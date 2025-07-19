@@ -80,11 +80,11 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
       {/* Section Title */}
       
       {catLoading ? (
-        <div className="text-center text-gray-500 py-8">Loading categories...</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : catError ? (
         <div className="text-center text-red-500 py-8">{catError}</div>
       ) : categories.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No categories found.</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : (
         <div
           className="w-full overflow-hidden select-none"
@@ -109,35 +109,36 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
               const isFirstVisible = idx === originalLength;
               const isLastVisible = idx === originalLength * 2 - 1;
               return (
-                <Link
+                <div
                   key={cat._id ? `${cat._id}-${idx}` : idx}
-                  href={`/category/${encodeURIComponent(cat.name)}`}
-                  className="bg-gray-50 border border-lindo-blue hover:border-lindo-yellow transition flex flex-col h-[340px] overflow-hidden flex-shrink-0 rounded-2xl cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
+                  className="flex flex-col items-center"
                   style={{ marginLeft: isFirstVisible ? 0 : undefined, marginRight: isLastVisible ? 0 : undefined }}
-                  onMouseEnter={() => setIsHovered(true)}
-                  onMouseLeave={() => setIsHovered(false)}
-                  tabIndex={0}
                 >
-                  <div className="w-full h-64 overflow-hidden">
-                    {image ? (
-                      <img
-                        src={image}
-                        alt={cat.name}
-                        className="w-full h-full object-cover object-center block"
-                        style={{ display: 'block', width: '100%', height: '100%' }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-4xl">🖼️</div>
-                    )}
-                  </div>
-                  <div className="flex flex-row items-center justify-between px-2 pt-2 pb-1 w-full">
-                    <div className="flex flex-col items-start">
-                      <span className="font-bold text-blue-800 text-base mb-1 truncate w-full">{cat.name}</span>
-                      <span className="text-xs text-blue-800 text-left line-clamp-2">{cat.description}</span>
+                  <Link
+                    href={`/category/${encodeURIComponent(cat.name)}`}
+                    className="bg-gray-50 border border-lindo-blue hover:border-lindo-yellow transition flex flex-col h-[280px] overflow-hidden flex-shrink-0 rounded-2xl cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    tabIndex={0}
+                  >
+                    <div className="w-full h-full overflow-hidden">
+                      {image ? (
+                        <img
+                          src={image}
+                          alt={cat.name}
+                          className="w-full h-full object-cover object-center block"
+                          style={{ display: 'block', width: '100%', height: '100%' }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-4xl">🖼️</div>
+                      )}
                     </div>
-                    <span className="ml-2 text-lindo-yellow text-xl flex-shrink-0">→</span>
+                  </Link>
+                  <div className="flex flex-col items-start mt-3 w-full max-w-xs md:w-80">
+                    <span className="font-bold text-black text-base mb-1 text-left">{cat.name}</span>
+                    <span className="text-xs text-black text-left line-clamp-2">{cat.description}</span>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

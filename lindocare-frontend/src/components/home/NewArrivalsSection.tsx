@@ -61,15 +61,15 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
     <section className="mb-8">
       {/* Section Title */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">SHOP THE MUST HAVES</h2>
+        <h2 className="text-2xl lg:text-5xl font-extrabold text-gray-800 mb-2">Shop The Must Haves</h2>
         <p className="text-gray-600">Discover our latest arrivals and trending products</p>
       </div>
-      {iconsRow && <div className="mb-6 flex justify-center">{iconsRow}</div>}
+      {iconsRow && <div className="mb-4 flex justify-center">{iconsRow}</div>}
       
-      <div className="flex items-center justify-end mb-6">
+      <div className="flex items-center justify-end mb-4">
         <Link
           href="/all-products"
-          className="text-yellow-500 text-sm font-semibold hover:underline focus:outline-none flex items-center gap-1"
+          className="text-black text-sm font-semibold hover:underline focus:outline-none flex items-center gap-1"
           style={{ minWidth: 70 }}
         >
           See more <ChevronRight size={16} />
@@ -79,11 +79,11 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
 
 
       {prodLoading ? (
-        <div className="text-center text-gray-500 py-8">Loading products...</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : prodError ? (
         <div className="text-center text-red-500 py-8">{prodError}</div>
       ) : filteredProducts.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No products found.</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : (
         <div className="relative">
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">

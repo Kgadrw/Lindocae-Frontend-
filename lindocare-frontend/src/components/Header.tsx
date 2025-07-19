@@ -281,9 +281,9 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
       {/* Mobile Search Bar (top, only on small screens) */}
       <div className="block md:hidden px-2 pt-1 pb-2 bg-white sticky top-0 z-50">
         {/* Location Display */}
-        <div className="flex items-center justify-center gap-2 text-gray-900 text-xs font-medium mb-2">
+        <div className="flex items-center justify-center gap-2 text-black text-xs font-medium mb-2">
           <div className="flex items-center gap-1">
-            <MapPin size={14} color="#6B7280" />
+            <MapPin size={14} color="#000000" />
             <span>Rwanda</span>
           </div>
           <span>RWF</span>
@@ -342,10 +342,10 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
                 onBlur={handleBlur}
                 ref={searchInputRef}
                 placeholder="Find babycare essentials..."
-                className="w-full rounded-full border text-gray-900 border-[#FFE600] px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-[#FFE600] text-base placeholder:text-[#2056A7]"
+                className="w-full rounded-full border text-blue-700 border-gray-700 px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-black text-base placeholder:text-gray-900"
                 onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
               />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FFE600] text-white p-1 rounded-full" aria-label="Search">
+              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-1 rounded-full" aria-label="Search">
                 <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               </button>
             </form>
@@ -369,39 +369,44 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
         {/* Icons (desktop only) */}
         <div className="hidden md:flex items-center gap-2 text-xl px-4 relative">
           {/* Location */}
-          <div className="flex items-center gap-1 text-gray-900 text-sm font-medium">
-            <MapPin size={16} color="#6B7280" />
+          <div className="flex items-center gap-1 text-black text-sm font-medium">
+            <MapPin size={16} color="#000000" />
             <span>Rwanda</span>
           </div>
           {/* Currency */}
-          <div className="text-gray-900 text-sm font-medium">
+          <div className="text-black text-sm font-medium">
             RWF
           </div>
           {/* Wishlist */}
           <Link href="/wishlist">
             <button
               aria-label="Wishlist"
-              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center relative ${pathname === '/wishlist' ? 'ring-2 ring-[#2056A7]' : ''}`}
+              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center relative`}
             >
-              <Heart size={22} className="stroke-[#2056A7] group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
+              <Heart size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                   {wishlistCount}
                 </span>
+              )}
+              {pathname === '/wishlist' && (
+                <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
               )}
             </button>
           </Link>
           {/* Cart */}
           <Link href="/cart">
             <button
-              aria-label="Cart"
-              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center relative ${pathname === '/cart' ? 'ring-2 ring-[#FFE600]' : ''}`}
+              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center relative`}
             >
-              <ShoppingCart size={22} className="stroke-[#2056A7] group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
+              <ShoppingCart size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                   {cartCount}
                 </span>
+              )}
+              {pathname === '/cart' && (
+                <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
               )}
             </button>
           </Link>
@@ -409,9 +414,12 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
           <Link href="/checkout">
             <button
               aria-label="Checkout"
-              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center ${pathname === '/checkout' ? 'ring-2 ring-[#2056A7]' : ''}`}
+              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center`}
             >
-              <Lock size={22} className="stroke-[#2056A7] group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
+              <Lock size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
+              {pathname === '/checkout' && (
+                <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
+              )}
             </button>
           </Link>
           {/* User */}
@@ -419,22 +427,25 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
             {user ? (
               <button
                 aria-label="User"
-                className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center ${pathname === '/account' ? 'ring-2 ring-[#FFE600]' : ''}`}
+                className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center`}
                 onClick={() => setDropdownOpen(v => !v)}
               >
                 <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-gray-200" width={32} height={32} style={{ width: 32, height: 'auto' }} />
+                {pathname === '/account' && (
+                  <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
+                )}
               </button>
             ) : (
               <div className="flex gap-1">
                 <button
-                  className="px-2 py-1 rounded-md bg-[#2056A7] text-white text-xs font-semibold shadow hover:bg-[#FFE600] hover:text-[#2056A7] transition"
+                  className="px-2 py-1 rounded-md bg-black text-white text-xs font-semibold hover:shadow transition"
                   style={{ minWidth: 0 }}
                   onClick={() => { setLoginMode('register'); setLoginOpen(true); }}
                 >
                   Create Account
                 </button>
                 <button
-                  className="px-2 py-1 rounded-md bg-[#FFE600] text-[#2056A7] text-xs font-semibold shadow hover:bg-[#2056A7] hover:text-white transition"
+                  className="px-2 py-1 rounded-md bg-[#FFE600] text-[#2056A7] hover:shadow text-xs font-semibold transition"
                   style={{ minWidth: 0 }}
                   onClick={() => { setLoginMode('login'); setLoginOpen(true); }}
                 >
@@ -452,12 +463,9 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
                 <button onMouseDown={handleSignOut} className="text-gray-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
               </div>
               <div className="flex flex-col gap-1 py-2 px-2">
-                <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><List size={18} color="#F4E029" /> My Orders</Link>
-                <Link href="/coins" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coins')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Coins size={18} color="#F4E029" /> My Coins</Link>
-                <Link href="/messages" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/messages')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><MessageCircle size={18} color="#F4E029" /> Message Center</Link>
-                <Link href="/payments" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/payments')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><CreditCard size={18} color="#F4E029" /> Payments</Link>
-                <Link href="/wishlist" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/wishlist')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Heart size={18} color="#F4E029" /> Wish list</Link>
-                <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Tag size={18} color="#F4E029" /> My coupon</Link>
+                <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><List size={18} color="#000000" /> My Orders</Link>
+                
+                <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Tag size={18} color="#000000" /> My coupon</Link>
                 <div className="border-t border-gray-100 my-2" />
                 <Link
                   href="/settings"
@@ -467,11 +475,11 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
                   }}
                   className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"
                 >
-                  <Settings size={18} color="#F4E029" /> Settings
+                  <Settings size={18} color="#000000" /> Settings
                 </Link>
-                <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><HelpCircle size={18} color="#F4E029" /> Help center</Link>
-                <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Accessibility size={18} color="#F4E029" /> Accessibility</Link>
-                <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><LogIn size={18} color="#F4E029" /> Seller Login</Link>
+                <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><HelpCircle size={18} color="#000000" /> Help center</Link>
+                <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Accessibility size={18} color="#000000" /> Accessibility</Link>
+                <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><LogIn size={18} color="#000000" /> Seller Login</Link>
                 <div className="border-t border-gray-100 my-2" />
                 <button onMouseDown={handleSignOut} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-50 text-red-600 text-sm font-medium w-full text-left">
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -487,7 +495,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
         </div>
       </div>
       {/* Desktop Navigation Links */}
-      <nav className="hidden md:flex flex-wrap border-t border-gray-300 justify-center gap-4 py-1 text-[#2056A7] text-sm font-semibold">
+      <nav className="hidden md:flex flex-wrap border-t border-gray-300 justify-center gap-4 py-1 text-black text-sm font-semibold">
         {loading ? (
           <span className="text-gray-400 animate-pulse">Loading categories...</span>
         ) : (propCategories && propCategories.length > 0) ? propCategories.map(cat => (
@@ -504,7 +512,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
           {loading ? (
             <span className="text-gray-400 animate-pulse px-4 py-3">Loading categories...</span>
           ) : (propCategories && propCategories.length > 0) ? propCategories.map(cat => (
-            <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="block hover:text-gray-200 px-4 py-3 text-gray-900 text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
+            <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="block hover:text-gray-200 px-4 py-3 text-black text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
               {cat.name}
             </Link>
           )) : null}
@@ -514,17 +522,17 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
       <div className="fixed bottom-0 left-0 w-full bg-white shadow-t z-50 md:hidden flex justify-evenly items-center py-2 border-t border-gray-200 px-0.5">
         <Link href="/">
           <button className="flex flex-col items-center bg-[#2056A7] text-white hover:bg-[#FFE600] hover:text-[#2056A7] focus:bg-[#FFE600] focus:text-[#2056A7] rounded-full p-2 transition-colors">
-            <Home size={24} color="#2056A7" strokeWidth={2.5} />
+            <Home size={24} color="#000000" strokeWidth={2.5} />
             <span className="text-xs">Home</span>
           </button>
         </Link>
         <button onClick={() => setNavOpen(true)} className="flex flex-col items-center bg-[#2056A7] text-white hover:bg-[#FFE600] hover:text-[#2056A7] focus:bg-[#FFE600] focus:text-[#2056A7] rounded-full p-2 transition-colors">
-          <List size={24} color="#2056A7" strokeWidth={2.5} />
+          <List size={24} color="#000000" strokeWidth={2.5} />
           <span className="text-xs">Categories</span>
         </button>
         <Link href="/cart">
           <button className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors relative">
-            <ShoppingCart size={24} color="#2056A7" strokeWidth={2.5} />
+            <ShoppingCart size={24} color="#000000" strokeWidth={2.5} />
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-2 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                 {cartCount}
@@ -535,13 +543,13 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
         </Link>
         <Link href="/checkout">
           <button className="flex flex-col items-center bg-[#2056A7] text-white hover:bg-[#FFE600] hover:text-white rounded-full p-2 transition-colors">
-            <Lock size={24} color="#2056A7" strokeWidth={2.5} />
+            <Lock size={24} color="#000000" strokeWidth={2.5} />
             <span className="ml-2 text-xs">Checkout</span>
           </button>
         </Link>
         <Link href="/wishlist">
           <button className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors relative">
-            <Heart size={24} color="#2056A7" strokeWidth={2.5} />
+            <Heart size={24} color="#000000" strokeWidth={2.5} />
             {wishlistCount > 0 && (
               <span className="absolute -top-1 -right-2 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                 {wishlistCount}
@@ -581,15 +589,15 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
               <button onMouseDown={handleSignOut} className="text-gray-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
             </div>
             <div className="flex flex-col gap-0.5 py-1 px-1">
-              <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><List size={15} color="#F4E029" /> My Orders</Link>
-              <Link href="/coins" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coins')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Coins size={15} color="#F4E029" /> My Coins</Link>
-              <Link href="/messages" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/messages')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><MessageCircle size={15} color="#F4E029" /> Message Center</Link>
-              <Link href="/payments" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/payments')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><CreditCard size={15} color="#F4E029" /> Payments</Link>
-              <Link href="/wishlist" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/wishlist')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Heart size={15} color="#F4E029" /> Wish list</Link>
-              <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Tag size={15} color="#F4E029" /> My coupon</Link>
-              <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><HelpCircle size={15} color="#F4E029" /> Help center</Link>
-              <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Accessibility size={15} color="#F4E029" /> Accessibility</Link>
-              <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><LogIn size={15} color="#F4E029" /> Seller Login</Link>
+              <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><List size={15} color="#000000" /> My Orders</Link>
+              <Link href="/coins" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coins')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Coins size={15} color="#000000" /> My Coins</Link>
+              <Link href="/messages" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/messages')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><MessageCircle size={15} color="#000000" /> Message Center</Link>
+              <Link href="/payments" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/payments')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><CreditCard size={15} color="#000000" /> Payments</Link>
+              <Link href="/wishlist" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/wishlist')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Heart size={15} color="#000000" /> Wish list</Link>
+              <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Tag size={15} color="#000000" /> My coupon</Link>
+              <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><HelpCircle size={15} color="#000000" /> Help center</Link>
+              <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Accessibility size={15} color="#000000" /> Accessibility</Link>
+              <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><LogIn size={15} color="#000000" /> Seller Login</Link>
               <div className="border-t border-gray-100 my-1" />
               <button onMouseDown={handleSignOut} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-red-50 text-red-600 text-xs font-medium w-full text-left">
                 <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

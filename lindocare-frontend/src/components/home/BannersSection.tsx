@@ -26,20 +26,20 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
   return (
     <section className="w-full mb-8">
       {bannerLoading ? (
-        <div className="text-center text-gray-500 py-8">Loading banners...</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : bannerError ? (
         <div className="text-center text-red-500 py-8">{typeof bannerError === 'string' ? bannerError : bannerError?.message || String(bannerError)}</div>
       ) : bannerData.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No banners found.</div>
+        <div className="text-center text-gray-500 py-8"></div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-9 gap-8">
           {/* Large promotional section on the left */}
-          <div className="lg:col-span-1 relative rounded-2xl p-6 flex flex-col justify-end pb-10 overflow-hidden">
+          <div className="lg:col-span-4 relative rounded-xl p-6 flex flex-col justify-end pb-10 overflow-hidden">
             {/* Background image */}
             <div className="absolute inset-0 w-full h-full z-0">
               <img src={promoImage} alt="Banner" className="w-full h-full object-cover object-center" />
               {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#89CFF0]/80 via-white/60 to-[#FFF9C4]/80" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </div>
             {/* Content */}
             <div className="relative z-10">
@@ -47,13 +47,13 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
               <div className="text-center lg:text-left space-y-4">
                 <div className="space-y-3">
-                  <h1 className="text-3xl lg:text-4xl font-bold text-blue-800 leading-tight">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
                     Up to 30% Off
                   </h1>
                   <h2 className="text-xl lg:text-2xl font-semibold text-yellow-500">
                     Newborn-Ready Nursery
                   </h2>
-                  <p className="text-base text-gray-600 leading-relaxed">
+                  <p className="text-base text-white leading-relaxed">
                     Everything you need to create the perfect nursery for your little one. Quality products, soft materials, and peace of mind.
                   </p>
                 </div>
@@ -61,7 +61,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                   <Link 
                     href="/all-products"
-                    className="bg-blue-800 hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
+                    className="bg-black  hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
                   >
                     Shop Now
                   </Link>
@@ -77,10 +77,10 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
           </div>
 
           {/* 2x2 grid of baby product images on the right */}
-          <div className="lg:col-span-2 grid grid-cols-2 gap-3">
+          <div className="lg:col-span-5 grid grid-cols-2 gap-3">
             {/* Top-left: First banner */}
             <Link href={gridBanners[0]?.category ? `/category/${encodeURIComponent(gridBanners[0].category)}` : '#'} className="group cursor-pointer">
-              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="relative bg-white rounded-xl overflow-hidden  hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[0]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <img 
@@ -88,7 +88,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                       alt={gridBanners[0].title} 
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <h3 className="font-bold text-lg">{gridBanners[0].title}</h3>
                       {gridBanners[0].subTitle && (
@@ -112,7 +112,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
             {/* Top-right: Second banner */}
             <Link href={gridBanners[1]?.category ? `/category/${encodeURIComponent(gridBanners[1].category)}` : '#'} className="group cursor-pointer">
-              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="relative bg-white rounded-xl overflow-hidden  hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[1]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <img 
@@ -120,7 +120,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                       alt={gridBanners[1].title} 
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <h3 className="font-bold text-lg">{gridBanners[1].title}</h3>
                       {gridBanners[1].subTitle && (
@@ -144,7 +144,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
             {/* Bottom-left: Third banner */}
             <Link href={gridBanners[2]?.category ? `/category/${encodeURIComponent(gridBanners[2].category)}` : '#'} className="group cursor-pointer">
-              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="relative bg-white rounded-xl overflow-hidden  hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[2]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <img 
@@ -152,7 +152,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                       alt={gridBanners[2].title} 
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <h3 className="font-bold text-lg">{gridBanners[2].title}</h3>
                       {gridBanners[2].subTitle && (
@@ -176,7 +176,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
             {/* Bottom-right: Fourth banner */}
             <Link href={gridBanners[3]?.category ? `/category/${encodeURIComponent(gridBanners[3].category)}` : '#'} className="group cursor-pointer">
-              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="relative bg-white rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[3]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <img 
@@ -184,7 +184,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                       alt={gridBanners[3].title} 
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <h3 className="font-bold text-lg">{gridBanners[3].title}</h3>
                       {gridBanners[3].subTitle && (

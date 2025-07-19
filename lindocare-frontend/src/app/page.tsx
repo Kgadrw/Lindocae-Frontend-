@@ -11,6 +11,7 @@ import useSWR from 'swr';
 import BannersSection from '../components/home/BannersSection';
 import CategoriesSlider from '../components/home/CategoriesSlider';
 import PromoBanner from '../components/home/PromoBanner';
+import EmailSignupBanner from '../components/home/EmailSignupBanner';
 import AdsSection from '../components/home/AdsSection';
 import IconsRow from '../components/home/IconsRow';
 import NewArrivalsSection from '../components/home/NewArrivalsSection';
@@ -302,8 +303,6 @@ export default function Home() {
         <CategoriesSlider categories={categories} catLoading={catLoading} catError={catError} />
         {/* Promo/Info Banners */}
         <AdsSection ads={ads} adsLoading={adsLoading} adsError={adsError} />
-        {/* Wishlist Promo Banner */}
-        <PromoBanner categories={categories} catLoading={catLoading} />
         {/* Product Grids */}
         <NewArrivalsSection
           filteredProducts={filteredProducts}
@@ -322,6 +321,10 @@ export default function Home() {
           handleClearAll={handleClearAll}
           iconsRow={<IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />}
         />
+        {/* Wishlist Promo Banner */}
+        <PromoBanner categories={categories} catLoading={catLoading} />
+        {/* Email Signup Banner */}
+        <EmailSignupBanner />
       </div>
       {/* WhatsApp Support Button (only visible after hero) */}
       {showWhatsappBtn && (

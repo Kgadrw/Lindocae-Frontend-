@@ -203,21 +203,21 @@ const WishlistPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
       <div className="max-w-7xl mx-auto px-2 pt-4 md:pt-6 pb-12">
-        <div className="text-sm text-blue-700 mb-4 pt-14 md:pt-0">
-          <Link href="/">Home</Link> / <span className="text-blue-900 font-medium">Wishlist</span>
+        <div className="text-sm text-gray-600 mb-4 pt-14 md:pt-0">
+          <Link href="/">Home</Link> / <span className="text-black font-medium">Wishlist</span>
         </div>
-        <h1 className="text-2xl font-bold text-blue-900 mb-6">My Wishlist</h1>
+        <h1 className="text-2xl font-bold text-black mb-6">My Wishlist</h1>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-blue-700 text-lg">Loading wishlist...</div>
+          <div className="flex flex-col items-center justify-center py-24 text-gray-600 text-lg">Loading wishlist...</div>
         ) : error && (
           <div className="flex flex-col items-center justify-center py-8 text-red-600 text-lg font-semibold">{error}</div>
         )}
         {wishlistProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <Heart size={48} color="#F87171" fill="#F87171" />
-            <p className="mt-4 text-blue-900 text-lg font-semibold">No products in your wishlist yet.</p>
-            <p className="text-blue-500">Click the heart icon on a product to save it here.</p>
-            <Link href="/" className="mt-6 px-6 py-2 rounded-full bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition">Continue Shopping</Link>
+            <Heart size={48} color="#888" fill="#888" />
+            <p className="mt-4 text-black text-lg font-semibold">No products in your wishlist yet.</p>
+            <p className="text-gray-500">Click the heart icon on a product to save it here.</p>
+            <Link href="/" className="mt-6 px-6 py-2 rounded-full bg-black text-white font-bold shadow hover:bg-gray-800 transition">Continue Shopping</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -228,7 +228,7 @@ const WishlistPage = () => {
                     <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" />
                   )}
                   {(product.tags || []).map((tag: string) => (
-                    <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
+                    <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-600`}>{tag}</span>
                   ))}
                   <button
                     className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
@@ -237,24 +237,30 @@ const WishlistPage = () => {
                   >
                     <Heart
                       size={20}
-                      color={wishlist.includes(String(product.id)) ? '#F87171' : '#3B82F6'}
-                      fill={wishlist.includes(String(product.id)) ? '#F87171' : 'none'}
+                      color={wishlist.includes(String(product.id)) ? '#111' : '#888'}
+                      fill={wishlist.includes(String(product.id)) ? '#111' : 'none'}
                       strokeWidth={2.2}
                     />
                   </button>
                 </div>
                 <div className="flex-1 flex flex-col">
                   <div className="flex items-center gap-1 mb-1">
-                    <span className="text-yellow-400">★</span>
-                    <span className="text-sm font-semibold text-blue-900">{product.rating}</span>
-                    <span className="text-xs text-blue-500">({product.reviews} reviews)</span>
+                    <span className="text-gray-400">★</span>
+                    <span className="text-sm font-semibold text-black">{product.rating}</span>
+                    <span className="text-xs text-gray-500">({product.reviews} reviews)</span>
                   </div>
-                  <div className="font-bold text-blue-900 mb-1">{product.name}</div>
+                  <div className="font-bold text-black mb-1">{product.name}</div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg font-bold text-blue-900">${product.price.toFixed(2)}</span>
-                    {product.oldPrice && <span className="text-sm line-through text-blue-400">${product.oldPrice}</span>}
+                    <span className="text-base font-bold text-black">${product.price}</span>
+                    {product.oldPrice && (
+                      <span className="text-sm line-through text-gray-400">${product.oldPrice}</span>
+                    )}
                   </div>
-                  <button className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition">Add to Cart</button>
+                  <div className="flex gap-2 flex-wrap mb-2">
+                    {(product.delivery || []).map((d: string) => (
+                      <span key={d} className="bg-gray-100 text-gray-600 rounded px-2 py-1 text-xs">{d}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
