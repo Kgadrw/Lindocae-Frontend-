@@ -49,7 +49,7 @@ const PromoBanner: React.FC<PromoBannerProps> = ({ categories, catLoading }) => 
 
   return (
     <section className="w-full mb-8">
-      <div className="bg-white rounded-2xl border  overflow-hidden">
+      <div className="bg-white  border  overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[80px] lg:min-h-[100px]">
           {/* Left side - Rotating image */}
           <div className="relative bg-gray-100">

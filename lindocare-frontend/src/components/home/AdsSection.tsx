@@ -34,7 +34,7 @@ const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) =>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* First Ad */}
           {firstAd && (
-            <div className="relative bg-white rounded-2xl  overflow-hidden">
+            <div className="relative bg-white  rounded-lg overflow-hidden">
               <div className="relative h-48 lg:h-64">
                 {/* Background image */}
                 {firstAd.image && (
@@ -70,7 +70,7 @@ const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) =>
 
           {/* Second Ad */}
           {secondAd && (
-            <div className="relative bg-white rounded-2xl  overflow-hidden">
+            <div className="relative bg-white rounded-lg  overflow-hidden">
               <div className="relative h-48 lg:h-64">
                 {/* Background image */}
                 {secondAd.image && (

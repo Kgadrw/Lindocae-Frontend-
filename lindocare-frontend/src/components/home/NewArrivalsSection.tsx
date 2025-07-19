@@ -149,7 +149,7 @@ export function RedesignForLoveSection({ banners }: { banners: string[] }) {
   return (
     <section
       ref={ref}
-      className={`w-full flex flex-col md:flex-row items-center justify-between gap-8 px-4 py-10 md:py-14 max-w-5xl mx-auto rounded-2xl mt-10 bg-[#f8f8f8] shadow-sm transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+      className={`w-full flex flex-col md:flex-row items-center justify-between gap-8 px-4 py-10 md:py-14 max-w-5xl mx-auto rounded-2xl mt-10 bg-white shadow-sm transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
       style={{ minHeight: 220 }}
     >
       <div className="flex-1 flex flex-col items-start justify-center max-w-lg">

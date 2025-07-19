@@ -116,7 +116,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                 >
                   <Link
                     href={`/category/${encodeURIComponent(cat.name)}`}
-                    className="bg-gray-50 border border-lindo-blue hover:border-lindo-yellow transition flex flex-col h-[280px] overflow-hidden flex-shrink-0 rounded-2xl cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
+                    className="bg-gray-50 border border-lindo-blue hover:border-lindo-yellow transition flex flex-col h-[280px] overflow-hidden flex-shrink-0  cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                     tabIndex={0}
