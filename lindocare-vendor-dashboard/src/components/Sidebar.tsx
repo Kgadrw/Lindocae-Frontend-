@@ -7,12 +7,25 @@ interface SidebarSection {
   icon: () => React.ReactNode;
 }
 
+interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+  tokens: {
+    accessToken: string;
+  };
+}
+
 interface SidebarProps {
   activeSection: string;
   setActiveSection: (key: string) => void;
   handleLogout: () => void;
   SIDEBAR_SECTIONS: SidebarSection[];
-  user?: { email: string; name: string } | null;
+  user?: User | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, handleLogout, SIDEBAR_SECTIONS, user }) => (
@@ -21,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, hand
       <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
         <User className="h-8 w-8 text-white" />
       </div>
-      <div className="mt-2 text-sm text-blue-700 font-semibold">{user?.name || 'Admin'}</div>
+      <div className="mt-2 text-sm text-blue-700 font-semibold">{user ? `${user.firstName} ${user.lastName}` : 'Admin'}</div>
       <div className="text-xs text-gray-500">{user?.email || 'admin@lindo.com'}</div>
     </div>
     <nav className="flex flex-col gap-2">

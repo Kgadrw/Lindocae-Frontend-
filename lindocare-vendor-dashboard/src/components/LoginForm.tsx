@@ -3,8 +3,25 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 
+interface User {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  role?: string;
+  createdAt: string;
+  updatedAt: string;
+  tokens?: {
+    accessToken: string;
+  };
+}
+
+interface SignUpResponse {
+  user: User;
+}
+
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (user: User) => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
@@ -26,11 +43,43 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onLogin(email, password);
+      const response = await fetch('http://localhost:5000/user/Login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          password,
+          role: 'vendor' // Set role as vendor for registration
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Sign up failed.');
+      }
+
+      const data: SignUpResponse = await response.json();
+
+      // Store user data and token
+      localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.user.tokens?.accessToken) {
+        localStorage.setItem('accessToken', data.user.tokens.accessToken);
+      }
+
+      // Check user role and handle navigation
+      if (data.user.role === 'vendor') {
+        console.log('User is a vendor, navigating to vendor dashboard');
+        onLogin(data.user);
+      } else {
+        setError('Access denied. Only vendors can access this dashboard.');
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+      }
     } catch (err) {
-      setError('Login failed. Please try again.');
+      console.error('Sign up error:', err);
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -45,10 +94,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             <User className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Vendor Dashboard</h2>
-          <p className="text-gray-600">Sign in to your account</p>
+          <p className="text-gray-600">Create your vendor account</p>
         </div>
 
-        {/* Login Form */}
+        {/* Form */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
@@ -68,7 +117,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-900"
                   placeholder="Enter your email"
                 />
               </div>
@@ -87,11 +136,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-900"
                   placeholder="Enter your password"
                 />
                 <button
@@ -115,7 +164,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               </div>
             )}
 
-            {/* Remember Me and Forgot Password */}
+            {/* Remember Me + Forgot */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -144,31 +193,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
+                  Creating account...
                 </div>
               ) : (
-                'Sign in'
+                'Sign Up'
               )}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
-            <p className="text-xs text-gray-600 mb-2 font-medium">Demo Credentials:</p>
-            <p className="text-xs text-gray-500">Email: admin@lindo.com</p>
-            <p className="text-xs text-gray-500">Password: admin123</p>
-          </div>
         </div>
 
         {/* Footer */}
         <div className="text-center">
-          <p className="text-sm text-gray-500">
-            © 2024 Lindo Vendor Dashboard. All rights reserved.
-          </p>
+          <p className="text-sm text-gray-500">© 2024 Lindo Vendor Dashboard. All rights reserved.</p>
         </div>
       </div>
     </div>
   );
 };
 
-export default LoginForm; 
+export default LoginForm;

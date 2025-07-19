@@ -12,6 +12,19 @@ import CartComponent from '../components/Cart/Component';
 import OrdersComponent from '../components/Orders/Component';
 import LoginForm from '../components/LoginForm';
 
+interface User {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  role?: string;
+  createdAt: string;
+  updatedAt: string;
+  tokens?: {
+    accessToken: string;
+  };
+}
+
 const SIDEBAR_SECTIONS = [
   { key: 'stats', label: 'Stats', icon: () => <Box size={20} /> },
   { key: 'categories', label: 'Categories', icon: () => <List size={20} /> },
@@ -25,17 +38,22 @@ const SIDEBAR_SECTIONS = [
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState('stats');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
-  const handleLogin = (email: string, password: string) => {
-    // Simple authentication logic - in real app, this would be an API call
-    if (email === 'admin@lindo.com' && password === 'admin123') {
-      setUser({ email, name: 'Admin User' });
+  const handleLogin = (userData: User) => {
+    // Check if user is a vendor
+    if (userData.role === 'vendor') {
+      setUser(userData);
       setIsAuthenticated(true);
       localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('user', JSON.stringify({ email, name: 'Admin User' }));
+      localStorage.setItem('user', JSON.stringify(userData));
+      console.log('Vendor logged in successfully:', userData.firstName, userData.lastName);
     } else {
-      alert('Invalid credentials. Please use the demo credentials provided.');
+      alert('Access denied. Only vendors can access this dashboard.');
+      // Clear any stored data
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user');
+      localStorage.removeItem('accessToken');
     }
   };
 
@@ -44,6 +62,7 @@ export default function AdminDashboard() {
     setUser(null);
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
     alert('Logged out successfully!');
   };
 
@@ -51,9 +70,28 @@ export default function AdminDashboard() {
   useEffect(() => {
     const auth = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('user');
-    if (auth === 'true' && userData) {
-      setIsAuthenticated(true);
-      setUser(JSON.parse(userData));
+    const accessToken = localStorage.getItem('accessToken');
+    
+    if (auth === 'true' && userData && accessToken) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        // Check if user is still a vendor
+        if (parsedUser.role === 'vendor') {
+          setIsAuthenticated(true);
+          setUser(parsedUser);
+        } else {
+          // Clear invalid data if user is not a vendor
+          localStorage.removeItem('isAuthenticated');
+          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+      }
     }
   }, []);
 
