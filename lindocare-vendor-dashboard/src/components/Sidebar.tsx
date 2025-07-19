@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 
 interface SidebarSection {
   key: string;
@@ -12,13 +12,17 @@ interface SidebarProps {
   setActiveSection: (key: string) => void;
   handleLogout: () => void;
   SIDEBAR_SECTIONS: SidebarSection[];
+  user?: { email: string; name: string } | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, handleLogout, SIDEBAR_SECTIONS }) => (
+const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, handleLogout, SIDEBAR_SECTIONS, user }) => (
   <aside className="fixed top-0 left-0 h-full w-64 bg-white/70 backdrop-blur-lg shadow-lg flex flex-col z-30 border-r border-gray-100 py-8 px-4 select-none">
     <div className="flex flex-col items-center mb-8">
-      <div className="w-16 h-16 rounded-full bg-blue-200 flex items-center justify-center text-3xl text-blue-700 font-bold shadow">A</div>
-      <div className="mt-2 text-sm text-blue-700 font-semibold">Admin</div>
+      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
+        <User className="h-8 w-8 text-white" />
+      </div>
+      <div className="mt-2 text-sm text-blue-700 font-semibold">{user?.name || 'Admin'}</div>
+      <div className="text-xs text-gray-500">{user?.email || 'admin@lindo.com'}</div>
     </div>
     <nav className="flex flex-col gap-2">
       {SIDEBAR_SECTIONS.map(sec => (

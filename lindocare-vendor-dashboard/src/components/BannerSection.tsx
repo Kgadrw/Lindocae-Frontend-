@@ -1,35 +1,35 @@
 import React, { useEffect, useState, useRef } from 'react';
 
-const API_URL = 'https://lindo-project.onrender.com/adds';
+const API_URL = 'https://lindo-project.onrender.com/banner';
 
-const AdList: React.FC = () => {
-  const [ads, setAds] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editAd, setEditAd] = useState<any | null>(null);
-  const [form, setForm] = useState({ title: '', content: '', buttonLabel: '', link: '', categoryId: '', image: null as File | null });
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState('');
+const BannerSection: React.FC = () => {
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editBanner, setEditBanner] = useState<any | null>(null);
+  const [form, setForm] = useState({ title: '', subTitle: '', categoryId: '', image: null as File | null });
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Fetch ads
-  const fetchAds = async () => {
+  // Fetch banners
+  const fetchBanners = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/getAds`);
+      const res = await fetch(`${API_URL}/getAllBanners`);
       const data = await res.json();
-      setAds(data || []);
+      setBanners(data.banners || []);
     } catch {
-      setAds([]);
+      setBanners([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchAds(); }, []);
+  useEffect(() => { fetchBanners(); }, []);
 
   // Handle form input
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -43,19 +43,17 @@ const AdList: React.FC = () => {
 
   // Open modal for create or edit
   const openCreateModal = () => {
-    setEditAd(null);
-    setForm({ title: '', content: '', buttonLabel: '', link: '', categoryId: '', image: null });
+    setEditBanner(null);
+    setForm({ title: '', subTitle: '', categoryId: '', image: null });
     setShowModal(true);
     setFormError('');
   };
-  const openEditModal = (ad: any) => {
-    setEditAd(ad);
+  const openEditModal = (banner: any) => {
+    setEditBanner(banner);
     setForm({
-      title: ad.title,
-      content: ad.content,
-      buttonLabel: ad.buttonLabel,
-      link: ad.link || '',
-      categoryId: ad.categoryId || '',
+      title: banner.title,
+      subTitle: banner.subTitle,
+      categoryId: banner.category?._id || '',
       image: null,
     });
     setShowModal(true);
@@ -66,35 +64,33 @@ const AdList: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (!form.title || !form.content || !form.buttonLabel || !form.categoryId || (!form.image && !editAd)) {
+    if (!form.title || !form.subTitle || !form.categoryId || (!form.image && !editBanner)) {
       setFormError('Please fill all fields and upload an image');
       return;
     }
     setFormLoading(true);
     const formData = new FormData();
     formData.append('title', form.title);
-    formData.append('content', form.content);
-    formData.append('buttonLabel', form.buttonLabel);
-    formData.append('link', form.link);
+    formData.append('subTitle', form.subTitle);
     formData.append('categoryId', form.categoryId);
-    if (form.image) formData.append('image', form.image);
+    if (form.image) formData.append('images', form.image);
     try {
       let res;
-      if (editAd) {
-        res = await fetch(`${API_URL}/updateAd/${editAd._id}`, { method: 'PUT', body: formData });
+      if (editBanner) {
+        res = await fetch(`${API_URL}/updateBanner/${editBanner._id}`, { method: 'PUT', body: formData });
       } else {
-        res = await fetch(`${API_URL}/createAd`, { method: 'POST', body: formData });
+        res = await fetch(`${API_URL}/createBanner`, { method: 'POST', body: formData });
       }
       if (res.status === 201 || res.status === 200) {
         setShowModal(false);
-        setEditAd(null);
-        setForm({ title: '', content: '', buttonLabel: '', link: '', categoryId: '', image: null });
-        fetchAds();
-        setSuccessMessage('Ad saved successfully!');
+        setEditBanner(null);
+        setForm({ title: '', subTitle: '', categoryId: '', image: null });
+        fetchBanners();
+        setSuccessMessage('Banner saved successfully!');
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
         const data = await res.json();
-        setFormError(data.message || 'Failed to save ad');
+        setFormError(data.message || 'Failed to save banner');
       }
     } catch {
       setFormError('Network error');
@@ -104,12 +100,12 @@ const AdList: React.FC = () => {
   };
 
   // Handle delete
-  const handleDelete = async (adId: string) => {
-    if (!window.confirm('Are you sure you want to delete this ad?')) return;
+  const handleDelete = async (bannerId: string) => {
+    if (!window.confirm('Are you sure you want to delete this banner?')) return;
     setFormLoading(true);
     try {
-      await fetch(`${API_URL}/deleteAd/${adId}`, { method: 'DELETE' });
-      fetchAds();
+      await fetch(`${API_URL}/deleteBanner/${bannerId}`, { method: 'DELETE' });
+      fetchBanners();
     } catch {}
     setFormLoading(false);
   };
@@ -117,53 +113,55 @@ const AdList: React.FC = () => {
   return (
     <div className="w-full p-0 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">Ads</h3>
+        <h3 className="text-xl font-semibold text-gray-900">Banners</h3>
         <button
           className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all"
           onClick={openCreateModal}
         >
-          + Create Ad
+          + Create Banner
         </button>
       </div>
-      {/* Ads List */}
-      <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg shadow-lg border border-pink-200 w-full overflow-x-auto">
+      {/* Banner List */}
+      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-lg border border-indigo-200 w-full overflow-x-auto">
         <table className="min-w-full text-sm text-left border-separate border-spacing-0">
           <thead className="sticky top-0 z-10">
             <tr className="bg-blue-600 text-white shadow-lg">
               <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Image</th>
               <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Title</th>
-              <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Content</th>
-              <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Button</th>
-              <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Link</th>
+              <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Subtitle</th>
               <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Category</th>
+              <th className="px-6 py-3 font-bold text-white uppercase tracking-wider" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Status</th>
               <th className="px-6 py-3 font-bold text-white uppercase tracking-wider text-center" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading...</td></tr>
-            ) : ads.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-400">No ads found.</td></tr>
-            ) : ads.map((ad, index) => (
-              <tr key={ad._id} className={`transition-colors ${index % 2 === 0 ? 'bg-white/80 backdrop-blur-sm' : 'bg-pink-200/50'}`}>
+              <tr><td colSpan={6} className="text-center py-8 text-gray-400">Loading...</td></tr>
+            ) : banners.length === 0 ? (
+              <tr><td colSpan={6} className="text-center py-8 text-gray-400">No banners found.</td></tr>
+            ) : banners.map((banner, index) => (
+              <tr key={banner._id} className={`transition-colors ${index % 2 === 0 ? 'bg-white/80 backdrop-blur-sm' : 'bg-indigo-200/50'}`}>
                 <td className="px-6 py-4 align-middle">
-                  <img src={ad.image?.[0] || ad.image} alt={ad.title} className="w-16 h-10 object-cover rounded-lg border border-gray-200" />
+                  <img src={banner.images?.[0]} alt={banner.title} className="w-16 h-10 object-cover rounded-lg border border-gray-200" />
                 </td>
-                <td className="px-6 py-4 align-middle font-semibold text-gray-900">{ad.title}</td>
-                <td className="px-6 py-4 align-middle text-gray-700">{ad.content}</td>
-                <td className="px-6 py-4 align-middle text-blue-700 font-semibold">{ad.buttonLabel}</td>
-                <td className="px-6 py-4 align-middle text-gray-700 break-words">{ad.link}</td>
-                <td className="px-6 py-4 align-middle text-gray-700">{ad.categoryId}</td>
+                <td className="px-6 py-4 align-middle font-semibold text-gray-900">{banner.title}</td>
+                <td className="px-6 py-4 align-middle text-gray-700">{banner.subTitle}</td>
+                <td className="px-6 py-4 align-middle text-gray-700">{banner.category?.name}</td>
+                <td className="px-6 py-4 align-middle">
+                  <span className={banner.isActive ? 'bg-green-100 text-green-800 px-2 py-0.5 text-[10px] font-semibold rounded' : 'bg-gray-200 text-gray-600 px-2 py-0.5 text-[10px] font-semibold rounded'}>
+                    {banner.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
                 <td className="px-6 py-4 align-middle text-center flex gap-2 items-center justify-center">
                   <button
                     className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-1"
-                    onClick={() => openEditModal(ad)}
+                    onClick={() => openEditModal(banner)}
                   >
                     <span role="img" aria-label="Edit">✏️</span> Edit
                   </button>
                   <button
                     className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
-                    onClick={() => handleDelete(ad._id)}
+                    onClick={() => handleDelete(banner._id)}
                     disabled={formLoading}
                   >
                     <span role="img" aria-label="Delete">🗑️</span> Delete
@@ -174,7 +172,7 @@ const AdList: React.FC = () => {
           </tbody>
         </table>
       </div>
-      {/* Create/Edit Ad Modal */}
+      {/* Create/Edit Banner Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white p-6 shadow-md w-full max-w-md relative">
@@ -185,7 +183,7 @@ const AdList: React.FC = () => {
             >
               ×
             </button>
-            <h4 className="text-lg font-semibold mb-4">{editAd ? 'Edit Ad' : 'Create Ad'}</h4>
+            <h4 className="text-lg font-semibold mb-4">{editBanner ? 'Edit Banner' : 'Create Banner'}</h4>
             <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
               <div>
                 <label className="block text-xs text-gray-700 mb-1">Title</label>
@@ -193,41 +191,19 @@ const AdList: React.FC = () => {
                   name="title"
                   value={form.title}
                   onChange={handleFormChange}
-                  placeholder="e.g. Summer Sale Ad"
+                  placeholder="e.g. Summer Sale Banner"
                   required
                   className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-700 mb-1">Content</label>
-                <textarea
-                  name="content"
-                  value={form.content}
+                <label className="block text-xs text-gray-700 mb-1">Subtitle</label>
+                <input
+                  name="subTitle"
+                  value={form.subTitle}
                   onChange={handleFormChange}
                   placeholder="e.g. Up to 50% Off"
                   required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400 resize-y"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Button Label</label>
-                <input
-                  name="buttonLabel"
-                  value={form.buttonLabel}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Shop Now"
-                  required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Link</label>
-                <input
-                  name="link"
-                  value={form.link}
-                  onChange={handleFormChange}
-                  placeholder="e.g. https://yourshop.com"
                   className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
                 />
               </div>
@@ -263,8 +239,8 @@ const AdList: React.FC = () => {
                     <img src={URL.createObjectURL(form.image)} alt="preview" className="mt-1 w-16 h-10 object-cover" />
                   )}
                   {/* Show current image if editing and no new image selected */}
-                  {!form.image && editAd && adImagePreview(editAd) && (
-                    <img src={adImagePreview(editAd)} alt="current" className="mt-1 w-16 h-10 object-cover" />
+                  {!form.image && editBanner && editBanner.images?.[0] && (
+                    <img src={editBanner.images[0]} alt="current" className="mt-1 w-16 h-10 object-cover" />
                   )}
                 </div>
               </div>
@@ -274,8 +250,8 @@ const AdList: React.FC = () => {
                   <strong className="font-bold">Success!</strong>
                   <span className="block sm:inline"> {successMessage}</span>
                   <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                    <button onClick={() => setSuccessMessage('')} className="text-green-800 hover:text-green-900">
-                      <svg className="fill-current h-6 w-6" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                    <button onClick={() => setSuccessMessage('')} className="text-green-800">
+                      <svg className="fill-current h-6 w-6" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.15 2.759 3.152a1.2 1.2 0 0 1 0 1.698z"/></svg>
                     </button>
                   </span>
                 </div>
@@ -285,7 +261,7 @@ const AdList: React.FC = () => {
                 className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2"
                 disabled={formLoading}
               >
-                {formLoading ? (editAd ? 'Saving...' : 'Creating...') : (editAd ? 'Save Changes' : 'Create Ad')}
+                {formLoading ? (editBanner ? 'Saving...' : 'Creating...') : (editBanner ? 'Save Changes' : 'Create Banner')}
               </button>
             </form>
           </div>
@@ -295,12 +271,4 @@ const AdList: React.FC = () => {
   );
 };
 
-// Helper to get image preview for edit
-function adImagePreview(ad: any) {
-  if (ad.image && Array.isArray(ad.image) && ad.image[0]) return ad.image[0];
-  if (ad.images && Array.isArray(ad.images) && ad.images[0]) return ad.images[0];
-  if (typeof ad.image === 'string') return ad.image;
-  return '';
-}
-
-export default AdList; 
+export default BannerSection; 

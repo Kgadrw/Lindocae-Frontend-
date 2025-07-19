@@ -16,6 +16,7 @@ import AdsSection from '../components/home/AdsSection';
 import IconsRow from '../components/home/IconsRow';
 import NewArrivalsSection from '../components/home/NewArrivalsSection';
 import { RedesignForLoveSection } from '../components/home/NewArrivalsSection';
+import SocialShareBar from '../components/SocialShareBar';
 
 // Add helpers for wishlist backend logic
 function getAuthToken() {
@@ -287,6 +288,7 @@ export default function Home() {
 
   return (
     <>
+      <SocialShareBar />
       <div className="px-2 md:px-4 lg:px-8 py-4 md:py-6 flex flex-col gap-6">
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
         {showToast && (

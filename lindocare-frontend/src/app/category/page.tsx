@@ -15,17 +15,17 @@ const categories = [
 const CategoryLandingPage = () => {
   const [expanded, setExpanded] = useState<string | null>(null);
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 pt-10 pb-16">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Shop by Category</h1>
+        <h1 className="text-3xl font-bold text-black mb-8 text-center">Shop by Category</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {categories.map(cat => (
             <div
               key={cat.name}
-              className="group bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer flex flex-col h-[320px]"
+              className="group bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer flex flex-col h-[320px] border border-black"
             >
               <Link href={`/category/${encodeURIComponent(cat.name)}`} className="block flex-1">
-                <div className="w-full h-40 overflow-hidden rounded-t-2xl">
+                <div className="w-full h-40 overflow-hidden rounded-t-2xl border-b border-black">
                   <img
                     src={cat.image}
                     alt={cat.name}
@@ -34,12 +34,12 @@ const CategoryLandingPage = () => {
                   />
                 </div>
                 <div className="flex flex-col items-start px-4 pt-4">
-                  <div className="font-bold text-lg text-gray-800 mb-1 truncate w-full">{cat.name}</div>
-                  <div className="text-sm text-gray-500 mb-2">{cat.count} products</div>
+                  <div className="font-bold text-lg text-black mb-1 truncate w-full">{cat.name}</div>
+                  <div className="text-sm text-black mb-2">{cat.count} products</div>
                 </div>
               </Link>
               <button
-                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 px-4 pb-2 pt-1 text-sm font-medium focus:outline-none"
+                className="flex items-center gap-1 text-black hover:text-black px-4 pb-2 pt-1 text-sm font-medium focus:outline-none"
                 onClick={() => setExpanded(expanded === cat.name ? null : cat.name)}
                 aria-label={expanded === cat.name ? 'Hide description' : 'Show description'}
               >
@@ -47,7 +47,7 @@ const CategoryLandingPage = () => {
                 <span className={`transform transition-transform ${expanded === cat.name ? 'rotate-90' : ''}`}>→</span>
               </button>
               {expanded === cat.name && (
-                <div className="px-4 pb-4 text-gray-700 text-xs transition-all duration-200">{cat.description}</div>
+                <div className="px-4 pb-4 text-black text-xs transition-all duration-200">{cat.description}</div>
               )}
             </div>
           ))}

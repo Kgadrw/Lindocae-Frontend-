@@ -120,6 +120,7 @@ const CategoryPage = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMsg, setLoginMsg] = useState('');
+  const [allCategories, setAllCategories] = useState<{ name: string; count?: number }[]>([]);
   useEffect(() => { setIsClient(true); }, []);
 
   // Wishlist state
@@ -129,6 +130,22 @@ const CategoryPage = () => {
     const saved = localStorage.getItem('wishlist');
     setWishlist(saved ? JSON.parse(saved) : []);
   }, [isClient]);
+
+  // Fetch categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('https://lindo-project.onrender.com/category/getAllCategories');
+        const data = await res.json();
+        if (Array.isArray(data)) setAllCategories(data);
+        else if (data && Array.isArray(data.categories)) setAllCategories(data.categories);
+        else setAllCategories([]);
+      } catch {
+        setAllCategories([]);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const params = useParams();
   const categoryParam = params.category;
@@ -235,19 +252,19 @@ const CategoryPage = () => {
   if (!isClient) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
+    <div className="min-h-screen bg-white pb-16">
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
       {showToast && (
         <>
           {/* Mobile: bottom above nav bar */}
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center md:hidden pointer-events-none">
-            <div className="bg-lindo-blue text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
+            <div className="bg-black text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
               {toastMsg}
             </div>
           </div>
           {/* Desktop: top center */}
           <div className="hidden md:flex fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full justify-center pointer-events-none">
-            <div className="bg-lindo-blue text-white px-6 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
+            <div className="bg-black text-white px-6 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
               {toastMsg}
             </div>
           </div>
@@ -255,51 +272,47 @@ const CategoryPage = () => {
       )}
       <div className="max-w-7xl mx-auto px-2 pt-4 md:pt-6 pb-12">
         {/* Breadcrumb */}
-        <div className="text-sm text-lindo-blue mb-4 pt-14 md:pt-0">
-          <Link href="/">Home</Link> / <span className="text-lindo-blue font-medium">{categoryName}</span>
+        <div className="text-sm text-black mb-4 pt-14 md:pt-0">
+          <Link href="/">Home</Link> / <span className="text-black font-medium">{categoryName}</span>
         </div>
         <div className="flex flex-col md:flex-row gap-8">
           {/* Filters (collapsible on mobile) */}
-          <aside className="w-full md:w-64 bg-white rounded-2xl shadow p-6 mb-6 md:mb-0 md:block">
-            <button className="md:hidden mb-4 text-lindo-blue font-semibold" onClick={() => setShowFilters(v => !v)}>
+          <aside className="w-full md:w-64 bg-white border border-black shadow p-6 mb-6 md:mb-0 md:block">
+            <button className="md:hidden mb-4 text-black font-semibold" onClick={() => setShowFilters(v => !v)}>
               {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
             <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
               <div className="flex justify-between items-center mb-4">
-                <span className="font-bold text-lindo-blue text-lg">Filters</span>
-                <button className="text-lindo-blue text-sm font-medium hover:underline" onClick={handleClearAll}>Clear All</button>
+                <span className="font-bold text-black text-lg">Filters</span>
+                <button className="text-blue-600 text-sm font-medium hover:underline" onClick={handleClearAll}>Clear All</button>
               </div>
               <div className="mb-4">
-                <div className="font-semibold text-lindo-blue mb-2">Categories</div>
+                <div className="font-semibold text-black mb-2">Categories</div>
                 <ul className="space-y-2">
-                  {categories.map(cat => (
+                  {allCategories.map(cat => (
                     <li key={cat.name} className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-lindo-blue" />
-                      <span className="text-lindo-blue text-sm">{cat.name} <span className="text-lindo-400">({cat.count})</span></span>
+                      <input type="checkbox" className="accent-blue-600" />
+                      <span className="text-black text-sm hover:text-blue-600 transition-colors cursor-pointer">{cat.name}</span>
+                      {cat.count !== undefined && <span className="text-black text-sm"> ({cat.count})</span>}
                     </li>
                   ))}
                 </ul>
               </div>
+              {/* Remove Delivery filter section */}
+           
               <div className="mb-4">
-                <div className="font-semibold text-lindo-blue mb-2">Delivery</div>
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 text-sm text-lindo-blue"><input type="checkbox" className="accent-green-500" checked={selectedDelivery.includes('Fast Delivery')} onChange={() => handleDeliveryChange('Fast Delivery')} /> Fast Delivery</label>
-                  <label className="flex items-center gap-2 text-sm text-lindo-blue"><input type="checkbox" className="accent-yellow-500" checked={selectedDelivery.includes('Pickup Nearby')} onChange={() => handleDeliveryChange('Pickup Nearby')} /> Pickup Nearby</label>
-                </div>
-              </div>
-              <div className="mb-4">
-                <div className="font-semibold text-lindo-blue mb-2">Color</div>
+                <div className="font-semibold text-black mb-2">Color</div>
                 <div className="flex gap-2">
                   {colors.map((color, i) => (
-                    <span key={i} className="w-6 h-6 rounded-full border border-gray-200" style={{ background: color }}></span>
+                    <span key={i} className="w-6 h-6 border border-black" style={{ background: color }}></span>
                   ))}
                 </div>
               </div>
               <div>
-                <div className="font-semibold text-lindo-blue mb-2">Price Range</div>
+                <div className="font-semibold text-black mb-2">Price Range</div>
                 <div className="flex gap-2">
-                  <input type="number" placeholder="Min" className="w-1/2 rounded-lg border px-2 py-1 text-sm" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
-                  <input type="number" placeholder="Max" className="w-1/2 rounded-lg border px-2 py-1 text-sm" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
+                  <input type="number" placeholder="Min" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
+                  <input type="number" placeholder="Max" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -307,49 +320,69 @@ const CategoryPage = () => {
           {/* Main Content */}
           <main className="flex-1">
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-lindo-blue">{categoryName} <span className="text-lindo-400 text-base font-normal">({products.length} products)</span></h1>
+              <h1 className="text-2xl font-bold text-black">{categoryName} <span className="text-black text-base font-normal">({products.length} products)</span></h1>
               <div className="flex items-center gap-2">
-                <span className="text-lindo-blue text-sm">Sort by:</span>
-                <select className="rounded-lg border px-2 py-1 text-sm text-lindo-blue" value={sort} onChange={e => setSort(e.target.value)}>
+                <span className="text-black text-sm">Sort by:</span>
+                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value={sort} onChange={e => setSort(e.target.value)}>
                   {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
-                <button className={`ml-2 p-2 rounded hover:bg-gray-100 ${viewMode === 'grid' ? 'bg-lindo-blue-light' : ''}`} onClick={() => setViewMode('grid')} aria-label="Grid view"><svg width="20" height="20" fill="none" stroke="#3B82F6" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></button>
-                <button className={`p-2 rounded hover:bg-gray-100 ${viewMode === 'list' ? 'bg-lindo-blue-light' : ''}`} onClick={() => setViewMode('list')} aria-label="List view"><svg width="20" height="20" fill="none" stroke="#3B82F6" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/></svg></button>
+                <button
+                  className={`ml-2 p-2 rounded border border-blue-600 hover:bg-blue-600 hover:text-white ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-blue-600'}`}
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                >
+                  <svg width="20" height="20" fill="none" stroke={viewMode === 'grid' ? '#fff' : '#000'} strokeWidth="2" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                  </svg>
+                </button>
+                <button
+                  className={`p-2 rounded border border-blue-600 hover:bg-blue-600 hover:text-white ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-blue-600'}`}
+                  onClick={() => setViewMode('list')}
+                  aria-label="List view"
+                >
+                  <svg width="20" height="20" fill="none" stroke={viewMode === 'list' ? '#fff' : '#000'} strokeWidth="2" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="7" rx="1.5"/>
+                    <rect x="3" y="14" width="18" height="7" rx="1.5"/>
+                  </svg>
+                </button>
               </div>
             </div>
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'flex flex-col gap-6'}>
               {filteredProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
+                <div key={product.id} className="bg-white border border-black rounded-2xl shadow p-4 flex flex-col">
                   <div className="relative mb-3">
-                    <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" />
+                    <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl border border-black" />
                     {product.tags.map(tag => (
-                      <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-lindo-blue-light text-lindo-blue'}`}>{tag}</span>
+                      <span key={tag} className="absolute top-2 left-2 px-2 py-1 border border-black text-black bg-white rounded text-xs font-bold">{tag}</span>
                     ))}
                     <button
-                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
+                      className="absolute top-2 right-2 bg-white border border-black rounded-full p-1 shadow hover:bg-blue-600 hover:text-white"
                       onClick={() => toggleWishlist(product.id)}
                       aria-label="Add to wishlist"
                     >
                       <Heart
                         size={20}
-                        color={wishlist.includes(product.id) ? '#F87171' : '#3B82F6'}
-                        fill={wishlist.includes(product.id) ? '#F87171' : 'none'}
+                        color={wishlist.includes(product.id) ? '#2563eb' : '#000'}
+                        fill={wishlist.includes(product.id) ? '#2563eb' : 'none'}
                         strokeWidth={2.2}
                       />
                     </button>
                   </div>
                   <div className="flex-1 flex flex-col">
                     <div className="flex items-center gap-1 mb-1">
-                      <span className="text-yellow-400">★</span>
-                      <span className="text-sm font-semibold text-lindo-blue">{product.rating}</span>
-                      <span className="text-xs text-lindo-500">({product.reviews} reviews)</span>
+                      <span className="text-black">★</span>
+                      <span className="text-sm font-semibold text-black">{product.rating}</span>
+                      <span className="text-xs text-black">({product.reviews} reviews)</span>
                     </div>
-                    <div className="font-bold text-lindo-blue mb-1">{product.name}</div>
+                    <div className="font-bold text-black mb-1">{product.name}</div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg font-bold text-lindo-blue">${product.price.toFixed(2)}</span>
-                      {product.oldPrice && <span className="text-sm line-through text-lindo-400">${product.oldPrice}</span>}
+                      <span className="text-lg font-bold text-black">${product.price.toFixed(2)}</span>
+                      {product.oldPrice && <span className="text-sm line-through text-black">${product.oldPrice}</span>}
                     </div>
-                    <button className="mt-auto rounded-full bg-lindo-blue text-white font-bold py-2 text-sm shadow hover:bg-lindo-blue-dark transition" onClick={() => handleAddToCart(product)}>Add to Cart</button>
+                    <button className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition" onClick={() => handleAddToCart(product)}>Add to Cart</button>
                   </div>
                 </div>
               ))}
