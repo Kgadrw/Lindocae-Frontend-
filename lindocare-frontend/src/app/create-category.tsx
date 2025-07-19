@@ -13,7 +13,7 @@ const CreateCategoryPage = () => {
     setSuccess('');
     setError('');
     try {
-      const res = await fetch('http://localhost:5000/category/createCategory', {
+      const res = await fetch('http:lindo-project.onrender.com/category/createCategory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description }),

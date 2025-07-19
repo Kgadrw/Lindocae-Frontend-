@@ -16,9 +16,10 @@ interface LoginModalProps {
   onClose: () => void;
   onLoginSuccess?: (name: string, avatar?: string, email?: string) => void;
   message?: string;
+  mode?: 'login' | 'register';
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, message }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, message, mode }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -34,6 +35,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
   const [iconsError, setIconsError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
+  React.useEffect(() => {
+    if (open) {
+      setIsRegister(mode === 'register');
+    }
+  }, [open, mode]);
 
   // Async Gravatar URL generator
   async function getGravatarUrl(email: string) {
@@ -280,12 +287,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
           <span className="font-semibold">Rwanda</span>
           <ChevronDown size={16} />
         </div>
-        <button
-          className="text-blue-700 font-semibold underline underline-offset-2"
-          onClick={() => setIsRegister((v) => !v)}
-        >
-          {isRegister ? 'Back to Sign in' : 'Register'}
-        </button>
+        <div className="w-full flex flex-col items-center gap-2 mt-2">
+          <button
+            type="button"
+            className="text-blue-600 hover:underline text-sm font-semibold"
+            onClick={() => setIsRegister(v => !v)}
+          >
+            {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
+          </button>
+        </div>
       </div>
     </div>
   );

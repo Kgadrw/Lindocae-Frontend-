@@ -1,8 +1,11 @@
 theme: {
   extend: {
+    fontFamily: {
+      'sans': ['Montserrat', 'Arial', 'Helvetica', 'sans-serif'],
+    },
     colors: {
-      'lindo-yellow': '#F4E029',
-      'lindo-blue': '#3B82F6',
+      'lindo-yellow': '#FFE600',
+      'lindo-blue': '#2056A7',
     },
   },
 }, 

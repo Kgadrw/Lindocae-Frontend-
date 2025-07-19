@@ -1,6 +1,7 @@
 import React from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { ReactNode } from 'react';
 
 interface Product {
   _id?: string;
@@ -29,7 +30,15 @@ interface NewArrivalsSectionProps {
   setSort: (v: string) => void;
   sortOptions: { value: string; label: string }[];
   handleClearAll: () => void;
+  iconsRow?: ReactNode;
 }
+
+const features = [
+  { icon: '/icons/reddot.svg', label: 'Red Dot Winner' },
+  { icon: '/icons/sustainable.svg', label: 'Global Sustainable Sourcing' },
+  { icon: '/icons/medical.svg', label: 'Medical-Grade Manufactured' },
+  { icon: '/icons/pediatrician.svg', label: 'Pediatrician Co-developed' },
+];
 
 const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
   filteredProducts,
@@ -46,37 +55,29 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
   setSort,
   sortOptions,
   handleClearAll,
+  iconsRow,
 }) => {
   return (
-    <section className="mb-4">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-center text-blue-700">New Arrivals</h2>
+    <section className="mb-8">
+      {/* Section Title */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">SHOP THE MUST HAVES</h2>
+        <p className="text-gray-600">Discover our latest arrivals and trending products</p>
+      </div>
+      {iconsRow && <div className="mb-6 flex justify-center">{iconsRow}</div>}
+      
+      <div className="flex items-center justify-end mb-6">
         <Link
           href="/all-products"
-          className="text-yellow-500 text-sm font-semibold hover:underline focus:outline-none ml-4"
+          className="text-yellow-500 text-sm font-semibold hover:underline focus:outline-none flex items-center gap-1"
           style={{ minWidth: 70 }}
         >
-          See more
+          See more <ChevronRight size={16} />
         </Link>
       </div>
-      {/* Filters and Sorting Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-white rounded-xl p-4">
-        {/* Price Range Filter (left) */}
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-blue-900">Price:</span>
-          <input type="number" placeholder="Min" className="w-20 rounded-lg border px-2 py-1 text-sm text-blue-900" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
-          <span>-</span>
-          <input type="number" placeholder="Max" className="w-20 rounded-lg border px-2 py-1 text-sm text-blue-900" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
-        </div>
-        {/* Sort Dropdown (right) */}
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="font-semibold text-blue-900">Sort by:</span>
-          <select className="rounded-lg border px-2 py-1 text-sm text-blue-900" value={sort} onChange={e => setSort(e.target.value)}>
-            {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-          <button className="text-blue-600 text-sm font-medium hover:underline ml-2" onClick={handleClearAll}>Clear All</button>
-        </div>
-      </div>
+      
+
+
       {prodLoading ? (
         <div className="text-center text-gray-500 py-8">Loading products...</div>
       ) : prodError ? (
@@ -84,46 +85,45 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
       ) : filteredProducts.length === 0 ? (
         <div className="text-center text-gray-500 py-8">No products found.</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.slice(0, 12).map((prod, idx) => (
-            <div key={prod._id || prod.id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col">
-              <div className="relative mb-3">
-                {prod.image && (Array.isArray(prod.image) ? (
-                  <img src={prod.image[0]} alt={prod.name} className="w-full h-40 object-cover rounded-xl" />
-                ) : (
-                  <img src={prod.image} alt={prod.name} className="w-full h-40 object-cover rounded-xl" />
-                ))}
-                {prod.tags && Array.isArray(prod.tags) && prod.tags.map((tag: string) => (
-                  <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
-                ))}
-                <button
-                  className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                  onClick={() => toggleWishlist(String(prod.id || prod._id))}
-                  aria-label="Add to wishlist"
-                >
-                  <Heart
-                    size={20}
-                    color={wishlist.includes(String(prod.id || prod._id)) ? '#F87171' : '#3B82F6'}
-                    fill={wishlist.includes(String(prod.id || prod._id)) ? '#F87171' : 'none'}
-                    strokeWidth={2.2}
-                  />
-                </button>
-              </div>
-              <div className="flex-1 flex flex-col">
-                <div className="flex items-center gap-1 mb-1">
-                  <span className="text-yellow-400">★</span>
-                  <span className="text-sm font-semibold text-blue-900">{prod.rating || 4.7}</span>
-                  <span className="text-xs text-blue-500">({prod.reviews || 12} reviews)</span>
+        <div className="relative">
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            {filteredProducts.slice(0, 12).map((prod, idx) => (
+              <div key={prod._id || prod.id || idx} className="bg-white rounded-2xl shadow-lg flex-shrink-0 w-64">
+                <div className="relative">
+                  {prod.image && (Array.isArray(prod.image) ? (
+                    <img src={prod.image[0]} alt={prod.name} className="w-full h-48 object-cover rounded-t-2xl" />
+                  ) : (
+                    <img src={prod.image} alt={prod.name} className="w-full h-48 object-cover rounded-t-2xl" />
+                  ))}
+                  <button
+                    className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition"
+                    onClick={() => toggleWishlist(String(prod.id || prod._id))}
+                    aria-label="Add to wishlist"
+                  >
+                    <Heart
+                      size={18}
+                      color={wishlist.includes(String(prod.id || prod._id)) ? '#F87171' : '#6B7280'}
+                      fill={wishlist.includes(String(prod.id || prod._id)) ? '#F87171' : 'none'}
+                      strokeWidth={2}
+                    />
+                  </button>
                 </div>
-                <div className="font-bold text-blue-900 mb-1">{prod.name}</div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg font-bold text-blue-900">${prod.price?.toFixed ? prod.price.toFixed(2) : prod.price}</span>
-                  {prod.oldPrice && <span className="text-sm line-through text-blue-400">${prod.oldPrice}</span>}
+                <div className="p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i} className={`text-sm ${i < (prod.rating || 5) ? 'text-yellow-400' : 'text-gray-300'}`}>★</span>
+                    ))}
+                  </div>
+                  <div className="text-sm font-semibold text-blue-900 mb-1 line-clamp-2">{prod.name}</div>
+                  <div className="text-lg font-bold text-blue-900">From ${prod.price?.toFixed ? prod.price.toFixed(2) : prod.price}</div>
                 </div>
-                <button className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition" onClick={() => handleAddToCart(prod)}>Add to Cart</button>
               </div>
+            ))}
+            {/* Arrow indicator for more items */}
+            <div className="flex items-center justify-center w-16 flex-shrink-0">
+              <ChevronRight size={24} className="text-gray-400" />
             </div>
-          ))}
+          </div>
         </div>
       )}
     </section>
@@ -131,3 +131,46 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
 };
 
 export default NewArrivalsSection; 
+
+export function RedesignForLoveSection({ banners }: { banners: string[] }) {
+  // Animation on scroll (fade/slide in)
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    const handleScroll = () => {
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      if (rect.top < window.innerHeight - 100) setVisible(true);
+    };
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  return (
+    <section
+      ref={ref}
+      className={`w-full flex flex-col md:flex-row items-center justify-between gap-8 px-4 py-10 md:py-14 max-w-5xl mx-auto rounded-2xl mt-10 bg-[#f8f8f8] shadow-sm transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+      style={{ minHeight: 220 }}
+    >
+      <div className="flex-1 flex flex-col items-start justify-center max-w-lg">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Redesign for Love</h2>
+        <p className="text-gray-700 text-base md:text-lg mb-4">With a focus on innovation and excellence, we aim to enhance every aspect of motherhood.</p>
+        <a href="#" className="text-blue-700 text-sm font-medium underline underline-offset-2 hover:text-blue-900 transition mb-2">Learn More &gt;</a>
+      </div>
+      <div className="flex-1 flex flex-row items-center justify-center gap-6 md:gap-10 w-full">
+        {[0,1,2,3].map(i => (
+          <div key={i} className="flex flex-col items-center">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white flex items-center justify-center shadow border border-gray-200 mb-2 overflow-hidden">
+              {banners && banners[i] ? (
+                <img src={banners[i]} alt={`Feature ${i+1}`} className="w-12 h-12 md:w-16 md:h-16 object-cover" />
+              ) : (
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-200 rounded-full" />
+              )}
+            </div>
+            <span className="text-xs md:text-sm text-gray-800 text-center font-medium max-w-[90px]">{features[i]?.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+} 

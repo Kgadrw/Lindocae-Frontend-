@@ -10,9 +10,11 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import BannersSection from '../components/home/BannersSection';
 import CategoriesSlider from '../components/home/CategoriesSlider';
+import PromoBanner from '../components/home/PromoBanner';
 import AdsSection from '../components/home/AdsSection';
 import IconsRow from '../components/home/IconsRow';
 import NewArrivalsSection from '../components/home/NewArrivalsSection';
+import { RedesignForLoveSection } from '../components/home/NewArrivalsSection';
 
 // Add helpers for wishlist backend logic
 function getAuthToken() {
@@ -61,10 +63,6 @@ export default function Home() {
   const { data: ads, error: adsError, isLoading: adsLoading } = useSWR('https://lindo-project.onrender.com/adds/getAds', fetcher);
   // Update icons fetch to use the correct endpoint and handle as array
   const { data: icons, error: iconsError, isLoading: iconsLoading } = useSWR('https://lindo-project.onrender.com/icons/getIcons', fetcher);
-
-  // Add a state to track if the loader should be shown
-  const [showLoader, setShowLoader] = useState(false);
-  const [loaderDone, setLoaderDone] = useState(false);
 
   // Add a single loading state for all data
   const allLoading = catLoading || prodLoading || bannerLoading || adsLoading || iconsLoading;
@@ -118,16 +116,9 @@ export default function Home() {
   })();
 
   // WhatsApp support modal and button visibility
-  const [showSupportModal, setShowSupportModal] = useState(false);
   const [showWhatsappBtn, setShowWhatsappBtn] = useState(false);
-  const [modalExpanded, setModalExpanded] = useState(false);
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (!sessionStorage.getItem('whatsappSupportModalShown')) {
-        setShowSupportModal(true);
-        setModalExpanded(true);
-        sessionStorage.setItem('whatsappSupportModalShown', 'true');
-      }
       const handleScroll = () => {
         // Hide WhatsApp button on hero (top 500px), show after
         setShowWhatsappBtn(window.scrollY > 500);
@@ -135,19 +126,6 @@ export default function Home() {
       window.addEventListener('scroll', handleScroll);
       handleScroll();
       return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Only show the loader if it hasn't been shown in this session
-    if (typeof window !== 'undefined') {
-      if (!sessionStorage.getItem('lindoLoaderShown')) {
-        setShowLoader(true);
-        sessionStorage.setItem('lindoLoaderShown', 'true');
-      } else {
-        setShowLoader(false);
-        setLoaderDone(true);
-      }
     }
   }, []);
 
@@ -306,41 +284,26 @@ export default function Home() {
     setTimeout(() => setShowToast(false), 1200);
   };
 
-  if (showLoader && !loaderDone) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Image src="/lindo.png" alt="Lindocare Logo" width={120} height={120} className="animate-pulse" style={{ width: 120, height: 'auto' }} />
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="px-4 md:px-8 lg:px-16 py-6 md:py-10 flex flex-col gap-8">
+      <div className="px-2 md:px-4 lg:px-8 py-4 md:py-6 flex flex-col gap-6">
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
         {showToast && (
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center pointer-events-none">
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
+            <div className="bg-lindo-blue text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
               {toastMsg}
             </div>
           </div>
         )}
         {/* Hero Section (Banners) */}
         <BannersSection banners={banners} bannerLoading={bannerLoading} bannerError={bannerError} />
+        {/* Category Icons Row */}
         {/* Category Cards as Slider */}
-        <CategoriesSlider
-          categories={categories}
-          catLoading={catLoading}
-          catError={catError}
-          catSlide={catSlide}
-          setCatSlide={setCatSlide}
-          catsPerSlide={catsPerSlide}
-          totalCatSlides={totalCatSlides}
-        />
+        <CategoriesSlider categories={categories} catLoading={catLoading} catError={catError} />
         {/* Promo/Info Banners */}
         <AdsSection ads={ads} adsLoading={adsLoading} adsError={adsError} />
-        {/* Category Icons Row */}
-        <IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />
+        {/* Wishlist Promo Banner */}
+        <PromoBanner categories={categories} catLoading={catLoading} />
         {/* Product Grids */}
         <NewArrivalsSection
           filteredProducts={filteredProducts}
@@ -357,48 +320,20 @@ export default function Home() {
           setSort={setSort}
           sortOptions={sortOptions}
           handleClearAll={handleClearAll}
+          iconsRow={<IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />}
         />
       </div>
-      {/* WhatsApp Support Modal as Floating Button */}
-      {showSupportModal && (
-        <div className="fixed bottom-28 right-6 z-50">
-          {/* Collapsed: just the icon button */}
-          {!modalExpanded && (
-            <button
-              onClick={() => setModalExpanded(true)}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200 focus:outline-none"
-              aria-label="Show WhatsApp support info"
-            >
-              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
-                <circle cx="16" cy="16" r="16" fill="#25D366"/>
-                <path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/>
-              </svg>
-            </button>
-          )}
-          {/* Expanded: show the modal */}
-          {modalExpanded && (
-            <div className="bg-white border border-yellow-300 shadow-xl rounded-2xl px-6 py-4 flex items-center gap-4 animate-fade-in min-w-[320px]">
-              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8"><circle cx="16" cy="16" r="16" fill="#25D366"/><path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/></svg>
-              <div className="flex flex-col">
-                <span className="font-bold text-blue-900 text-base mb-1">Need help?</span>
-                <span className="text-sm text-blue-800">For any support, you can text us on WhatsApp at <span className="font-semibold text-green-600">+250 785 064 255</span>.</span>
-              </div>
-              <button onClick={() => { setShowSupportModal(false); setModalExpanded(false); }} className="ml-2 text-gray-400 hover:text-gray-700 text-xl font-bold focus:outline-none">×</button>
-            </div>
-          )}
-        </div>
-      )}
       {/* WhatsApp Support Button (only visible after hero) */}
       {showWhatsappBtn && (
         <a
           href="https://wa.me/250785064255"
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200"
+          className="fixed bottom-6 right-6 z-50 bg-lindo-blue hover:bg-lindo-yellow text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200"
           aria-label="Chat with support on WhatsApp"
         >
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
-            <circle cx="16" cy="16" r="16" fill="#25D366"/>
+            <circle cx="16" cy="16" r="16" fill="var(--lindo-yellow)"/>
             <path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/>
           </svg>
         </a>

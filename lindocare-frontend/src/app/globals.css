@@ -1,19 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --lindo-yellow: #FFD600;
-  --lindo-blue: #174EA6;
-  --font-inter: 'Inter', Arial, Helvetica, sans-serif;
+  --lindo-yellow: #FFE600;
+  --lindo-blue: #2056A7;
   --font-montserrat: 'Montserrat', Arial, Helvetica, sans-serif;
-  --font-permanent-marker: 'Permanent Marker', cursive;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-montserrat);
   --font-mono: monospace;
 }
 
@@ -27,5 +26,10 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-montserrat);
+  font-weight: 400;
+}
+
+* {
   font-family: var(--font-montserrat);
 }

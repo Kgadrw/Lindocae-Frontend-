@@ -33,7 +33,7 @@ const GetCategoriesPage = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md border border-yellow-200">
         <h1 className="text-2xl font-bold mb-6 text-center text-blue-700">All Categories</h1>
-        {loading && <div className="text-center text-gray-500">Loading...</div>}
+        {loading && null}
         {error && <div className="text-red-500 text-center mb-4">{error}</div>}
         {!loading && !error && (
           <ul className="flex flex-col gap-4">

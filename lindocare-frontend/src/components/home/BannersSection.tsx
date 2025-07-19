@@ -15,100 +15,198 @@ interface BannersSectionProps {
 }
 
 const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionProps) => {
+  // Get banner data safely
+  const bannerData = banners?.banners || [];
+  const gridBanners = bannerData.slice(0, 4); // Get up to 4 banners for the grid
+  // Find the first banner not used in the grid for the large promo section
+  const gridBannerIds = new Set(gridBanners.map(b => b._id));
+  const promoBanner = bannerData.find(b => !gridBannerIds.has(b._id));
+  const promoImage = promoBanner?.images?.[0] || '/lindo.png';
+
   return (
-    <section className="w-full mb-4">
+    <section className="w-full mb-8">
       {bannerLoading ? (
         <div className="text-center text-gray-500 py-8">Loading banners...</div>
       ) : bannerError ? (
         <div className="text-center text-red-500 py-8">{typeof bannerError === 'string' ? bannerError : bannerError?.message || String(bannerError)}</div>
-      ) : banners?.banners?.length === 0 ? (
+      ) : bannerData.length === 0 ? (
         <div className="text-center text-gray-500 py-8">No banners found.</div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            {/* Main large banner */}
-            <Link href={banners?.banners?.[0]?.category ? `/category/${encodeURIComponent(banners.banners[0].category)}` : '#'} className="md:col-span-2 bg-white rounded-2xl shadow p-0 flex items-center justify-center h-64 overflow-hidden relative group cursor-pointer">
-              {banners?.banners?.[0]?.images?.[0] && (
-                <img src={banners.banners[0].images[0]} alt={banners.banners[0].title} className="absolute inset-0 w-full h-full object-cover rounded-2xl group-hover:brightness-90 transition" />
-              )}
-              {/* Title at top center */}
-              <div className="absolute top-0 left-0 w-full flex flex-col items-center pt-6 z-10">
-                <span className="text-3xl font-bold text-yellow-500 drop-shadow-lg bg-white/70 px-4 py-1 rounded-full shadow-md text-center">{banners?.banners?.[0]?.title}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Large promotional section on the left */}
+          <div className="lg:col-span-1 relative rounded-2xl p-6 flex flex-col justify-end pb-10 overflow-hidden">
+            {/* Background image */}
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img src={promoImage} alt="Banner" className="w-full h-full object-cover object-center" />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#89CFF0]/80 via-white/60 to-[#FFF9C4]/80" />
+            </div>
+            {/* Content */}
+            <div className="relative z-10">
+
+
+              <div className="text-center lg:text-left space-y-4">
+                <div className="space-y-3">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-blue-800 leading-tight">
+                    Up to 30% Off
+                  </h1>
+                  <h2 className="text-xl lg:text-2xl font-semibold text-yellow-500">
+                    Newborn-Ready Nursery
+                  </h2>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    Everything you need to create the perfect nursery for your little one. Quality products, soft materials, and peace of mind.
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                  <Link 
+                    href="/all-products"
+                    className="bg-blue-800 hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
+                  >
+                    Shop Now
+                  </Link>
+                  <Link 
+                    href="/category/nursery"
+                    className="border-2 border-lindo-blue bg-yellow-300 hover:border-lindo-yellow text-white hover:text-lindo-yellow px-6 py-3 rounded-full font-semibold text-base transition-colors duration-300"
+                  >
+                    View Categories
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2x2 grid of baby product images on the right */}
+          <div className="lg:col-span-2 grid grid-cols-2 gap-3">
+            {/* Top-left: First banner */}
+            <Link href={gridBanners[0]?.category ? `/category/${encodeURIComponent(gridBanners[0].category)}` : '#'} className="group cursor-pointer">
+              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                {gridBanners[0]?.images?.[0] ? (
+                  <div className="aspect-[4/3] relative">
+                    <img 
+                      src={gridBanners[0].images[0]} 
+                      alt={gridBanners[0].title} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <h3 className="font-bold text-lg">{gridBanners[0].title}</h3>
+                      {gridBanners[0].subTitle && (
+                        <p className="text-sm opacity-90">{gridBanners[0].subTitle}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <div className="text-center space-y-3">
+                      <div className="w-16 h-16 bg-blue-300 rounded-full flex items-center justify-center mx-auto">
+                        <span className="text-2xl">👶</span>
+                      </div>
+                      <h3 className="font-bold text-gray-800 text-lg">Nursery Essentials</h3>
+                      <p className="text-sm text-gray-600">Changing pads & more</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </Link>
-            {/* Two vertical banners on the right */}
-            {[1,2].map(i => (
-              <Link
-                key={i}
-                href={banners?.banners?.[i]?.category ? `/category/${encodeURIComponent(banners.banners[i].category)}` : '#'}
-                className="bg-white rounded-2xl shadow p-0 flex flex-col h-64 overflow-hidden relative group transition-transform duration-300 animate-fade-in cursor-pointer"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                {banners?.banners?.[i]?.images?.[0]
-                  ? (
-                    <>
-                      <img
-                        src={banners.banners[i].images[0]}
-                        alt={banners.banners[i].title}
-                        className="absolute inset-0 w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105 group-hover:brightness-90"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent rounded-2xl transition-opacity duration-300 group-hover:opacity-80" />
-                      <div className="absolute bottom-0 left-0 w-full flex flex-col items-start px-4 pb-4 z-10">
-                        <span className="flex items-center text-lg font-bold text-white drop-shadow-lg transition group-hover:text-yellow-300">
-                          {banners.banners[i].title}
-                          <span className="ml-2 text-xl transition-transform group-hover:translate-x-1">→</span>
-                        </span>
-                        {banners.banners[i].subTitle && (
-                          <span className="text-xs text-white mt-2 drop-shadow">{banners.banners[i].subTitle}</span>
-                        )}
+
+            {/* Top-right: Second banner */}
+            <Link href={gridBanners[1]?.category ? `/category/${encodeURIComponent(gridBanners[1].category)}` : '#'} className="group cursor-pointer">
+              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                {gridBanners[1]?.images?.[0] ? (
+                  <div className="aspect-[4/3] relative">
+                    <img 
+                      src={gridBanners[1].images[0]} 
+                      alt={gridBanners[1].title} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <h3 className="font-bold text-lg">{gridBanners[1].title}</h3>
+                      {gridBanners[1].subTitle && (
+                        <p className="text-sm opacity-90">{gridBanners[1].subTitle}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[4/3] bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
+                    <div className="text-center space-y-3">
+                      <div className="w-16 h-16 bg-yellow-300 rounded-full flex items-center justify-center mx-auto">
+                        <span className="text-2xl">🎪</span>
                       </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100 rounded-2xl">No Banner</div>
-                  )}
+                      <h3 className="font-bold text-gray-800 text-lg">Ready, Set, Play!</h3>
+                      <p className="text-sm text-gray-600">Baby play gyms</p>
+                    </div>
+                  </div>
+                )}
+              </div>
               </Link>
-            ))}
-          </div>
-          {/* Row of smaller banners below */}
-          {banners?.banners?.length > 3 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {banners.banners.slice(3, 7).map((banner: any, idx: number) => (
-                <Link
-                  key={banner._id || idx}
-                  href={banner.category ? `/category/${encodeURIComponent(banner.category)}` : '#'}
-                  className="bg-white rounded-2xl shadow p-0 flex flex-col h-40 overflow-hidden relative group transition-transform duration-300 animate-fade-in cursor-pointer"
-                  style={{ animationDelay: `${(idx + 3) * 100}ms` }}
-                >
-                  {banner.images && banner.images[0]
-                    ? (
-                      <>
-                        <img
-                          src={banner.images[0]}
-                          alt={banner.title}
-                          className="absolute inset-0 w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105 group-hover:brightness-90"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent rounded-2xl transition-opacity duration-300 group-hover:opacity-80" />
-                        <div className="absolute bottom-0 left-0 w-full flex flex-col items-start px-3 pb-3 z-10">
-                          <span className="flex items-center text-base font-bold text-white drop-shadow-lg transition group-hover:text-yellow-300">
-                            {banner.title}
-                            <span className="ml-2 text-lg transition-transform group-hover:translate-x-1">→</span>
-                          </span>
-                          {banner.subTitle && (
-                            <span className="text-xs text-white mt-2 drop-shadow">{banner.subTitle}</span>
+
+            {/* Bottom-left: Third banner */}
+            <Link href={gridBanners[2]?.category ? `/category/${encodeURIComponent(gridBanners[2].category)}` : '#'} className="group cursor-pointer">
+              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                {gridBanners[2]?.images?.[0] ? (
+                  <div className="aspect-[4/3] relative">
+                    <img 
+                      src={gridBanners[2].images[0]} 
+                      alt={gridBanners[2].title} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <h3 className="font-bold text-lg">{gridBanners[2].title}</h3>
+                      {gridBanners[2].subTitle && (
+                        <p className="text-sm opacity-90">{gridBanners[2].subTitle}</p>
                           )}
                         </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100 rounded-2xl">No Banner</div>
-                    )}
+                  </div>
+                ) : (
+                  <div className="aspect-[4/3] bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <div className="text-center space-y-3">
+                      <div className="w-16 h-16 bg-green-300 rounded-full flex items-center justify-center mx-auto">
+                        <span className="text-2xl">🛁</span>
+                      </div>
+                      <h3 className="font-bold text-gray-800 text-lg">Bath Time Fun</h3>
+                      <p className="text-sm text-gray-600">Towels & bath toys</p>
+                    </div>
+                  </div>
+                )}
+              </div>
                 </Link>
-              ))}
-              {Array.from({length: Math.max(0, 4 - (banners.banners.length - 3))}).map((_, idx) => (
-                <div key={idx} className="bg-gray-100 rounded-2xl shadow h-40" />
-              ))}
+
+            {/* Bottom-right: Fourth banner */}
+            <Link href={gridBanners[3]?.category ? `/category/${encodeURIComponent(gridBanners[3].category)}` : '#'} className="group cursor-pointer">
+              <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                {gridBanners[3]?.images?.[0] ? (
+                  <div className="aspect-[4/3] relative">
+                    <img 
+                      src={gridBanners[3].images[0]} 
+                      alt={gridBanners[3].title} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <h3 className="font-bold text-lg">{gridBanners[3].title}</h3>
+                      {gridBanners[3].subTitle && (
+                        <p className="text-sm opacity-90">{gridBanners[3].subTitle}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[4/3] bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+                    <div className="text-center space-y-3">
+                      <div className="w-16 h-16 bg-purple-300 rounded-full flex items-center justify-center mx-auto">
+                        <span className="text-2xl">🧸</span>
+                      </div>
+                      <h3 className="font-bold text-gray-800 text-lg">Most-Loved</h3>
+                      <p className="text-sm text-gray-600">Wooden toys & more</p>
+                    </div>
             </div>
           )}
-        </>
+              </div>
+            </Link>
+          </div>
+        </div>
       )}
     </section>
   );

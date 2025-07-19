@@ -10,6 +10,7 @@ import CategoriesSection from '../components/CategoriesSection';
 import Link from 'next/link';
 import AdCreateForm from '../components/AdCreateForm';
 import AdList from '../components/AdList';
+import CategoryDeleteModal from '../components/CategoryDeleteModal';
 
 interface Vendor {
   id: number;
@@ -638,55 +639,39 @@ export default function AdminDashboard() {
     setCatDeleteLoading(true);
     setCatDeleteError('');
     const token = getAuthToken();
+    const payload = { _id: catToDelete._id };
     try {
-      const res = await fetch(`https://lindo-project.onrender.com/category/deleteCategory/${catToDelete._id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+      const res = await fetch('https://lindo-project.onrender.com/category/deleteCategory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        let msg = `Failed to delete category (status: ${res.status})`;
+      if (res.ok) {
+        setCatDeleteLoading(false);
+        setCatDeleteModalOpen(false);
+        setCatToDelete(null);
+        fetchCategories();
+        return;
+      } else {
+        let errorMsg = `Failed to delete category (status: ${res.status})`;
         try {
-          // Try to parse JSON error
           const data = await res.json();
-          msg = (data.message ? `${data.message} (status: ${res.status})` : msg);
+          if (data && data.message) errorMsg += ` - ${data.message}`;
+          else errorMsg += ` - ${JSON.stringify(data)}`;
         } catch {
-          // If not JSON, get raw text
           try {
             const text = await res.text();
-            if (text) msg = `${text} (status: ${res.status})`;
+            if (text) errorMsg += ` - ${text}`;
           } catch {}
         }
-        // If 404, auto-close modal and refresh
-        if (res.status === 404) {
-          setCatToDelete(null);
-          setCatDeleteLoading(false);
-          // Refresh categories
-          setCatLoading(true);
-          fetch('https://lindo-project.onrender.com/category/getAllCategories', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-            .then(res => res.json())
-            .then(data => setCategories(Array.isArray(data) ? data : (data.categories || [])))
-            .catch(() => setCatError('Failed to fetch categories.'))
-            .finally(() => setCatLoading(false));
-          return;
-        }
-        // Log the full response for debugging
-        console.error('Delete category error:', msg, res);
-        throw new Error(msg);
+        setCatDeleteError(errorMsg);
+        setCatDeleteLoading(false);
       }
-      // Refresh categories
-      fetch('https://lindo-project.onrender.com/category/getAllCategories', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => setCategories(Array.isArray(data) ? data : (data.categories || [])))
-        .catch(() => setCatError('Failed to fetch categories.'))
-        .finally(() => setCatLoading(false));
-      setCatToDelete(null);
-    } catch (err: any) {
-      setCatDeleteError(err.message || 'Error deleting category');
-    } finally {
+    } catch (err) {
+      setCatDeleteError('Network error. Please try again.');
       setCatDeleteLoading(false);
     }
   };
@@ -1173,6 +1158,26 @@ export default function AdminDashboard() {
                     setCatEditId={setCatEditId}
                     setCatForm={setCatForm}
                     safeRender={safeRender}
+                  />
+                  {/* Category Delete Modal */}
+                  <CategoryDeleteModal
+                    open={!!catToDelete}
+                    category={catToDelete}
+                    error={catDeleteError}
+                    loading={catDeleteLoading}
+                    onCancel={cancelCatDelete}
+                    onConfirm={confirmCatDelete}
+                    onRefresh={() => {
+                      setCatLoading(true);
+                      const token = getAuthToken();
+                      fetch('https://lindo-project.onrender.com/category/getAllCategories', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      })
+                        .then(res => res.json())
+                        .then(data => setCategories(Array.isArray(data) ? data : (data.categories || [])))
+                        .catch(() => setCatError('Failed to fetch categories.'))
+                        .finally(() => setCatLoading(false));
+                    }}
                   />
                   {catFormOpen && (
                     <>

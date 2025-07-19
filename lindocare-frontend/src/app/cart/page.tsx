@@ -189,7 +189,7 @@ export default function CartPage() {
             </div>
             <div className="flex gap-2 mt-2">
               <input type="text" placeholder="Promo code" className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm" />
-              <button className="rounded bg-yellow-400 text-white px-3 py-1 text-sm font-semibold">Apply</button>
+              <button className="rounded bg-lindo-blue hover:bg-lindo-yellow text-white px-3 py-1 text-sm font-semibold">Apply</button>
             </div>
             <div className="flex justify-between items-center text-lg font-bold mt-2">
               <span className="text-blue-900">Total</span>

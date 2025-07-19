@@ -22,29 +22,47 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
   catError,
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
   const [translateX, setTranslateX] = useState(0);
   const animationRef = useRef<number | null>(null);
   const [rowWidth, setRowWidth] = useState(0);
+  const [isInView, setIsInView] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Duplicate categories for seamless infinite scroll
-  const displayCategories = [...categories, ...categories];
+  // Duplicate categories 3 times for seamless infinite scroll
+  const displayCategories = [...categories, ...categories, ...categories];
+  const originalLength = categories.length;
 
   useEffect(() => {
     if (!rowRef.current || categories.length === 0) return;
-    setRowWidth(rowRef.current.scrollWidth / 2); // width of one set
-    setTranslateX(0);
+    setRowWidth(rowRef.current.scrollWidth / 3); // width of one set
+    setTranslateX(-rowWidth); // Start at the first full set for seamless loop
   }, [categories]);
 
+  // Intersection Observer to detect if slider is in view
   useEffect(() => {
-    if (!rowRef.current || categories.length === 0) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new window.IntersectionObserver(
+      ([entry]) => setIsInView(entry.isIntersecting),
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Animation effect: only run when in view and not hovered
+  useEffect(() => {
+    if (!rowRef.current || categories.length === 0 || !isInView || isHovered) return;
     let frameId: number;
     let x = translateX;
     let isMounted = true;
     const animate = () => {
       if (!isMounted) return;
-      x += SCROLL_SPEED;
-      if (x >= rowWidth) {
-        x = 0;
+      x -= SCROLL_SPEED; // Move left
+      if (Math.abs(x) >= rowWidth * 2) {
+        // If we've scrolled past the second set, reset to the start of the first set
+        x = -rowWidth;
       }
       setTranslateX(x);
       frameId = requestAnimationFrame(animate);
@@ -55,14 +73,12 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
       isMounted = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-    // eslint-disable-next-line
-  }, [rowWidth, categories]);
+  }, [rowWidth, categories, isInView, isHovered]);
 
   return (
-    <section className="relative w-full mb-8 p-0">
-      <div className="flex flex-col items-center mb-2">
-        <h2 className="text-xl font-bold text-blue-900 text-center mb-6">Categories</h2>
-      </div>
+    <section ref={containerRef} className="relative w-full mb-8 p-0">
+      {/* Section Title */}
+      
       {catLoading ? (
         <div className="text-center text-gray-500 py-8">Loading categories...</div>
       ) : catError ? (
@@ -72,14 +88,14 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
       ) : (
         <div
           className="w-full overflow-hidden select-none"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: 'auto' }}
         >
           <div
             ref={rowRef}
-            className="flex flex-row gap-4 pb-2 w-max -mx-4"
+            className="flex flex-row gap-4 pb-2 w-max"
             style={{
               width: 'max-content',
-              minWidth: '100%',
+              minWidth: '100vw',
               transform: `translateX(${translateX}px)`,
               transition: 'none',
               willChange: 'transform',
@@ -89,12 +105,18 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
               let image = '';
               if (Array.isArray(cat.image) && cat.image.length > 0) image = cat.image[0];
               else if (typeof cat.image === 'string') image = cat.image;
+              // Edge-to-edge: Remove left margin for first, right margin for last
+              const isFirstVisible = idx === originalLength;
+              const isLastVisible = idx === originalLength * 2 - 1;
               return (
                 <Link
                   key={cat._id ? `${cat._id}-${idx}` : idx}
                   href={`/category/${encodeURIComponent(cat.name)}`}
-                  className="bg-gray-50 border transition flex flex-col h-[340px] overflow-hidden flex-shrink-0 rounded-2xl shadow hover:shadow-lg cursor-pointer pointer-events-auto w-[85vw] max-w-xs md:w-72"
-                  style={{ marginLeft: 0, marginRight: 0 }}
+                  className="bg-gray-50 border border-lindo-blue hover:border-lindo-yellow transition flex flex-col h-[340px] overflow-hidden flex-shrink-0 rounded-2xl cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
+                  style={{ marginLeft: isFirstVisible ? 0 : undefined, marginRight: isLastVisible ? 0 : undefined }}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                  tabIndex={0}
                 >
                   <div className="w-full h-64 overflow-hidden">
                     {image ? (
@@ -110,10 +132,10 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                   </div>
                   <div className="flex flex-row items-center justify-between px-2 pt-2 pb-1 w-full">
                     <div className="flex flex-col items-start">
-                      <span className="font-bold text-blue-700 text-base mb-1 truncate w-full">{cat.name}</span>
-                      <span className="text-xs text-blue-700 text-left line-clamp-2">{cat.description}</span>
+                      <span className="font-bold text-blue-800 text-base mb-1 truncate w-full">{cat.name}</span>
+                      <span className="text-xs text-blue-800 text-left line-clamp-2">{cat.description}</span>
                     </div>
-                    <span className="ml-2 text-blue-700 text-xl flex-shrink-0">→</span>
+                    <span className="ml-2 text-lindo-yellow text-xl flex-shrink-0">→</span>
                   </div>
                 </Link>
               );
