@@ -43,7 +43,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/user/Login', {
+      const response = await fetch('https://lindo-project.onrender.com/user/Login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
