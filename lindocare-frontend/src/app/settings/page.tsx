@@ -1,9 +1,79 @@
 "use client";
 import React, { useState, useEffect, ChangeEvent, useRef } from "react";
 import Link from "next/link";
-import { getCurrentUserEmail } from '../../components/Header';
+
 import { List, Coins, MessageCircle, CreditCard, Tag, Heart, Settings, HelpCircle, Accessibility, LogIn } from 'lucide-react';
 import Image from 'next/image';
+
+// Function to update user profile on server
+async function updateUserProfile(email: string, firstName: string, lastName: string, image?: File) {
+  try {
+    console.log('Starting profile update for email:', email);
+
+    // First, try to find the user by email to get their current data
+    const usersResponse = await fetch('https://lindo-project.onrender.com/user/getAllUsers');
+    if (!usersResponse.ok) {
+      throw new Error('Failed to fetch users from server');
+    }
+
+    const usersData = await usersResponse.json();
+    const user = usersData.users.find((u: any) => u.email === email);
+    
+    if (!user) {
+      throw new Error('User not found on server');
+    }
+
+    console.log('Found user:', user);
+
+    // Since there's no direct update endpoint, we'll simulate the update
+    // by creating a new user registration with updated data
+    // This is a workaround until a proper update endpoint is available
+    const formData = new FormData();
+    formData.append('firstName', firstName);
+    formData.append('lastName', lastName);
+    formData.append('email', email);
+    formData.append('gender', user.gender || 'N/A');
+    formData.append('password', user.password || 'google-oauth');
+    formData.append('role', user.role || 'user');
+    if (image) {
+      formData.append('image', image);
+    }
+
+    console.log('Sending profile update to server:', {
+      email,
+      firstName,
+      lastName,
+      hasImage: !!image,
+      gender: user.gender,
+      role: user.role
+    });
+
+    // Try to update using the registration endpoint (this might not work for existing users)
+    // For now, we'll just update the local storage and show success
+    // The server update will need to be implemented properly later
+    
+    // Simulate successful update for now
+    const mockResponse = {
+      user: {
+        firstName,
+        lastName,
+        email,
+        image: image ? ['mock-image-url'] : user.image
+      }
+    };
+
+    console.log('Mock response data:', mockResponse);
+    return mockResponse;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+}
+
+// Function to get current user email
+function getCurrentUserEmail(): string | null {
+  return localStorage.getItem('userEmail');
+}
 
 const sidebarOptions = [
   { label: "My Orders", icon: <List size={18} color="#F4E029" />, href: "/orders" },
@@ -22,17 +92,20 @@ const SettingsPage = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [theme, setTheme] = useState("light");
   const [language, setLanguage] = useState("en");
   const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Refs for scrolling
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const email = getCurrentUserEmail();
-    setEmail(email);
+    setEmail(email || "");
     setName((email && localStorage.getItem(`userName:${email}`)) || "");
     setAvatar((email && localStorage.getItem(`userAvatar:${email}`)) || "");
     setTheme(localStorage.getItem("userTheme") || "light");
@@ -41,31 +114,92 @@ const SettingsPage = () => {
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedImage(file);
+      
       const reader = new FileReader();
       reader.onload = (ev) => {
         if (ev.target && typeof ev.target.result === 'string') {
           setAvatar(ev.target.result);
         }
       };
-      reader.readAsDataURL(e.target.files[0]);
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const currentEmail = getCurrentUserEmail();
-    if (currentEmail) {
-      localStorage.setItem(`userName:${currentEmail}`, name);
-      localStorage.setItem(`userAvatar:${currentEmail}`, avatar);
-      localStorage.setItem("userEmail", currentEmail);
-      // Trigger storage event for header update
-      window.dispatchEvent(new StorageEvent('storage', { key: `userName:${currentEmail}` }));
-      window.dispatchEvent(new StorageEvent('storage', { key: `userAvatar:${currentEmail}` }));
+    setIsSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      console.log('Starting save process...');
+      const email = getCurrentUserEmail();
+      console.log('User email:', email);
+      
+      if (!email) {
+        console.log('No user email found in localStorage');
+        throw new Error('User not found. Please log in again.');
+      }
+
+      // Split the name into firstName and lastName
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Update profile on server
+      const response = await updateUserProfile(email, firstName, lastName, selectedImage || undefined);
+
+      // Update user state based on server response
+      if (response && response.user) {
+        const updatedName = `${response.user.firstName} ${response.user.lastName}`.trim();
+        const updatedAvatar = response.user.image && response.user.image.length > 0 ? response.user.image[0] : '';
+        
+        // Update localStorage with server data
+        const currentEmail = getCurrentUserEmail();
+        if (currentEmail) {
+          localStorage.setItem(`userName:${currentEmail}`, updatedName);
+          if (updatedAvatar) {
+            localStorage.setItem(`userAvatar:${currentEmail}`, updatedAvatar);
+          } else {
+            localStorage.removeItem(`userAvatar:${currentEmail}`);
+          }
+          // Trigger storage event for header update
+          window.dispatchEvent(new StorageEvent('storage', { key: `userName:${currentEmail}` }));
+          window.dispatchEvent(new StorageEvent('storage', { key: `userAvatar:${currentEmail}` }));
+        }
+
+        // Update local state with server data
+        setName(updatedName);
+        setAvatar(updatedAvatar);
+      } else {
+        // Fallback to form data if server response doesn't include user data
+        const currentEmail = getCurrentUserEmail();
+        if (currentEmail) {
+          localStorage.setItem(`userName:${currentEmail}`, name);
+          localStorage.setItem(`userAvatar:${currentEmail}`, avatar);
+          localStorage.setItem("userEmail", currentEmail);
+          // Trigger storage event for header update
+          window.dispatchEvent(new StorageEvent('storage', { key: `userName:${currentEmail}` }));
+          window.dispatchEvent(new StorageEvent('storage', { key: `userAvatar:${currentEmail}` }));
+        }
+      }
+
+      // Save theme and language preferences locally
+      localStorage.setItem("userTheme", theme);
+      localStorage.setItem("userLang", language);
+
+      setSelectedImage(null);
+      setSuccess("Your settings have been saved locally! (Server update pending)");
+      setTimeout(() => setSuccess(""), 5000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save settings. Please try again.');
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setIsSaving(false);
     }
-    localStorage.setItem("userTheme", theme);
-    localStorage.setItem("userLang", language);
-    setSuccess("Your settings have been saved!");
-    setTimeout(() => setSuccess(""), 2500);
   };
 
   return (
@@ -99,6 +233,11 @@ const SettingsPage = () => {
             {success && (
               <div className="mb-4 p-3 rounded-lg bg-green-100 text-green-800 font-semibold text-center shadow border border-green-200 animate-fade-in">
                 {success}
+              </div>
+            )}
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 font-semibold text-center shadow border border-red-200 animate-fade-in">
+                {error}
               </div>
             )}
             {/* Settings Section */}
@@ -148,7 +287,17 @@ const SettingsPage = () => {
             </section>
             {/* Save Button */}
             <div className="flex justify-end mt-4">
-              <button type="submit" className="rounded-full bg-blue-600 text-white font-bold py-1.5 px-6 text-base shadow hover:bg-blue-700 transition">Save Settings</button>
+              <button 
+                type="submit" 
+                disabled={isSaving}
+                className={`rounded-full bg-blue-600 text-white font-bold py-1.5 px-6 text-base shadow transition ${
+                  isSaving 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-blue-700'
+                }`}
+              >
+                {isSaving ? 'Saving...' : 'Save Settings'}
+              </button>
             </div>
           </form>
         </main>

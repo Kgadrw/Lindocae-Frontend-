@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     const auth = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('user');
     if (auth === 'true' && userData) {
-      setIsAuthenticated(true);
+        setIsAuthenticated(true);
       setUser(JSON.parse(userData));
     }
   }, []);
@@ -65,11 +65,11 @@ export default function AdminDashboard() {
   // Show dashboard if authenticated
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar
+          <Sidebar
         SIDEBAR_SECTIONS={SIDEBAR_SECTIONS}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        handleLogout={handleLogout}
+            activeSection={activeSection}
+            setActiveSection={setActiveSection}
+            handleLogout={handleLogout}
         user={user}
       />
       <main className="ml-64 p-4 md:p-8 space-y-8">
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
         {activeSection === 'products' && <ProductsSection />}
         {activeSection === 'cart' && <CartComponent />}
         {activeSection === 'orders' && <OrdersComponent />}
-      </main>
-    </div>
+          </main>
+        </div>
   );
 }

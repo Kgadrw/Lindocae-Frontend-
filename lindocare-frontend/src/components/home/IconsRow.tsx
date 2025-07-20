@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 interface Icon {
@@ -13,7 +13,69 @@ interface IconsRowProps {
   iconsError: any;
 }
 
+const SCROLL_SPEED = 1.0; // Increased speed for faster sliding
+
 const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const maxIndex = Math.max(0, (icons?.length || 0) - 6); // Show 6 icons at a time
+
+  // Array of random border colors
+  const borderColors = [
+    'border-red-400',
+    'border-blue-400', 
+    'border-green-400',
+    'border-yellow-400',
+    'border-purple-400',
+    'border-pink-400',
+    'border-indigo-400',
+    'border-teal-400',
+    'border-orange-400',
+    'border-cyan-400',
+    'border-emerald-400',
+    'border-violet-400'
+  ];
+
+  // Generate random border colors for each icon
+  const getRandomBorderColor = (index: number) => {
+    return borderColors[index % borderColors.length];
+  };
+
+  useEffect(() => {
+    if (!icons || icons.length <= 6) return;
+
+    const slideInterval = setInterval(() => {
+      if (!isPaused) {
+        setCurrentIndex((prevIndex) => {
+          if (prevIndex >= maxIndex) {
+            return 0; // Reset to beginning
+          }
+          return prevIndex + 1;
+        });
+      }
+    }, 500); // Reduced from 1000ms to 500ms for faster sliding
+
+    const pauseInterval = setInterval(() => {
+      setIsPaused((prevPaused) => !prevPaused);
+    }, 1000); // Reduced from 2000ms to 1000ms for faster pause cycle
+
+    return () => {
+      clearInterval(slideInterval);
+      clearInterval(pauseInterval);
+    };
+  }, [icons, maxIndex, isPaused]);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = currentIndex * 105; // 100px (min-w-[100px]) + 5px (gap)
+      scrollContainerRef.current.scrollTo({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  }, [currentIndex]);
+
   return (
     <section className="w-full mb-8">
       {iconsLoading ? (
@@ -24,8 +86,12 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
         <div className="text-center text-gray-500 py-8">No icons found.</div>
       ) : (
         <div className="w-full">
-          {/* Horizontal scrolling container */}
-          <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide">
+          {/* Auto-sliding container */}
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-5 overflow-x-hidden pb-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {icons?.map((icon: any, idx: number) => {
               let image = '';
               if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
@@ -39,8 +105,8 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
                 >
                   {/* Icon container with soft blob background */}
                   <div className="relative w-20 h-20 mb-3 group-hover:scale-105 transition-transform duration-300">
-                    {/* Soft blob background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-100 rounded-full shadow-sm group-hover:shadow-md transition-shadow duration-300" />
+                    {/* Soft blob background with random border */}
+                    <div className={`absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-100 rounded-full shadow-sm group-hover:shadow-md transition-shadow duration-300 border-4 ${getRandomBorderColor(idx)}`} />
                     
                     {/* Icon image */}
                     <div className="absolute inset-2 rounded-full overflow-hidden bg-white">
@@ -70,10 +136,21 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
             })}
           </div>
           
-          {/* Scroll indicator for mobile */}
-          <div className="flex justify-center mt-2 lg:hidden">
-            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-          </div>
+          {/* Auto-slide indicator */}
+          {icons && icons.length > 6 && (
+            <div className="flex justify-center mt-4">
+              <div className="flex space-x-2">
+                {Array.from({ length: Math.ceil(icons.length / 6) }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      Math.floor(currentIndex / 6) === idx ? 'bg-orange-500' : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

@@ -135,8 +135,8 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                     </div>
                   </Link>
                   <div className="flex flex-col items-start mt-3 w-full max-w-xs md:w-80">
-                    <span className="font-bold text-black text-base mb-1 text-left">{cat.name}</span>
-                    <span className="text-xs text-black text-left line-clamp-2">{cat.description}</span>
+                    <span className="font-bold text-blue-900 text-base mb-1 text-left">{cat.name}</span>
+                    <span className="text-xs text-blue-800 text-left line-clamp-2">{cat.description}</span>
                   </div>
                 </div>
               );

@@ -12,11 +12,11 @@ const EmailSignupBanner: React.FC = () => {
 
   return (
     <section className="w-full mb-8">
-      <div className="bg-white border border-lindo-blue/20 rounded-2xl p-8 max-w-2xl mx-auto text-center shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          Unlock <span className="text-3xl font-extrabold text-black">10% OFF!</span>
+      <div className="bg-white border-2 border- rounded-2xl p-8 max-w-2xl mx-auto text-center shadow-lg">
+        <h2 className="text-2xl font-bold text-blue-800 mb-2">
+          Unlock <span className="text-3xl font-extrabold text-blue-900">10% OFF!</span>
         </h2>
-        <p className="text-gray-700 mb-6">
+        <p className="text-blue-700 mb-6">
           Gain early access to new products and exclusive deals.
         </p>
         
@@ -27,12 +27,12 @@ const EmailSignupBanner: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email address"
-              className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-black focus:outline-none focus:ring-2 focus:ring-black focus:border-lindo-yellow bg-white text-black "
+              className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-500 bg-white text-blue-900 placeholder-gray-400"
               required
             />
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
               <svg 
-                className="w-5 h-5 text-black" 
+                className="w-5 h-5 text-gray-500" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -50,11 +50,11 @@ const EmailSignupBanner: React.FC = () => {
         
         <p className="text-sm text-gray-600">
           By clicking the button you agree to the{' '}
-          <a href="/privacy-policy" className="underline hover:text-lindo-blue text-lindo-blue font-medium">
+          <a href="/privacy-policy" className="underline hover:text-blue-800 text-gray-700 font-medium">
             Privacy Policy
           </a>{' '}
           and{' '}
-          <a href="/terms-conditions" className="underline hover:text-lindo-blue text-lindo-blue font-medium">
+          <a href="/terms-conditions" className="underline hover:text-blue-800 text-gray-700 font-medium">
             Terms and Conditions
           </a>
         </p>

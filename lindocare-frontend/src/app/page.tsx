@@ -34,6 +34,33 @@ function getUserIdFromToken() {
   }
 }
 
+// Utility: add to cart on server
+async function addToCartOnServer(token: string, productId: string, quantity: number) {
+  const res = await fetch('https://lindo-project.onrender.com/cart/addToCart', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ productId, quantity }),
+  });
+  if (!res.ok) throw new Error('Failed to add to server cart');
+  return res.json();
+}
+
+// Utility: fetch cart from server
+async function fetchUserCartFromServer(token: string) {
+  const res = await fetch('https://lindo-project.onrender.com/cart/getCartByUserId', {
+    headers: {
+      'accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error('Failed to fetch server cart');
+  return res.json();
+}
+
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const safeFetcher = async (url: string, fallback: any) => {
@@ -251,39 +278,73 @@ export default function Home() {
   }
 
   // Add to cart handler (adapted from category page)
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = async (product: any) => {
     const email = getCurrentUserEmail();
-    if (!email) {
-      setLoginMsg('Please log in or create an account to add products to your cart.');
-      setLoginOpen(true);
-      return;
+    const token = getAuthToken();
+    // Ensure image is always a string URL
+    let imageUrl = '/lindo.png';
+    if (Array.isArray(product.image) && product.image.length > 0) {
+      imageUrl = product.image[0];
+    } else if (typeof product.image === 'string' && product.image.trim().length > 0) {
+      imageUrl = product.image;
     }
-    const cartKey = `cart:${email}`;
-    const cartRaw = localStorage.getItem(cartKey);
-    let cart = [];
-    try {
-      cart = cartRaw ? JSON.parse(cartRaw) : [];
-    } catch {
-      cart = [];
-    }
-    const idx = cart.findIndex((item: { id: any }) => item.id === product.id);
-    if (idx > -1) {
-      cart[idx].quantity = (cart[idx].quantity || 1) + 1;
+    if (token) {
+      // Logged in: add to server cart
+      try {
+        await addToCartOnServer(token, product.id || product._id, 1);
+        // Optionally, update localStorage for instant UI
+        const cartKey = `cart:${email}`;
+        const cartRaw = localStorage.getItem(cartKey);
+        let cart = [];
+        try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
+        const idx = cart.findIndex((item: { id: any }) => item.id === product.id);
+        if (idx > -1) {
+          cart[idx].quantity = (cart[idx].quantity || 1) + 1;
+        } else {
+          cart.push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: imageUrl,
+            quantity: 1,
+          });
+        }
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+        window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cart' }));
+        setToastMsg(`${product.name} added to cart!`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      } catch (err) {
+        setToastMsg('Failed to add to cart. Please try again.');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      }
     } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        quantity: 1,
-      });
+      // Guest: localStorage only
+      const cartKey = `cart:${email}`;
+      const cartRaw = localStorage.getItem(cartKey);
+      let cart = [];
+      try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
+      const idx = cart.findIndex((item: { id: any }) => item.id === product.id);
+      if (idx > -1) {
+        cart[idx].quantity = (cart[idx].quantity || 1) + 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: imageUrl,
+          quantity: 1,
+        });
+      }
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+      window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'cart' }));
+      setToastMsg(`${product.name} added to cart!`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 1200);
     }
-    localStorage.setItem(cartKey, JSON.stringify(cart));
-    window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
-    window.dispatchEvent(new StorageEvent('storage', { key: 'cart' }));
-    setToastMsg(`${product.name} added to cart!`);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 1200);
   };
 
   return (
@@ -334,11 +395,11 @@ export default function Home() {
           href="https://wa.me/250785064255"
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 z-50 bg-lindo-blue hover:bg-lindo-yellow text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200"
+          className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200"
           aria-label="Chat with support on WhatsApp"
         >
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
-            <circle cx="16" cy="16" r="16" fill="var(--lindo-yellow)"/>
+            <circle cx="16" cy="16" r="16" fill="#25D366"/>
             <path d="M23.472 19.339c-.355-.177-2.104-1.037-2.43-1.155-.326-.119-.563-.177-.8.177-.237.355-.914 1.155-1.12 1.392-.207.237-.412.266-.767.089-.355-.178-1.5-.553-2.86-1.763-1.057-.944-1.77-2.108-1.98-2.463-.207-.355-.022-.546.155-.723.159-.158.355-.414.533-.622.178-.207.237-.355.355-.592.119-.237.06-.444-.03-.622-.089-.177-.8-1.924-1.096-2.637-.289-.693-.583-.599-.8-.61-.207-.009-.444-.011-.681-.011-.237 0-.622.089-.948.444-.326.355-1.24 1.211-1.24 2.955 0 1.744 1.27 3.428 1.447 3.666.178.237 2.5 3.82 6.05 5.209.846.291 1.505.464 2.021.594.849.216 1.622.186 2.233.113.682-.08 2.104-.859 2.402-1.689.296-.83.296-1.541.207-1.689-.089-.148-.326-.237-.681-.414z" fill="#fff"/>
           </svg>
         </a>

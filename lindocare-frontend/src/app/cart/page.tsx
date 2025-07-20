@@ -15,14 +15,60 @@ interface Product {
   lowStock?: boolean;
 }
 
+// Utility: get auth token from localStorage
+function getAuthToken() {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token');
+  }
+  return null;
+}
+
+// Utility: fetch cart from server
+async function fetchUserCartFromServer(token: string) {
+  const res = await fetch('https://lindo-project.onrender.com/cart/getCartByUserId', {
+    headers: {
+      'accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error('Failed to fetch server cart');
+  return res.json();
+}
+
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<Product[]>([]);
   const [userEmail, setUserEmail] = useState('');
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    function loadCart() {
+    async function loadCart() {
       if (typeof window !== 'undefined') {
+        const token = getAuthToken();
+        if (token) {
+          // Logged in: fetch cart from server
+          try {
+            const data = await fetchUserCartFromServer(token);
+            const items = (data.cart && data.cart.items) ? data.cart.items : [];
+            // Convert server cart items to local Product[] format
+            const cartItems = items.map((item: any) => ({
+              id: item.productId,
+              name: item.name || '', // Optionally fetch product name if not present
+              price: item.price || 0,
+              image: item.image || '/lindo.png', // Optionally fetch product image if not present
+              quantity: item.quantity || 1,
+            }));
+            setCartItems(cartItems);
+            // Optionally sync to localStorage for UI
+            const email = getCurrentUserEmail();
+            if (email) {
+              localStorage.setItem(`cart:${email}`, JSON.stringify(cartItems));
+            }
+            return;
+          } catch (err) {
+            // Fallback to localStorage if server fetch fails
+          }
+        }
+        // Guest or server fetch failed: use localStorage
         const email = getCurrentUserEmail();
         setUserEmail(email);
         if (!email) {
@@ -131,7 +177,8 @@ export default function CartPage() {
                   {typeof item.image === 'string' && item.image.trim().length > 0 ? (
                     <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">?</div>
+                    (() => { console.warn('Cart item missing image:', item); return null; })() ||
+                    <Image src="/lindo.png" alt="No image" width={96} height={96} className="object-cover w-full h-full opacity-60" />
                   )}
                 </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
@@ -184,7 +231,7 @@ export default function CartPage() {
             </div>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between"><span className="text-black font-medium">Subtotal</span><span className="text-black font-semibold">${subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-black font-medium">Estimated Shipping</span><span className="text-black font-semibold">$5.99</span></div>
+              <div className="flex justify-between"><span className="text-black font-medium">Estimated Shipping</span><span className="text-black font-semibold">$0.00</span></div>
               <div className="flex justify-between"><span className="text-black font-medium">Taxes</span><span className="text-gray-400 font-normal">Calculated at checkout</span></div>
             </div>
             <div className="flex gap-2 mt-2">
@@ -193,7 +240,7 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between items-center text-lg font-bold mt-2">
               <span className="text-black">Total</span>
-              <span className="text-black">${(subtotal + 5.99).toFixed(2)}</span>
+              <span className="text-black">${subtotal.toFixed(2)}</span>
             </div>
             <button className="w-full rounded bg-black text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors" disabled={cartItems.length === 0}>Proceed to Checkout</button>
             <button className="w-full rounded border border-black text-black py-2 font-bold text-base bg-white mt-1 hover:bg-gray-100 transition-colors">Continue Shopping</button>

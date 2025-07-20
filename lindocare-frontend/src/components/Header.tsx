@@ -30,6 +30,8 @@ function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: 
   }
 }
 
+
+
 async function fetchWishlistCountFromBackend() {
   if (typeof window === 'undefined') return 0;
   const token = localStorage.getItem('token');
@@ -81,6 +83,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
+
 
   // Scroll detection
   React.useEffect(() => {
@@ -224,9 +227,10 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
       localStorage.removeItem(`wishlist_${email}`);
     }
     window.dispatchEvent(new StorageEvent('storage', { key: 'userEmail' }));
-    updateUser(setUser);
     router.push('/');
   };
+
+
 
   const handleSearch = (e?: React.FormEvent | React.KeyboardEvent) => {
     if (e) e.preventDefault();
@@ -385,7 +389,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
             >
               <Heart size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                   {wishlistCount}
                 </span>
               )}
@@ -401,7 +405,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
             >
               <ShoppingCart size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600]" strokeWidth={2.5} />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                   {cartCount}
                 </span>
               )}
@@ -430,7 +434,9 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
                 className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center`}
                 onClick={() => setDropdownOpen(v => !v)}
               >
-                <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-gray-200" width={32} height={32} style={{ width: 32, height: 'auto' }} />
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
                 {pathname === '/account' && (
                   <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
                 )}
@@ -458,28 +464,13 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
           {dropdownOpen && user && (
             <div ref={dropdownRef} className="absolute right-0 top-14 z-50 bg-white rounded-2xl shadow-2xl p-0 w-72 flex flex-col border border-gray-200 animate-fade-in" style={{ minWidth: 260 }}>
               <div className="flex flex-col items-center pt-6 pb-2 px-6 border-b border-gray-100">
-                                  <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 mb-2" width={48} height={48} style={{ width: 48, height: 'auto' }} />
+                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold border-2 border-gray-200 mb-2">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
                 <span className="font-semibold text-gray-900 text-base mb-1">Welcome back, {user.name}</span>
-                <button onMouseDown={handleSignOut} className="text-gray-600 font-semibold text-sm hover:underline mb-2">Sign Out</button>
+                {/* Remove Sign Out button, keep only Logout below */}
               </div>
               <div className="flex flex-col gap-1 py-2 px-2">
-                <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><List size={18} color="#000000" /> My Orders</Link>
-                
-                <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Tag size={18} color="#000000" /> My coupon</Link>
-                <div className="border-t border-gray-100 my-2" />
-                <Link
-                  href="/settings"
-                  onMouseDown={e => {
-                    e.preventDefault();
-                    handleDropdownAction(() => router.push('/settings'));
-                  }}
-                  className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"
-                >
-                  <Settings size={18} color="#000000" /> Settings
-                </Link>
-                <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><HelpCircle size={18} color="#000000" /> Help center</Link>
-                <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><Accessibility size={18} color="#000000" /> Accessibility</Link>
-                <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-900 text-sm font-medium"><LogIn size={18} color="#000000" /> Seller Login</Link>
                 <div className="border-t border-gray-100 my-2" />
                 <button onMouseDown={handleSignOut} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-50 text-red-600 text-sm font-medium w-full text-left">
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -534,7 +525,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
           <button className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors relative">
             <ShoppingCart size={24} color="#000000" strokeWidth={2.5} />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+              <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                 {cartCount}
               </span>
             )}
@@ -551,7 +542,7 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
           <button className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors relative">
             <Heart size={24} color="#000000" strokeWidth={2.5} />
             {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-gray-200 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+              <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                 {wishlistCount}
               </span>
             )}
@@ -560,7 +551,9 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
         </Link>
           {user ? (
           <button onClick={() => setDropdownOpen(v => !v)} className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors">
-            <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-gray-200" width={32} height={32} style={{ width: 32, height: 'auto' }} />
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
             <span className="text-xs">Account</span>
           </button>
           ) : (
@@ -584,20 +577,13 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
         {dropdownOpen && user && (
           <div ref={dropdownRef} className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-0 w-64 flex flex-col border border-gray-200 animate-fade-in md:hidden" style={{ minWidth: 200 }}>
             <div className="flex flex-col items-start pt-4 pb-1 px-4 border-b border-gray-100">
-                              <Image src={user.avatar || "/lindo.png"} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-gray-200 mb-1" width={36} height={36} style={{ width: 36, height: 'auto' }} />
+              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200 mb-1">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
               <span className="font-semibold text-gray-900 text-sm mb-1">Welcome back, {user.name}</span>
-              <button onMouseDown={handleSignOut} className="text-gray-600 font-semibold text-xs hover:underline mb-1">Sign Out</button>
+              {/* Remove Sign Out button, keep only Logout below */}
             </div>
             <div className="flex flex-col gap-0.5 py-1 px-1">
-              <Link href="/orders" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/orders')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><List size={15} color="#000000" /> My Orders</Link>
-              <Link href="/coins" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coins')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Coins size={15} color="#000000" /> My Coins</Link>
-              <Link href="/messages" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/messages')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><MessageCircle size={15} color="#000000" /> Message Center</Link>
-              <Link href="/payments" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/payments')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><CreditCard size={15} color="#000000" /> Payments</Link>
-              <Link href="/wishlist" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/wishlist')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Heart size={15} color="#000000" /> Wish list</Link>
-              <Link href="/coupons" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/coupons')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Tag size={15} color="#000000" /> My coupon</Link>
-              <Link href="/help" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/help')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><HelpCircle size={15} color="#000000" /> Help center</Link>
-              <Link href="/accessibility" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/accessibility')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><Accessibility size={15} color="#000000" /> Accessibility</Link>
-              <Link href="/seller-login" onMouseDown={e => { e.preventDefault(); handleDropdownAction(() => router.push('/seller-login')); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-900 text-xs font-medium"><LogIn size={15} color="#000000" /> Seller Login</Link>
               <div className="border-t border-gray-100 my-1" />
               <button onMouseDown={handleSignOut} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-red-50 text-red-600 text-xs font-medium w-full text-left">
                 <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

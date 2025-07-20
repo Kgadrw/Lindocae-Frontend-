@@ -61,13 +61,13 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                   <Link 
                     href="/all-products"
-                    className="bg-black  hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
+                    className="bg-blue-600  hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
                   >
                     Shop Now
                   </Link>
                   <Link 
                     href="/category/nursery"
-                    className="border-2 border-lindo-blue bg-yellow-300 hover:border-lindo-yellow text-white hover:text-lindo-yellow px-6 py-3 rounded-full font-semibold text-base transition-colors duration-300"
+                    className=" bg-yellow-300  transform hover:scale-105 text-white hover:text-lindo-yellow px-6 py-3 rounded-full font-semibold text-base transition-colors duration-300"
                   >
                     View Categories
                   </Link>
