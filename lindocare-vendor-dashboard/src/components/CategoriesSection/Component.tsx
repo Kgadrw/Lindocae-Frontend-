@@ -241,7 +241,7 @@ const CategoriesSection: React.FC = () => {
                 <td className="px-6 py-4 align-middle">
                   <img src={cat.image?.[0] || cat.image} alt={cat.name} className="w-16 h-10 object-cover rounded-lg border border-gray-200" />
                 </td>
-                <td className="px-6 py-4 align-middle font-semibold text-gray-900">{cat.name}</td>
+                <td className="px-6 py-4 align-middle font-semibold text-blue-700">{cat.name}</td>
                 <td className="px-6 py-4 align-middle text-gray-700">{cat.description}</td>
                 <td className="px-6 py-4 align-middle text-gray-500">{new Date(cat.createdAt).toLocaleDateString()}</td>
                 <td className="px-6 py-4 align-middle text-center flex gap-2 items-center justify-center">

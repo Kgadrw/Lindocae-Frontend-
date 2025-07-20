@@ -271,7 +271,7 @@ export default function Home() {
       setWishlist((prev) => {
         const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
         localStorage.setItem(key, JSON.stringify(updated));
-        window.dispatchEvent(new StorageEvent('storage', { key }));
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
         return updated;
       });
     }
@@ -297,21 +297,16 @@ export default function Home() {
         const cartRaw = localStorage.getItem(cartKey);
         let cart = [];
         try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
-        const idx = cart.findIndex((item: { id: any }) => item.id === product.id);
-        if (idx > -1) {
-          cart[idx].quantity = (cart[idx].quantity || 1) + 1;
-        } else {
-          cart.push({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: imageUrl,
-            quantity: 1,
-          });
-        }
+        cart.push({
+          id: String(product.id),
+          name: product.name,
+          price: product.price,
+          image: imageUrl,
+          quantity: 1,
+        });
         localStorage.setItem(cartKey, JSON.stringify(cart));
-        window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
-        window.dispatchEvent(new StorageEvent('storage', { key: 'cart' }));
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
         setToastMsg(`${product.name} added to cart!`);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 1200);
@@ -326,21 +321,16 @@ export default function Home() {
       const cartRaw = localStorage.getItem(cartKey);
       let cart = [];
       try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
-      const idx = cart.findIndex((item: { id: any }) => item.id === product.id);
-      if (idx > -1) {
-        cart[idx].quantity = (cart[idx].quantity || 1) + 1;
-      } else {
-        cart.push({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: imageUrl,
-          quantity: 1,
-        });
-      }
+      cart.push({
+        id: String(product.id),
+        name: product.name,
+        price: product.price,
+        image: imageUrl,
+        quantity: 1,
+      });
       localStorage.setItem(cartKey, JSON.stringify(cart));
-      window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'cart' }));
+      setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
+      setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
       setToastMsg(`${product.name} added to cart!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 1200);

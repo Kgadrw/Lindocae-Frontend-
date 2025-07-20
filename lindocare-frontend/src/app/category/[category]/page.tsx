@@ -6,6 +6,21 @@ import { Heart } from 'lucide-react';
 import { getCurrentUserEmail } from '../../../components/Header';
 import LoginModal from '../../../components/LoginModal';
 
+function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token');
+}
+function getUserIdFromToken() {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId || payload.id || payload._id || payload.user || null;
+  } catch {
+    return null;
+  }
+}
+
 // Template categories (replace with API data later)
 const categories = [
   { name: 'Cribs', count: 128 },
@@ -124,12 +139,77 @@ const CategoryPage = () => {
   useEffect(() => { setIsClient(true); }, []);
 
   // Wishlist state
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+
   useEffect(() => {
-    if (!isClient) return;
-    const saved = localStorage.getItem('wishlist');
-    setWishlist(saved ? JSON.parse(saved) : []);
-  }, [isClient]);
+    async function fetchWishlist() {
+      const token = getAuthToken();
+      const userId = getUserIdFromToken();
+      if (token && userId) {
+        try {
+          const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+            headers: {
+              'accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) throw new Error('Failed to fetch wishlist');
+          const data = await res.json();
+          setWishlist((data.products || []).map((p: any) => String(p._id || p.id)));
+        } catch {
+          setWishlist([]);
+        }
+      } else {
+        // Guest: fallback to localStorage
+        const email = getCurrentUserEmail();
+        const key = email ? `wishlist_${email}` : 'wishlist';
+        const saved = localStorage.getItem(key);
+        const ids = saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+        setWishlist(ids);
+      }
+    }
+    fetchWishlist();
+  }, []);
+
+  async function toggleWishlist(id: string) {
+    const token = getAuthToken();
+    const userId = getUserIdFromToken();
+    if (token && userId) {
+      try {
+        const res = await fetch('https://lindo-project.onrender.com/wishlist/toggleWishlistProduct', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ productId: id }),
+        });
+        if (!res.ok) return;
+        // Refetch wishlist from backend
+        const wishlistRes = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+          headers: {
+            'accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const wishlistData = await wishlistRes.json();
+        setWishlist((wishlistData.products || []).map((p: any) => String(p._id || p.id)));
+      } catch (err) {
+        // Optionally show error
+      }
+    } else {
+      // Guest: fallback to localStorage
+      const email = getCurrentUserEmail();
+      const key = email ? `wishlist_${email}` : 'wishlist';
+      setWishlist((prev) => {
+        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
+        localStorage.setItem(key, JSON.stringify(updated));
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
+        return updated;
+      });
+    }
+  }
 
   // Fetch categories from backend
   useEffect(() => {
@@ -202,16 +282,6 @@ const CategoryPage = () => {
     setPriceMax('');
   };
 
-  const toggleWishlist = (id: number) => {
-    if (!isClient) return;
-    setWishlist((prev) => {
-      const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-      localStorage.setItem('wishlist', JSON.stringify(updated));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'wishlist' }));
-      return updated;
-    });
-  };
-
   // Add to cart handler
   const handleAddToCart = (product: Product) => {
     const email = getCurrentUserEmail();
@@ -242,8 +312,8 @@ const CategoryPage = () => {
     }
     localStorage.setItem(cartKey, JSON.stringify(cart));
     // Manually dispatch storage event for same-tab update
-    window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
-    window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })); // for header badge update
+    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
+    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0); // for header badge update
     setToastMsg(`${product.name} added to cart!`);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 1200);
@@ -360,13 +430,13 @@ const CategoryPage = () => {
                     ))}
                     <button
                       className="absolute top-2 right-2 bg-white border border-black rounded-full p-1 shadow hover:bg-blue-600 hover:text-white"
-                      onClick={() => toggleWishlist(product.id)}
+                      onClick={() => toggleWishlist(String(product.id))}
                       aria-label="Add to wishlist"
                     >
                       <Heart
                         size={20}
-                        color={wishlist.includes(product.id) ? '#2563eb' : '#000'}
-                        fill={wishlist.includes(product.id) ? '#2563eb' : 'none'}
+                        color={wishlist.includes(String(product.id)) ? '#2563eb' : '#000'}
+                        fill={wishlist.includes(String(product.id)) ? '#2563eb' : 'none'}
                         strokeWidth={2.2}
                       />
                     </button>

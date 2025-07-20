@@ -23,18 +23,18 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
 
   // Array of random border colors
   const borderColors = [
-    'border-red-400',
-    'border-blue-400', 
-    'border-green-400',
-    'border-yellow-400',
-    'border-purple-400',
-    'border-pink-400',
-    'border-indigo-400',
-    'border-teal-400',
-    'border-orange-400',
-    'border-cyan-400',
-    'border-emerald-400',
-    'border-violet-400'
+    'border-red-300',
+    'border-blue-300', 
+    'border-green-300',
+    'border-yellow-300',
+    'border-purple-300',
+    'border-pink-300',
+    'border-indigo-300',
+    'border-teal-300',
+    'border-orange-300',
+    'border-cyan-300',
+    'border-emerald-300',
+    'border-violet-300'
   ];
 
   // Generate random border colors for each icon

@@ -106,11 +106,11 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
   }, [dropdownOpen]);
 
   // On mount, restore user from localStorage if available
-  React.useEffect(() => {
+  useEffect(() => {
     function handleStorage() {
       updateUser(setUser);
     }
-    updateUser(setUser);
+    updateUser(setUser); // Only call here, not in render
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);

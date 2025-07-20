@@ -89,7 +89,7 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
       {/* Section Title and Controls */}
       <div className="flex items-center justify-between mb-6">
         <div className="text-center flex-1">
-          <h2 className="text-2xl lg:text-5xl font-extrabold text-gray-700 mb-2">Shop The Must Haves</h2>
+          <h2 className="text-2xl lg:text-5xl font-extrabold text-blue-500 mb-2">Shop The Must Haves</h2>
           <p className="text-gray-600">Discover our latest arrivals and trending products</p>
         </div>
         
@@ -97,7 +97,7 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
         <div className="flex items-center gap-4">
           <Link
             href="/all-products"
-            className="text-blue-700 text-sm font-semibold hover:underline focus:outline-none flex items-center gap-1"
+            className="text-blue-500 text-sm font-semibold hover:underline focus:outline-none flex items-center gap-1"
             style={{ minWidth: 70 }}
           >
             See more <ChevronRight size={16} />
