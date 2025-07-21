@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Category {
   _id: string;
@@ -24,7 +25,7 @@ const CategoryLandingPage = () => {
         const res = await fetch('https://lindo-project.onrender.com/category/getAllCategories');
         if (!res.ok) throw new Error('Server error');
         const data = await res.json();
-        let cats = Array.isArray(data) ? data : (data.categories || []);
+        const cats = Array.isArray(data) ? data : (data.categories || []);
         setCategories(cats);
       } catch {
         setError('Failed to fetch categories.');
@@ -51,11 +52,12 @@ const CategoryLandingPage = () => {
             >
                 <Link href={`/category/${cat._id}`} className="block flex-1">
                 <div className="w-full h-40 overflow-hidden rounded-t-2xl border-b border-black">
-                  <img
+                  <Image
                       src={cat.image || '/lindo.png'}
                     alt={cat.name}
                     className="w-full h-full object-cover object-center block"
-                    style={{ display: 'block', width: '100%', height: '100%' }}
+                    width={300}
+                    height={200}
                   />
                 </div>
                 <div className="flex flex-col items-start px-4 pt-4">

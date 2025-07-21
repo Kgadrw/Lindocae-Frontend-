@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Icon {
   _id?: string;
@@ -12,8 +13,6 @@ interface IconsRowProps {
   iconsLoading: boolean;
   iconsError: any;
 }
-
-const SCROLL_SPEED = 1.0; // Increased speed for faster sliding
 
 const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -92,7 +91,7 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
             className="flex gap-5 overflow-x-hidden pb-4"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {icons?.map((icon: any, idx: number) => {
+            {icons?.map((icon: Icon, idx: number) => {
               let image = '';
               if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
               else if (typeof icon.image === 'string') image = icon.image;
@@ -111,9 +110,11 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
                     {/* Icon image */}
                     <div className="absolute inset-2 rounded-full overflow-hidden bg-white">
                       {image ? (
-                        <img
+                        <Image
                           src={image}
                           alt={icon.title}
+                          width={40}
+                          height={40}
                           className="w-full h-full object-cover"
                         />
                       ) : (

@@ -78,7 +78,7 @@ const CategoryPage = () => {
         if (!res.ok || !contentType || !contentType.includes('application/json')) {
           throw new Error('Category not found or invalid response.');
         }
-        const data = await res.json();
+        const data: Category = await res.json();
         console.log('Fetched category data:', data);
         if (!data || !data._id) throw new Error('Category not found');
         setCategory(data);
@@ -99,11 +99,11 @@ const CategoryPage = () => {
       try {
         // Fetch all products, then filter by categoryId on the client
         const res = await fetch(`https://lindo-project.onrender.com/product/getAllProduct`);
-        const data = await res.json();
-        let prods = Array.isArray(data) ? data : (data.products || []);
+        const data: { products: Product[] } = await res.json();
+        let prods = data.products;
         // Filter products by categoryId === category._id
         if (category) {
-          prods = prods.filter((p: any) => p.categoryId === category._id);
+          prods = prods.filter((p: Product) => p.categoryId === category._id);
         }
         setProducts(prods);
       } catch {
@@ -136,8 +136,8 @@ const CategoryPage = () => {
             },
           });
           if (!res.ok) throw new Error('Failed to fetch wishlist');
-          const data = await res.json();
-          setWishlist((data.products || []).map((p: any) => String(p._id || p.id)));
+          const data: { products: Product[] } = await res.json();
+          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
         } catch {
           setWishlist([]);
         }
@@ -145,7 +145,7 @@ const CategoryPage = () => {
         const email = getCurrentUserEmail();
         const key = email ? `wishlist_${email}` : 'wishlist';
         const saved = localStorage.getItem(key);
-        const ids = saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+        const ids = saved ? JSON.parse(saved).map((id: string) => String(id)) : [];
         setWishlist(ids);
       }
     }
@@ -173,8 +173,8 @@ const CategoryPage = () => {
             'Authorization': `Bearer ${token}`,
           },
         });
-        const wishlistData = await wishlistRes.json();
-        setWishlist((wishlistData.products || []).map((p: any) => String(p._id || p.id)));
+        const wishlistData: { products: Product[] } = await wishlistRes.json();
+        setWishlist((wishlistData.products || []).map((p: Product) => String(p._id || p.id)));
       } catch (err) {}
     } else {
       const email = getCurrentUserEmail();
@@ -205,7 +205,7 @@ const CategoryPage = () => {
     }
     const cartKey = `cart:${email}`;
     const cartRaw = localStorage.getItem(cartKey);
-    let cart = [];
+    let cart: { _id: string; name: string; price: number; image: string; quantity: number }[] = [];
     try {
       cart = cartRaw ? JSON.parse(cartRaw) : [];
     } catch {
@@ -323,7 +323,7 @@ const CategoryPage = () => {
                     <h2 className="text-2xl font-bold text-black">Products</h2>
               <div className="flex items-center gap-2">
                 <span className="text-black text-sm">Sort by:</span>
-                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value="popular" onChange={e => {}}>
+                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value="popular" onChange={() => {}}>
                   <option value="popular">Popular</option>
                   <option value="priceLow">Price: Low to High</option>
                   <option value="priceHigh">Price: High to Low</option>

@@ -17,7 +17,7 @@ async function updateUserProfile(email: string, firstName: string, lastName: str
     }
 
     const usersData = await usersResponse.json();
-    const user = usersData.users.find((u: any) => u.email === email);
+    const user = usersData.users.find((u: User) => u.email === email);
     
     if (!user) {
       throw new Error('User not found on server');

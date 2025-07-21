@@ -3,7 +3,6 @@ import { Instagram, Mail, ChevronLeft } from 'lucide-react';
 
 const SocialShareBar: React.FC = () => {
   const [hidden, setHidden] = useState(false);
-  const [hoveringEdge, setHoveringEdge] = useState(false);
 
   return (
     <>
@@ -17,7 +16,6 @@ const SocialShareBar: React.FC = () => {
       )}
       <div
         className={`fixed left-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center transition-transform duration-300 ${hidden ? '-translate-x-full' : ''}`}
-        onMouseLeave={() => setHoveringEdge(false)}
       >
         <div className="bg-blue-600 flex flex-col items-center py-2 px-1 gap-2 shadow-lg">
           <a href="#" className="w-7 h-7 flex items-center justify-center" aria-label="Instagram">

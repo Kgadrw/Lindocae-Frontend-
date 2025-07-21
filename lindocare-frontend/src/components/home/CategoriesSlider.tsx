@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 interface Category {
   _id?: string;
@@ -123,11 +124,12 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                   >
                     <div className="w-full h-full overflow-hidden">
                       {image ? (
-                        <img
+                        <Image
                           src={image}
                           alt={cat.name}
-                          className="w-full h-full object-cover object-center block"
-                          style={{ display: 'block', width: '100%', height: '100%' }}
+                          layout="fill"
+                          objectFit="cover"
+                          objectPosition="center"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-4xl">🖼️</div>

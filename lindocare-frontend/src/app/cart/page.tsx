@@ -55,13 +55,22 @@ export default function CartPage() {
             const data = await fetchUserCartFromServer(token);
             const items = (data.cart && data.cart.items) ? data.cart.items : [];
             // Convert server cart items to local Product[] format
-            const cartItems = items.map((item: any) => ({
-              id: String(item.productId),
-              name: item.name || '', // Optionally fetch product name if not present
-              price: item.price || 0,
-              image: item.image || '/lindo.png', // Optionally fetch product image if not present
-              quantity: item.quantity || 1,
-            }));
+            const cartItems = items.map((item: unknown) => {
+              const cartItem = item as {
+                productId: number;
+                name: string;
+                price: number;
+                image: string;
+                quantity: number;
+              };
+              return {
+                id: String(cartItem.productId),
+                name: cartItem.name || '', // Optionally fetch product name if not present
+                price: cartItem.price || 0,
+                image: cartItem.image || '/lindo.png', // Optionally fetch product image if not present
+                quantity: cartItem.quantity || 1,
+              };
+            });
             setCartItems(cartItems);
             // Optionally sync to localStorage for UI
             const email = getCurrentUserEmail();

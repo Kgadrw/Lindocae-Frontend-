@@ -2,16 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Heart, ShoppingCart, User, Home, List, ChevronDown, MessageCircle, CreditCard, Tag, Settings, HelpCircle, Accessibility, LogIn, Coins, MapPin, CreditCard as CheckoutIcon, Lock } from 'lucide-react';
+import { Heart, ShoppingCart, Home, List, MapPin, Lock } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import LoginModal from './LoginModal';
 
-// Change iconColor and activeColor to neutral
-const iconColor = "#6B7280";
-const activeColor = "#222";
-
-// Add template products for suggestions
-// Remove template productsData
+// Remove all unused imports and variables as listed in the error log.
+// Replace all 'any' types with specific types or 'unknown'.
 
 // Move updateUser outside so it can be called from anywhere
 function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: string; avatar?: string }>>) {
@@ -209,11 +205,6 @@ const Header = ({ categories: propCategories, loading }: { categories?: { _id?: 
   };
 
   // Helper to close dropdown and perform an action
-  const handleDropdownAction = (action: () => void) => {
-    setDropdownOpen(false);
-    action();
-  };
-
   const handleSignOut = () => {
     const email = localStorage.getItem('userEmail');
     console.log('[handleSignOut] Signing out user:', email);

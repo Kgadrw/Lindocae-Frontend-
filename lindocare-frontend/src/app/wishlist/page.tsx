@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
+import Image from 'next/image';
 
 // Template products (should match those in category page)
 const productsData = [
@@ -100,12 +101,12 @@ function getWishlistKey() {
 }
 
 // Add to cart functionality
-function addToCart(product: any) {
+function addToCart(product: Product) {
   const email = getUserEmail();
   const cartKey = email ? `cart:${email}` : 'cart';
   
   const existingCart = localStorage.getItem(cartKey);
-  let cart = existingCart ? JSON.parse(existingCart) : [];
+  let cart: CartItem[] = existingCart ? JSON.parse(existingCart) : [];
   
   // Add product to cart (as a separate line item)
   cart.push({
@@ -126,7 +127,7 @@ function addToCart(product: any) {
 
 const WishlistPage = () => {
   const [wishlist, setWishlist] = useState<string[]>([]); // use string[] for product IDs
-  const [wishlistProducts, setWishlistProducts] = useState<any[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
@@ -162,9 +163,9 @@ const WishlistPage = () => {
             setLoading(false);
             return;
           }
-          setWishlist((data.products || []).map((p: any) => String(p._id || p.id)));
+          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
           setWishlistProducts(data.products || []);
-        } catch (e: any) {
+        } catch (e: unknown) {
           setError('Network error. Please try again.');
           setWishlist([]);
           setWishlistProducts([]);
@@ -173,17 +174,17 @@ const WishlistPage = () => {
         // Guest: fallback to localStorage
         const key = getWishlistKey();
         const saved = localStorage.getItem(key);
-        let products: any[] = [];
+        let products: Product[] = [];
         if (saved) {
           try {
             const arr = JSON.parse(saved);
             // If array of objects, use as is; if array of IDs, map to productsData
             if (arr.length > 0 && typeof arr[0] === 'object') {
               products = arr;
-              setWishlist(arr.map((p: any) => String(p.id)));
+              setWishlist(arr.map((p: Product) => String(p.id)));
             } else {
               products = productsData.filter((p) => arr.includes(String(p.id)));
-              setWishlist(arr.map((id: any) => String(id)));
+              setWishlist(arr.map((id: string) => String(id)));
             }
           } catch {
             products = [];
@@ -197,7 +198,7 @@ const WishlistPage = () => {
   }, []);
 
   // Updated toggleWishlist for guests: store full product object
-  const toggleWishlist = async (id: string, product?: any) => {
+  const toggleWishlist = async (id: string, product?: Product) => {
     const token = getAuthToken();
     const userId = getUserIdFromToken();
     if (token && userId) {
@@ -225,17 +226,17 @@ const WishlistPage = () => {
           },
         });
         const wishlistData = await wishlistRes.json();
-        setWishlist((wishlistData.products || []).map((p: any) => p._id || p.id));
+        setWishlist((wishlistData.products || []).map((p: Product) => p._id || p.id));
         setWishlistProducts(wishlistData.products || []);
-      } catch (err) {
+      } catch (err: unknown) {
         alert('Network error. Please try again.');
       }
     } else {
       // Guest: fallback to localStorage
       const key = getWishlistKey();
       setWishlist((prev) => {
-        let updated: any[] = [];
-        let products: any[] = [];
+        let updated: string[] = [];
+        let products: Product[] = [];
         const saved = localStorage.getItem(key);
         if (saved) {
           try {
@@ -296,7 +297,13 @@ const WishlistPage = () => {
               <div key={product.id || product._id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
                 <div className="relative mb-3">
                   {product.image && (
-                    <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" />
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      width={160}
+                      height={160}
+                      className="w-full h-40 object-cover rounded-xl"
+                    />
                   )}
                   {(product.tags || []).map((tag: string) => (
                     <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-600`}>{tag}</span>

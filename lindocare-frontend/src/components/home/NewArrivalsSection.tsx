@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Heart, ChevronRight, ChevronLeft, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import Image from 'next/image';
 
 interface Product {
   _id?: string;
@@ -23,14 +24,6 @@ interface NewArrivalsSectionProps {
   wishlist: string[];
   toggleWishlist: (id: string) => void;
   handleAddToCart: (product: Product) => void;
-  priceMin: string;
-  setPriceMin: (v: string) => void;
-  priceMax: string;
-  setPriceMax: (v: string) => void;
-  sort: string;
-  setSort: (v: string) => void;
-  sortOptions: { value: string; label: string }[];
-  handleClearAll: () => void;
   iconsRow?: ReactNode;
 }
 
@@ -48,14 +41,6 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
   wishlist,
   toggleWishlist,
   handleAddToCart,
-  priceMin,
-  setPriceMin,
-  priceMax,
-  setPriceMax,
-  sort,
-  setSort,
-  sortOptions,
-  handleClearAll,
   iconsRow,
 }) => {
   const [scrollIndex, setScrollIndex] = useState(0);
@@ -63,7 +48,6 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
   const productsPerRow = 4;
   const rowsPerView = 2; // Number of rows visible at once
   const totalRows = Math.ceil(products.length / productsPerRow);
-  const maxScrollIndex = Math.max(0, totalRows - rowsPerView);
 
   const nextPage = () => {
     setScrollIndex((prev) => (prev + 1) % Math.max(1, totalRows));
@@ -145,9 +129,9 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
                 <div key={prod._id || prod.id || idx} className="bg-white shadow-lg">
                   <div className="relative">
                     {prod.image && (Array.isArray(prod.image) ? (
-                      <img src={prod.image[0]} alt={prod.name} className="w-full h-48 object-cover" />
+                      <Image src={prod.image[0]} alt={prod.name} width={200} height={120} />
                     ) : (
-                      <img src={prod.image} alt={prod.name} className="w-full h-48 object-cover" />
+                      <Image src={prod.image} alt={prod.name} width={200} height={120} />
                     ))}
                     <button
                       className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition"
@@ -243,7 +227,7 @@ export function RedesignForLoveSection({ banners }: { banners: string[] }) {
           <div key={i} className="flex flex-col items-center">
             <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white flex items-center justify-center shadow border border-gray-200 mb-2 overflow-hidden">
               {banners && banners[i] ? (
-                <img src={banners[i]} alt={`Feature ${i+1}`} className="w-12 h-12 md:w-16 md:h-16 object-cover" />
+                <Image src={banners[i]} alt={`Feature ${i+1}`} width={40} height={40} />
               ) : (
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-200 rounded-full" />
               )}
