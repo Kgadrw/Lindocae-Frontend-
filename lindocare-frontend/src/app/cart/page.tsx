@@ -15,14 +15,74 @@ interface Product {
   lowStock?: boolean;
 }
 
+// Utility: get auth token from localStorage
+function getAuthToken() {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token');
+  }
+  return null;
+}
+
+// Utility: fetch cart from server
+async function fetchUserCartFromServer(token: string) {
+  const res = await fetch('https://lindo-project.onrender.com/cart/getCartByUserId', {
+    headers: {
+      'accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error('Failed to fetch server cart');
+  return res.json();
+}
+
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<Product[]>([]);
   const [userEmail, setUserEmail] = useState('');
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    function loadCart() {
+    async function loadCart() {
       if (typeof window !== 'undefined') {
+        const token = getAuthToken();
+        if (token) {
+          // Logged in: fetch cart from server
+          try {
+            const data = await fetchUserCartFromServer(token);
+            const items = (data.cart && data.cart.items) ? data.cart.items : [];
+            // Convert server cart items to local Product[] format
+            const cartItems = items.map((item: unknown) => {
+              const cartItem = item as {
+                productId: number;
+                name: string;
+                price: number;
+                image: string;
+                quantity: number;
+              };
+              return {
+                id: String(cartItem.productId),
+                name: cartItem.name || '', // Optionally fetch product name if not present
+                price: cartItem.price || 0,
+                image: cartItem.image || '/lindo.png', // Optionally fetch product image if not present
+                quantity: cartItem.quantity || 1,
+              };
+            });
+            setCartItems(cartItems);
+            // Optionally sync to localStorage for UI
+            const email = getCurrentUserEmail();
+            if (email) {
+              localStorage.setItem(`cart:${email}`, JSON.stringify(cartItems));
+            }
+            return;
+          } catch (err) {
+            // Fallback to localStorage if server fetch fails
+          }
+        }
+        // Guest or server fetch failed: use localStorage
         const email = getCurrentUserEmail();
         setUserEmail(email);
         if (!email) {
@@ -99,6 +159,53 @@ export default function CartPage() {
     }
   };
 
+  // Checkout handler
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOrderStatus({});
+    setIsSubmitting(true);
+    try {
+      const token = getAuthToken();
+      // Prepare items for API
+      const items = cartItems.map(item => ({
+        productId: item.id,
+        quantity: item.quantity || 1,
+        price: item.price,
+      }));
+      const body = {
+        paymentMethod,
+        shippingAddress,
+        items,
+      };
+      const res = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 201) {
+        setOrderStatus({ success: 'Order placed successfully!' });
+        setShowCheckoutForm(false);
+        // Optionally clear cart
+        const email = getCurrentUserEmail();
+        if (email) {
+          localStorage.setItem(`cart:${email}`, JSON.stringify([]));
+          setCartItems([]);
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setOrderStatus({ error: data.message || 'Failed to place order.' });
+      }
+    } catch (err) {
+      setOrderStatus({ error: 'Network error. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="px-2 sm:px-4 md:px-8 lg:px-16 py-4 md:py-10 flex flex-col gap-6 sm:gap-8">
       {/* Cart Title */}
@@ -126,12 +233,13 @@ export default function CartPage() {
             <div className="text-black text-center py-12 text-lg font-semibold">Your cart is empty.</div>
           ) : (
             cartItems.map((item, idx) => (
-              <div key={`${item.id ?? 'noid'}-${idx}`} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
+              <div key={idx} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                   {typeof item.image === 'string' && item.image.trim().length > 0 ? (
                     <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">?</div>
+                    (() => { console.warn('Cart item missing image:', item); return null; })() ||
+                    <Image src="/lindo.png" alt="No image" width={96} height={96} className="object-cover w-full h-full opacity-60" />
                   )}
                 </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
@@ -161,9 +269,9 @@ export default function CartPage() {
                     {item.lowStock ? (
                       <span className="flex items-center gap-1 ml-2 sm:ml-4 text-black font-semibold"><span className="w-2 h-2 rounded-full bg-black inline-block" />Low Stock</span>
                     ) : (
-                      <span className="flex items-center gap-1 ml-2 sm:ml-4 text-gray-600 font-semibold"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />In Stock</span>
+                      <span className="flex items-center gap-1 ml-2 sm:ml-4 text-green-600 font-semibold"><span className="w-2 h-2 rounded-full bg-green-600 inline-block" />In Stock</span>
                     )}
-                    <button className="text-gray-400 hover:text-red-400 ml-2" onClick={() => handleRemove(item.id)}>Remove</button>
+                    <button className="text-red-500 hover:text-red-700 ml-2" onClick={() => handleRemove(item.id)}>Remove</button>
                   </div>
                 </div>
               </div>
@@ -184,7 +292,7 @@ export default function CartPage() {
             </div>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between"><span className="text-black font-medium">Subtotal</span><span className="text-black font-semibold">${subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-black font-medium">Estimated Shipping</span><span className="text-black font-semibold">$5.99</span></div>
+              <div className="flex justify-between"><span className="text-black font-medium">Estimated Shipping</span><span className="text-black font-semibold">$0.00</span></div>
               <div className="flex justify-between"><span className="text-black font-medium">Taxes</span><span className="text-gray-400 font-normal">Calculated at checkout</span></div>
             </div>
             <div className="flex gap-2 mt-2">
@@ -193,12 +301,68 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between items-center text-lg font-bold mt-2">
               <span className="text-black">Total</span>
-              <span className="text-black">${(subtotal + 5.99).toFixed(2)}</span>
+              <span className="text-black">${subtotal.toFixed(2)}</span>
             </div>
-            <button className="w-full rounded bg-black text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors" disabled={cartItems.length === 0}>Proceed to Checkout</button>
+            <button
+              className="w-full rounded bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:from-blue-600 hover:to-blue-800 transition-all shadow"
+              disabled={cartItems.length === 0}
+              onClick={() => setShowCheckoutForm(true)}
+            >
+              Proceed to Checkout
+            </button>
             <button className="w-full rounded border border-black text-black py-2 font-bold text-base bg-white mt-1 hover:bg-gray-100 transition-colors">Continue Shopping</button>
             {cartItems.length === 0 && (
               <div className="text-center text-gray-400 font-semibold mt-2">Add products to your cart to proceed.</div>
+            )}
+            {/* Checkout Form Inline */}
+            {showCheckoutForm && (
+              <div className="mt-4 bg-white border border-blue-100 rounded-xl shadow p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-semibold">Checkout</h4>
+                  <button
+                    className="text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                    onClick={() => setShowCheckoutForm(false)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <form onSubmit={handleCheckout} className="flex flex-col gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Payment Method</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={e => setPaymentMethod(e.target.value)}
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                      required
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="mobile">Mobile Money</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Shipping Address</label>
+                    <input
+                      type="text"
+                      value={shippingAddress}
+                      onChange={e => setShippingAddress(e.target.value)}
+                      placeholder="e.g. Kigali, Rwanda"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  {orderStatus.error && <div className="text-red-600 text-xs font-semibold mt-1">{orderStatus.error}</div>}
+                  {orderStatus.success && <div className="text-green-600 text-xs font-semibold mt-1">{orderStatus.success}</div>}
+                  <button
+                    type="submit"
+                    className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2 rounded"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                  </button>
+                </form>
+              </div>
             )}
           </div>
         </div>

@@ -12,7 +12,7 @@ interface Ad {
 interface AdsSectionProps {
   ads: Ad[] | undefined;
   adsLoading: boolean;
-  adsError: any;
+  adsError: unknown;
 }
 
 const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) => {
@@ -27,7 +27,7 @@ const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) =>
       {adsLoading ? (
         <div className="text-center text-gray-500 py-8"></div>
       ) : adsError ? (
-        <div className="text-center text-red-500 py-8">{typeof adsError === 'string' ? adsError : adsError?.message || String(adsError)}</div>
+        <div className="text-center text-red-500 py-8">{typeof adsError === 'string' ? adsError : (adsError as Error)?.message || String(adsError)}</div>
       ) : ads?.length === 0 ? (
         <div className="text-center text-gray-500 py-8"></div>
       ) : (

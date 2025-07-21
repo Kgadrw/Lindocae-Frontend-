@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 
 export default function HeaderWithCategories() {
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);

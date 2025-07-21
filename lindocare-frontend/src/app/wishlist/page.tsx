@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, ShoppingCart } from "lucide-react";
+import Image from 'next/image';
 
 // Template products (should match those in category page)
 const productsData = [
@@ -93,9 +94,40 @@ function getUserIdFromToken() {
   }
 }
 
+// For guests, store the full product object in localStorage when toggling wishlist
+function getWishlistKey() {
+  const email = getUserEmail();
+  return email ? `wishlist_${email}` : 'wishlist';
+}
+
+// Add to cart functionality
+function addToCart(product: Product) {
+  const email = getUserEmail();
+  const cartKey = email ? `cart:${email}` : 'cart';
+  
+  const existingCart = localStorage.getItem(cartKey);
+  let cart: CartItem[] = existingCart ? JSON.parse(existingCart) : [];
+  
+  // Add product to cart (as a separate line item)
+  cart.push({
+    ...product,
+    quantity: 1
+  });
+  
+  localStorage.setItem(cartKey, JSON.stringify(cart));
+  
+  // Dispatch storage event to update other components
+  setTimeout(() => {
+    window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+  }, 0);
+  
+  // Show success message
+  alert(`${product.name} added to cart!`);
+}
+
 const WishlistPage = () => {
   const [wishlist, setWishlist] = useState<string[]>([]); // use string[] for product IDs
-  const [wishlistProducts, setWishlistProducts] = useState<any[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
@@ -131,29 +163,42 @@ const WishlistPage = () => {
             setLoading(false);
             return;
           }
-          setWishlist((data.products || []).map((p: any) => String(p._id || p.id)));
+          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
           setWishlistProducts(data.products || []);
-        } catch (e: any) {
+        } catch (e: unknown) {
           setError('Network error. Please try again.');
           setWishlist([]);
           setWishlistProducts([]);
         }
       } else {
         // Guest: fallback to localStorage
-        const email = getUserEmail();
-        const key = email ? `wishlist_${email}` : 'wishlist';
+        const key = getWishlistKey();
         const saved = localStorage.getItem(key);
-        // When reading from localStorage, convert IDs to strings
-        const ids = saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
-        setWishlist(ids);
-        setWishlistProducts(productsData.filter((p) => ids.includes(String(p.id))));
+        let products: Product[] = [];
+        if (saved) {
+          try {
+            const arr = JSON.parse(saved);
+            // If array of objects, use as is; if array of IDs, map to productsData
+            if (arr.length > 0 && typeof arr[0] === 'object') {
+              products = arr;
+              setWishlist(arr.map((p: Product) => String(p.id)));
+            } else {
+              products = productsData.filter((p) => arr.includes(String(p.id)));
+              setWishlist(arr.map((id: string) => String(id)));
+            }
+          } catch {
+            products = [];
+          }
+        }
+        setWishlistProducts(products);
       }
       setLoading(false);
     }
     fetchWishlist();
   }, []);
 
-  const toggleWishlist = async (id: string) => {
+  // Updated toggleWishlist for guests: store full product object
+  const toggleWishlist = async (id: string, product?: Product) => {
     const token = getAuthToken();
     const userId = getUserIdFromToken();
     if (token && userId) {
@@ -181,24 +226,51 @@ const WishlistPage = () => {
           },
         });
         const wishlistData = await wishlistRes.json();
-        setWishlist((wishlistData.products || []).map((p: any) => p._id || p.id));
+        setWishlist((wishlistData.products || []).map((p: Product) => p._id || p.id));
         setWishlistProducts(wishlistData.products || []);
-      } catch (err) {
+      } catch (err: unknown) {
         alert('Network error. Please try again.');
       }
     } else {
       // Guest: fallback to localStorage
-      const email = getUserEmail();
-      const key = email ? `wishlist_${email}` : 'wishlist';
+      const key = getWishlistKey();
       setWishlist((prev) => {
-        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-        localStorage.setItem(key, JSON.stringify(updated));
-        setWishlistProducts(productsData.filter((p) => updated.includes(String(p.id))));
-        window.dispatchEvent(new StorageEvent('storage', { key }));
+        let updated: string[] = [];
+        let products: Product[] = [];
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          try {
+            const arr = JSON.parse(saved);
+            if (arr.length > 0 && typeof arr[0] === 'object') {
+              products = arr;
+            } else {
+              products = productsData.filter((p) => arr.includes(String(p.id)));
+            }
+          } catch {
+            products = [];
+          }
+        }
+        if (prev.includes(id)) {
+          // Remove from wishlist
+          products = products.filter((p) => String(p.id) !== id);
+        } else if (product) {
+          // Add to wishlist
+          products = [...products, product];
+        }
+        updated = products.map((p) => String(p.id));
+        localStorage.setItem(key, JSON.stringify(products));
+        setWishlistProducts(products);
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
         return updated;
       });
     }
   };
+
+  // Debug output
+  useEffect(() => {
+    console.log('[Wishlist Debug] IDs:', wishlist);
+    console.log('[Wishlist Debug] Products:', wishlistProducts);
+  }, [wishlist, wishlistProducts]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -222,23 +294,29 @@ const WishlistPage = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {wishlistProducts.map((product) => (
-              <div key={product.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
+              <div key={product.id || product._id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
                 <div className="relative mb-3">
                   {product.image && (
-                    <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl" />
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      width={160}
+                      height={160}
+                      className="w-full h-40 object-cover rounded-xl"
+                    />
                   )}
                   {(product.tags || []).map((tag: string) => (
                     <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-600`}>{tag}</span>
                   ))}
                   <button
                     className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                    onClick={() => toggleWishlist(String(product.id))}
-                    aria-label="Add to wishlist"
+                    onClick={() => toggleWishlist(String(product.id || product._id), product)}
+                    aria-label="Remove from wishlist"
                   >
                     <Heart
                       size={20}
-                      color={wishlist.includes(String(product.id)) ? '#111' : '#888'}
-                      fill={wishlist.includes(String(product.id)) ? '#111' : 'none'}
+                      color="#111"
+                      fill="#111"
                       strokeWidth={2.2}
                     />
                   </button>
@@ -256,11 +334,18 @@ const WishlistPage = () => {
                       <span className="text-sm line-through text-gray-400">${product.oldPrice}</span>
                     )}
                   </div>
-                  <div className="flex gap-2 flex-wrap mb-2">
+                  <div className="flex gap-2 flex-wrap mb-3">
                     {(product.delivery || []).map((d: string) => (
                       <span key={d} className="bg-gray-100 text-gray-600 rounded px-2 py-1 text-xs">{d}</span>
                     ))}
                   </div>
+                  <button
+                    onClick={() => addToCart(product)}
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg font-semibold hover:from-blue-600 hover:to-blue-800 transition-all flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart size={16} />
+                    Move to Cart
+                  </button>
                 </div>
               </div>
             ))}

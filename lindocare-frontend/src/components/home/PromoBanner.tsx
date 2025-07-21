@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface Category {
+  image?: string | string[];
+  name: string;
+  description?: string;
+}
+
 interface PromoBannerProps {
-  categories: any[];
+  categories: Category[];
   catLoading: boolean;
 }
 
@@ -102,14 +108,14 @@ const PromoBanner: React.FC<PromoBannerProps> = ({ categories, catLoading }) => 
                   Stay Organized with a Wish List
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Easily curate and save your list of must-have items with just a few clicks. Perfect for planning your baby's nursery or shopping for gifts.
+                  Easily curate and save your list of must-have items with just a few clicks. Perfect for planning your baby&apos;s nursery or shopping for gifts.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <Link
                   href="/wishlist"
-                  className="inline-flex items-center justify-center bg-black hover:bg-lindo-blue text-lindo-blue px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-lindo-yellow/30"
+                  className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300/50 shadow-lg"
                 >
                   Get Started
                   <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

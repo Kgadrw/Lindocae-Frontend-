@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Icon {
   _id?: string;
@@ -14,6 +15,66 @@ interface IconsRowProps {
 }
 
 const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const maxIndex = Math.max(0, (icons?.length || 0) - 6); // Show 6 icons at a time
+
+  // Array of random border colors
+  const borderColors = [
+    'border-red-300',
+    'border-blue-300', 
+    'border-green-300',
+    'border-yellow-300',
+    'border-purple-300',
+    'border-pink-300',
+    'border-indigo-300',
+    'border-teal-300',
+    'border-orange-300',
+    'border-cyan-300',
+    'border-emerald-300',
+    'border-violet-300'
+  ];
+
+  // Generate random border colors for each icon
+  const getRandomBorderColor = (index: number) => {
+    return borderColors[index % borderColors.length];
+  };
+
+  useEffect(() => {
+    if (!icons || icons.length <= 6) return;
+
+    const slideInterval = setInterval(() => {
+      if (!isPaused) {
+        setCurrentIndex((prevIndex) => {
+          if (prevIndex >= maxIndex) {
+            return 0; // Reset to beginning
+          }
+          return prevIndex + 1;
+        });
+      }
+    }, 500); // Reduced from 1000ms to 500ms for faster sliding
+
+    const pauseInterval = setInterval(() => {
+      setIsPaused((prevPaused) => !prevPaused);
+    }, 1000); // Reduced from 2000ms to 1000ms for faster pause cycle
+
+    return () => {
+      clearInterval(slideInterval);
+      clearInterval(pauseInterval);
+    };
+  }, [icons, maxIndex, isPaused]);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = currentIndex * 105; // 100px (min-w-[100px]) + 5px (gap)
+      scrollContainerRef.current.scrollTo({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  }, [currentIndex]);
+
   return (
     <section className="w-full mb-8">
       {iconsLoading ? (
@@ -24,9 +85,13 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
         <div className="text-center text-gray-500 py-8">No icons found.</div>
       ) : (
         <div className="w-full">
-          {/* Horizontal scrolling container */}
-          <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide">
-            {icons?.map((icon: any, idx: number) => {
+          {/* Auto-sliding container */}
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-5 overflow-x-hidden pb-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {icons?.map((icon: Icon, idx: number) => {
               let image = '';
               if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
               else if (typeof icon.image === 'string') image = icon.image;
@@ -39,15 +104,17 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
                 >
                   {/* Icon container with soft blob background */}
                   <div className="relative w-20 h-20 mb-3 group-hover:scale-105 transition-transform duration-300">
-                    {/* Soft blob background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-100 rounded-full shadow-sm group-hover:shadow-md transition-shadow duration-300" />
+                    {/* Soft blob background with random border */}
+                    <div className={`absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-100 rounded-full shadow-sm group-hover:shadow-md transition-shadow duration-300 border-4 ${getRandomBorderColor(idx)}`} />
                     
                     {/* Icon image */}
                     <div className="absolute inset-2 rounded-full overflow-hidden bg-white">
                       {image ? (
-                        <img
+                        <Image
                           src={image}
                           alt={icon.title}
+                          width={40}
+                          height={40}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -70,10 +137,21 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
             })}
           </div>
           
-          {/* Scroll indicator for mobile */}
-          <div className="flex justify-center mt-2 lg:hidden">
-            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-          </div>
+          {/* Auto-slide indicator */}
+          {icons && icons.length > 6 && (
+            <div className="flex justify-center mt-4">
+              <div className="flex space-x-2">
+                {Array.from({ length: Math.ceil(icons.length / 6) }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      Math.floor(currentIndex / 6) === idx ? 'bg-orange-500' : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

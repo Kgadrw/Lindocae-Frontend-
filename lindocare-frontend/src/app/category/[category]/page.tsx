@@ -5,94 +5,18 @@ import { useParams } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { getCurrentUserEmail } from '../../../components/Header';
 import LoginModal from '../../../components/LoginModal';
+import Head from 'next/head';
+import Image from 'next/image';
 
-// Template categories (replace with API data later)
-const categories = [
-  { name: 'Cribs', count: 128 },
-  { name: 'Changing Tables', count: 140 },
-  { name: 'Rocking Chairs', count: 95 },
-  { name: 'Baby Dressers', count: 87 },
-  { name: 'Playpens &amp; Playards', count: 77 },
-];
+interface Category {
+  _id: string;
+  name: string;
+  description?: string;
+  image?: string | string[];
+}
 
-// Template products (replace with API data later)
-const productsData = [
-  {
-    id: 1,
-    name: 'Sorelle Natural Pinewood Crib',
-    price: 526.63,
-    oldPrice: 567.05,
-    image: 'https://images.pexels.com/photos/459225/pexels-photo-459225.jpeg',
-    reviews: 22,
-    rating: 4.8,
-    tags: ['Sale'],
-    delivery: ['Fast Delivery'],
-  },
-  {
-    id: 2,
-    name: 'Premium Changing Table',
-    price: 289.99,
-    image: 'https://images.pexels.com/photos/3933276/pexels-photo-3933276.jpeg',
-    reviews: 15,
-    rating: 4.5,
-    tags: [],
-    delivery: ['Pickup Nearby'],
-  },
-  {
-    id: 3,
-    name: 'Comfort Rocking Chair',
-    price: 459.0,
-    image: 'https://images.pexels.com/photos/3933275/pexels-photo-3933275.jpeg',
-    reviews: 45,
-    rating: 4.7,
-    tags: ['Featured'],
-    delivery: ['Fast Delivery'],
-  },
-  {
-    id: 4,
-    name: 'Baby Dresser & Changer',
-    price: 399.99,
-    image: 'https://images.pexels.com/photos/3933277/pexels-photo-3933277.jpeg',
-    reviews: 28,
-    rating: 4.6,
-    tags: [],
-    delivery: ['Pickup Nearby'],
-  },
-  {
-    id: 5,
-    name: 'Portable Baby Playpen',
-    price: 179.99,
-    image: 'https://images.pexels.com/photos/3933278/pexels-photo-3933278.jpeg',
-    reviews: 12,
-    rating: 4.4,
-    tags: ['New'],
-    delivery: ['Fast Delivery'],
-  },
-  {
-    id: 6,
-    name: 'Organic Crib Mattress',
-    price: 299.99,
-    image: 'https://images.pexels.com/photos/3933279/pexels-photo-3933279.jpeg',
-    reviews: 67,
-    rating: 4.9,
-    tags: [],
-    delivery: ['Pickup Nearby'],
-  },
-];
-
-const colors = ['#fff', '#e5e7eb', '#f87171', '#60a5fa', '#fbbf24', '#34d399'];
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const sortOptions = [
-  { value: 'popular', label: 'Popular' },
-  { value: 'priceLow', label: 'Price: Low to High' },
-  { value: 'priceHigh', label: 'Price: High to Low' },
-  { value: 'newest', label: 'Newest' },
-];
-
-// Define Product type
 interface Product {
-  id: number;
+  _id: string;
   name: string;
   price: number;
   oldPrice?: number;
@@ -103,16 +27,27 @@ interface Product {
   delivery: string[];
 }
 
+function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token');
+}
+function getUserIdFromToken() {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId || payload.id || payload._id || payload.user || null;
+  } catch {
+    return null;
+  }
+}
+
+const colors = ['#fff', '#e5e7eb', '#f87171', '#60a5fa', '#fbbf24', '#34d399'];
+
 const CategoryPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [sort, setSort] = useState('popular');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [priceMin, setPriceMin] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [priceMax, setPriceMax] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -120,72 +55,140 @@ const CategoryPage = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMsg, setLoginMsg] = useState('');
-  const [allCategories, setAllCategories] = useState<{ name: string; count?: number }[]>([]);
+  const [category, setCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [wishlist, setWishlist] = useState<string[]>([]);
+
   useEffect(() => { setIsClient(true); }, []);
 
-  // Wishlist state
-  const [wishlist, setWishlist] = useState<number[]>([]);
-  useEffect(() => {
-    if (!isClient) return;
-    const saved = localStorage.getItem('wishlist');
-    setWishlist(saved ? JSON.parse(saved) : []);
-  }, [isClient]);
+  const params = useParams();
+  const categoryId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  // Fetch categories from backend
+  // Fetch category details
   useEffect(() => {
-    const fetchCategories = async () => {
+    if (!categoryId) return;
+    setLoading(true);
+    setError('');
+    const fetchCategory = async () => {
       try {
-        const res = await fetch('https://lindo-project.onrender.com/category/getAllCategories');
-        const data = await res.json();
-        if (Array.isArray(data)) setAllCategories(data);
-        else if (data && Array.isArray(data.categories)) setAllCategories(data.categories);
-        else setAllCategories([]);
-      } catch {
-        setAllCategories([]);
+        console.log('Fetching category with ID:', categoryId);
+        const res = await fetch(`https://lindo-project.onrender.com/category/getCategoryById/${categoryId}`);
+        const contentType = res.headers.get('content-type');
+        if (!res.ok || !contentType || !contentType.includes('application/json')) {
+          throw new Error('Category not found or invalid response.');
+        }
+        const data: Category = await res.json();
+        console.log('Fetched category data:', data);
+        if (!data || !data._id) throw new Error('Category not found');
+        setCategory(data);
+      } catch (err) {
+        setError('Category not found or invalid.');
+        setCategory(null);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchCategories();
-  }, []);
+    fetchCategory();
+  }, [categoryId]);
 
-  const params = useParams();
-  const categoryParam = params.category;
-  const categoryName = decodeURIComponent(Array.isArray(categoryParam) ? categoryParam[0] : categoryParam || 'Baby Furniture');
-
+  // Fetch products for this category
   useEffect(() => {
-    // Fetch real products for this category
+    if (!categoryId) return;
     const fetchProducts = async () => {
       try {
-        const res = await fetch(`https://lindo-project.onrender.com/product/getProductsByCategory?category=${encodeURIComponent(categoryName)}`);
-        const data = await res.json();
-        if (Array.isArray(data)) setProducts(data);
-        else if (data && Array.isArray(data.products)) setProducts(data.products);
-        else setProducts([]);
+        // Fetch all products, then filter by categoryId on the client
+        const res = await fetch(`https://lindo-project.onrender.com/product/getAllProduct`);
+        const data: { products: Product[] } = await res.json();
+        let prods = data.products;
+        // Filter products by categoryId === category._id
+        if (category) {
+          prods = prods.filter((p: Product) => p.categoryId === category._id);
+        }
+        setProducts(prods);
       } catch {
         setProducts([]);
       }
     };
     fetchProducts();
-  }, [categoryName]);
+  }, [categoryId, category]);
 
   // Filtering logic
-  React.useEffect(() => {
+  useEffect(() => {
     let filtered = [...products];
-    // Delivery filter
     if (selectedDelivery.length > 0) {
       filtered = filtered.filter(p => selectedDelivery.some(d => p.delivery && p.delivery.includes(d)));
     }
-    // Price filter
-    if (priceMin) filtered = filtered.filter(p => p.price >= parseFloat(priceMin));
-    if (priceMax) filtered = filtered.filter(p => p.price <= parseFloat(priceMax));
-    // Sorting
-    if (sort === 'priceLow') filtered.sort((a, b) => a.price - b.price);
-    else if (sort === 'priceHigh') filtered.sort((a, b) => b.price - a.price);
-    else if (sort === 'newest') filtered = filtered.slice().reverse();
-    // (Popular: default order)
     setFilteredProducts(filtered);
-  }, [products, selectedDelivery, sort, priceMin, priceMax]);
+  }, [products, selectedDelivery]);
 
-  React.useEffect(() => {
+  // Wishlist logic (same as before)
+  useEffect(() => {
+    async function fetchWishlist() {
+      const token = getAuthToken();
+      const userId = getUserIdFromToken();
+      if (token && userId) {
+        try {
+          const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+            headers: {
+              'accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) throw new Error('Failed to fetch wishlist');
+          const data: { products: Product[] } = await res.json();
+          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
+        } catch {
+          setWishlist([]);
+        }
+      } else {
+        const email = getCurrentUserEmail();
+        const key = email ? `wishlist_${email}` : 'wishlist';
+        const saved = localStorage.getItem(key);
+        const ids = saved ? JSON.parse(saved).map((id: string) => String(id)) : [];
+        setWishlist(ids);
+      }
+    }
+    fetchWishlist();
+  }, []);
+
+  async function toggleWishlist(id: string) {
+    const token = getAuthToken();
+    const userId = getUserIdFromToken();
+    if (token && userId) {
+      try {
+        const res = await fetch('https://lindo-project.onrender.com/wishlist/toggleWishlistProduct', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ productId: id }),
+        });
+        if (!res.ok) return;
+        const wishlistRes = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+          headers: {
+            'accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const wishlistData: { products: Product[] } = await wishlistRes.json();
+        setWishlist((wishlistData.products || []).map((p: Product) => String(p._id || p.id)));
+      } catch (err) {}
+    } else {
+      const email = getCurrentUserEmail();
+      const key = email ? `wishlist_${email}` : 'wishlist';
+      setWishlist((prev) => {
+        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
+        localStorage.setItem(key, JSON.stringify(updated));
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
+        return updated;
+      });
+    }
+  }
+
+  useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
@@ -193,26 +196,6 @@ const CategoryPage = () => {
     setSelectedDelivery(prev => prev.includes(option) ? prev.filter(d => d !== option) : [...prev, option]);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleClearAll = () => {
-    setSelectedDelivery([]);
-    setSort('popular');
-    setViewMode('grid');
-    setPriceMin('');
-    setPriceMax('');
-  };
-
-  const toggleWishlist = (id: number) => {
-    if (!isClient) return;
-    setWishlist((prev) => {
-      const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-      localStorage.setItem('wishlist', JSON.stringify(updated));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'wishlist' }));
-      return updated;
-    });
-  };
-
-  // Add to cart handler
   const handleAddToCart = (product: Product) => {
     const email = getCurrentUserEmail();
     if (!email) {
@@ -222,18 +205,18 @@ const CategoryPage = () => {
     }
     const cartKey = `cart:${email}`;
     const cartRaw = localStorage.getItem(cartKey);
-    let cart = [];
+    let cart: { _id: string; name: string; price: number; image: string; quantity: number }[] = [];
     try {
       cart = cartRaw ? JSON.parse(cartRaw) : [];
     } catch {
       cart = [];
     }
-    const idx = cart.findIndex((item: { id: number }) => item.id === product.id);
+    const idx = cart.findIndex((item: { _id: string }) => item._id === product._id);
     if (idx > -1) {
       cart[idx].quantity = (cart[idx].quantity || 1) + 1;
     } else {
       cart.push({
-        id: product.id,
+        _id: product._id,
         name: product.name,
         price: product.price,
         image: product.image,
@@ -241,9 +224,8 @@ const CategoryPage = () => {
       });
     }
     localStorage.setItem(cartKey, JSON.stringify(cart));
-    // Manually dispatch storage event for same-tab update
-    window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
-    window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })); // for header badge update
+    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
+    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
     setToastMsg(`${product.name} added to cart!`);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 1200);
@@ -252,17 +234,20 @@ const CategoryPage = () => {
   if (!isClient) return null;
 
   return (
+    <>
+      <Head>
+        <title>{category ? `${category.name} | Lindo Shop` : 'Category | Lindo Shop'}</title>
+        <meta name="description" content={category?.description || 'Browse products by category.'} />
+      </Head>
     <div className="min-h-screen bg-white pb-16">
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
       {showToast && (
         <>
-          {/* Mobile: bottom above nav bar */}
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center md:hidden pointer-events-none">
             <div className="bg-black text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
               {toastMsg}
             </div>
           </div>
-          {/* Desktop: top center */}
           <div className="hidden md:flex fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full justify-center pointer-events-none">
             <div className="bg-black text-white px-6 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
               {toastMsg}
@@ -271,9 +256,28 @@ const CategoryPage = () => {
         </>
       )}
       <div className="max-w-7xl mx-auto px-2 pt-4 md:pt-6 pb-12">
-        {/* Breadcrumb */}
         <div className="text-sm text-black mb-4 pt-14 md:pt-0">
-          <Link href="/">Home</Link> / <span className="text-black font-medium">{categoryName}</span>
+            <Link href="/">Home</Link> / <span className="text-black font-medium">{category?.name || 'Category'}</span>
+          </div>
+          {loading ? (
+            <div className="text-center text-gray-500 py-12">Loading category...</div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-12">{error} <br/> <span className='text-xs'>Check if the category ID in the URL is valid.</span></div>
+          ) : category && (
+            <>
+              {/* Category Banner */}
+              <div className="mb-8 flex flex-col items-center">
+                <Image
+                  src={Array.isArray(category.image) ? (category.image[0] || '/lindo.png') : (category.image || '/lindo.png')}
+                  alt={category.name}
+                  width={600}
+                  height={224}
+                  className="w-full max-w-2xl h-56 object-cover rounded-2xl border border-black mb-4"
+                  style={{ background: '#f5f5f5' }}
+                />
+                <h1 className="text-3xl font-bold text-black mb-2 text-center">{category.name}</h1>
+                {category.description && <p className="text-gray-700 text-center max-w-2xl">{category.description}</p>}
+                <div className="text-black text-base font-normal mt-2">{products.length} products</div>
         </div>
         <div className="flex flex-col md:flex-row gap-8">
           {/* Filters (collapsible on mobile) */}
@@ -284,22 +288,25 @@ const CategoryPage = () => {
             <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
               <div className="flex justify-between items-center mb-4">
                 <span className="font-bold text-black text-lg">Filters</span>
-                <button className="text-blue-600 text-sm font-medium hover:underline" onClick={handleClearAll}>Clear All</button>
+                <button className="text-blue-600 text-sm font-medium hover:underline" onClick={() => {}}>Clear All</button>
               </div>
+                    {/* Delivery and price filters */}
               <div className="mb-4">
-                <div className="font-semibold text-black mb-2">Categories</div>
+                      <div className="font-semibold text-black mb-2">Delivery</div>
                 <ul className="space-y-2">
-                  {allCategories.map(cat => (
-                    <li key={cat.name} className="flex items-center gap-2">
-                      <input type="checkbox" className="accent-blue-600" />
-                      <span className="text-black text-sm hover:text-blue-600 transition-colors cursor-pointer">{cat.name}</span>
-                      {cat.count !== undefined && <span className="text-black text-sm"> ({cat.count})</span>}
+                        {['Fast Delivery', 'Pickup Nearby'].map(option => (
+                          <li key={option} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="accent-blue-600"
+                              checked={selectedDelivery.includes(option)}
+                              onChange={() => handleDeliveryChange(option)}
+                            />
+                            <span className="text-black text-sm cursor-pointer">{option}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              {/* Remove Delivery filter section */}
-           
               <div className="mb-4">
                 <div className="font-semibold text-black mb-2">Color</div>
                 <div className="flex gap-2">
@@ -308,23 +315,19 @@ const CategoryPage = () => {
                   ))}
                 </div>
               </div>
-              <div>
-                <div className="font-semibold text-black mb-2">Price Range</div>
-                <div className="flex gap-2">
-                  <input type="number" placeholder="Min" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
-                  <input type="number" placeholder="Max" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
-                </div>
-              </div>
             </div>
           </aside>
           {/* Main Content */}
           <main className="flex-1">
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-black">{categoryName} <span className="text-black text-base font-normal">({products.length} products)</span></h1>
+                    <h2 className="text-2xl font-bold text-black">Products</h2>
               <div className="flex items-center gap-2">
                 <span className="text-black text-sm">Sort by:</span>
-                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value={sort} onChange={e => setSort(e.target.value)}>
-                  {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value="popular" onChange={() => {}}>
+                  <option value="popular">Popular</option>
+                  <option value="priceLow">Price: Low to High</option>
+                  <option value="priceHigh">Price: High to Low</option>
+                  <option value="newest">Newest</option>
                 </select>
                 <button
                   className={`ml-2 p-2 rounded border border-blue-600 hover:bg-blue-600 hover:text-white ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-blue-600'}`}
@@ -350,23 +353,29 @@ const CategoryPage = () => {
                 </button>
               </div>
             </div>
+                  {filteredProducts.length === 0 ? (
+                    <div className="text-center text-gray-500 py-12 text-lg font-semibold">No products found in this category.</div>
+                  ) : (
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'flex flex-col gap-6'}>
               {filteredProducts.map(product => (
-                <div key={product.id} className="bg-white border border-black rounded-2xl shadow p-4 flex flex-col">
+                <div key={product._id} className="bg-white border border-black rounded-2xl shadow p-4 flex flex-col">
                   <div className="relative mb-3">
-                    <img src={product.image} alt={product.name} className="w-full h-40 object-cover rounded-xl border border-black" />
+                    <Link href={`/product/${product._id}`}>
+                      <Image src={product.image} alt={product.name} width={600} height={224} className="w-full h-40 object-cover rounded-xl border border-black" />
+                      <div className="font-bold text-black mb-1">{product.name}</div>
+                    </Link>
                     {product.tags.map(tag => (
                       <span key={tag} className="absolute top-2 left-2 px-2 py-1 border border-black text-black bg-white rounded text-xs font-bold">{tag}</span>
                     ))}
                     <button
                       className="absolute top-2 right-2 bg-white border border-black rounded-full p-1 shadow hover:bg-blue-600 hover:text-white"
-                      onClick={() => toggleWishlist(product.id)}
+                              onClick={() => toggleWishlist(String(product._id))}
                       aria-label="Add to wishlist"
                     >
                       <Heart
                         size={20}
-                        color={wishlist.includes(product.id) ? '#2563eb' : '#000'}
-                        fill={wishlist.includes(product.id) ? '#2563eb' : 'none'}
+                                color={wishlist.includes(String(product._id)) ? '#2563eb' : '#000'}
+                                fill={wishlist.includes(String(product._id)) ? '#2563eb' : 'none'}
                         strokeWidth={2.2}
                       />
                     </button>
@@ -377,7 +386,6 @@ const CategoryPage = () => {
                       <span className="text-sm font-semibold text-black">{product.rating}</span>
                       <span className="text-xs text-black">({product.reviews} reviews)</span>
                     </div>
-                    <div className="font-bold text-black mb-1">{product.name}</div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg font-bold text-black">${product.price.toFixed(2)}</span>
                       {product.oldPrice && <span className="text-sm line-through text-black">${product.oldPrice}</span>}
@@ -387,10 +395,14 @@ const CategoryPage = () => {
                 </div>
               ))}
             </div>
+                  )}
           </main>
+              </div>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

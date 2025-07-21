@@ -1,15 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { X, ChevronDown, Eye, EyeOff, Upload, CheckCircle } from 'lucide-react';
-
-// SVG for the modern Twitter (X) icon
-const TwitterXIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 32 32" fill="none" width={28} height={28} {...props}>
-    <rect width="32" height="32" rx="16" fill="#000" />
-    <path d="M21.5 10.5L10.5 21.5M10.5 10.5L21.5 21.5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-  </svg>
-);
+import { X, ChevronDown, Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 interface LoginModalProps {
   open: boolean;
@@ -30,11 +22,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState("");
   const [success, setSuccess] = useState("");
-  const [icons, setIcons] = useState<any[]>([]);
-  const [iconsLoading, setIconsLoading] = useState(true);
-  const [iconsError, setIconsError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   React.useEffect(() => {
     if (open) {

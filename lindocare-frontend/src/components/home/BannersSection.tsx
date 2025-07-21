@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Banner {
   _id?: string;
@@ -11,7 +12,7 @@ interface Banner {
 interface BannersSectionProps {
   banners: { banners: Banner[] } | undefined;
   bannerLoading: boolean;
-  bannerError: any;
+  bannerError: unknown;
 }
 
 const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionProps) => {
@@ -37,7 +38,13 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
           <div className="lg:col-span-4 relative rounded-xl p-6 flex flex-col justify-end pb-10 overflow-hidden">
             {/* Background image */}
             <div className="absolute inset-0 w-full h-full z-0">
-              <img src={promoImage} alt="Banner" className="w-full h-full object-cover object-center" />
+              <Image
+                src={promoImage}
+                alt="Banner"
+                layout="fill"
+                objectFit="cover"
+                objectPosition="center"
+              />
               {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </div>
@@ -61,13 +68,13 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                   <Link 
                     href="/all-products"
-                    className="bg-black  hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
+                    className="bg-blue-600  hover:bg-lindo-blue text-lindo-blue px-6 py-3 rounded-full font-bold text-white transition-colors duration-300 transform hover:scale-105"
                   >
                     Shop Now
                   </Link>
                   <Link 
                     href="/category/nursery"
-                    className="border-2 border-lindo-blue bg-yellow-300 hover:border-lindo-yellow text-white hover:text-lindo-yellow px-6 py-3 rounded-full font-semibold text-base transition-colors duration-300"
+                    className=" bg-yellow-300  transform hover:scale-105 text-white hover:text-lindo-yellow px-6 py-3 rounded-full font-semibold text-base transition-colors duration-300"
                   >
                     View Categories
                   </Link>
@@ -83,10 +90,11 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
               <div className="relative bg-white rounded-xl overflow-hidden  hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[0]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
-                    <img 
+                    <Image
                       src={gridBanners[0].images[0]} 
                       alt={gridBanners[0].title} 
-                      className="w-full h-full object-cover"
+                      layout="fill"
+                      objectFit="cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -115,10 +123,11 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
               <div className="relative bg-white rounded-xl overflow-hidden  hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[1]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
-                    <img 
+                    <Image
                       src={gridBanners[1].images[0]} 
                       alt={gridBanners[1].title} 
-                      className="w-full h-full object-cover"
+                      layout="fill"
+                      objectFit="cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -147,10 +156,11 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
               <div className="relative bg-white rounded-xl overflow-hidden  hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[2]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
-                    <img 
+                    <Image
                       src={gridBanners[2].images[0]} 
                       alt={gridBanners[2].title} 
-                      className="w-full h-full object-cover"
+                      layout="fill"
+                      objectFit="cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -179,10 +189,11 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
               <div className="relative bg-white rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300">
                 {gridBanners[3]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
-                    <img 
+                    <Image
                       src={gridBanners[3].images[0]} 
                       alt={gridBanners[3].title} 
-                      className="w-full h-full object-cover"
+                      layout="fill"
+                      objectFit="cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4 text-white">

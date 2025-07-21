@@ -55,13 +55,20 @@ const ProductsSection: React.FC = () => {
     try {
       const response = await fetch('https://lindo-project.onrender.com/product/getAllProduct');
       if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched products:', data);
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else if (data && Array.isArray(data.products)) {
-          setProducts(data.products);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          console.log('Fetched products:', data);
+          if (Array.isArray(data)) {
+            setProducts(data);
+          } else if (data && Array.isArray(data.products)) {
+            setProducts(data.products);
+          } else {
+            setProducts([]);
+          }
         } else {
+          const text = await response.text();
+          console.error('Expected JSON but got:', text);
           setProducts([]);
         }
       } else {
@@ -78,13 +85,20 @@ const ProductsSection: React.FC = () => {
     try {
       const response = await fetch('https://lindo-project.onrender.com/category/getAllCategories');
       if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched categories:', data);
-        if (Array.isArray(data)) {
-          setCategories(data);
-        } else if (data && Array.isArray(data.categories)) {
-          setCategories(data.categories);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          console.log('Fetched categories:', data);
+          if (Array.isArray(data)) {
+            setCategories(data);
+          } else if (data && Array.isArray(data.categories)) {
+            setCategories(data.categories);
+          } else {
+            setCategories([]);
+          }
         } else {
+          const text = await response.text();
+          console.error('Expected JSON but got:', text);
           setCategories([]);
         }
       } else {

@@ -13,13 +13,11 @@ interface Product {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [userEmail, setUserEmail] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const email = localStorage.getItem('userEmail') || '';
-      setUserEmail(email);
       if (!email) {
         setCartItems([]);
         return;

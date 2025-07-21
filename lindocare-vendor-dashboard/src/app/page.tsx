@@ -41,16 +41,15 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<User | null>(null);
 
   const handleLogin = (userData: User) => {
-    // Check if user is a vendor
     if (userData.role === 'vendor') {
       setUser(userData);
       setIsAuthenticated(true);
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('accessToken', userData.tokens?.accessToken || '');
       console.log('Vendor logged in successfully:', userData.firstName, userData.lastName);
     } else {
       alert('Access denied. Only vendors can access this dashboard.');
-      // Clear any stored data
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
@@ -66,28 +65,24 @@ export default function AdminDashboard() {
     alert('Logged out successfully!');
   };
 
-  // Check for existing authentication on component mount
   useEffect(() => {
     const auth = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('user');
     const accessToken = localStorage.getItem('accessToken');
-    
+
     if (auth === 'true' && userData && accessToken) {
       try {
         const parsedUser = JSON.parse(userData);
-        // Check if user is still a vendor
         if (parsedUser.role === 'vendor') {
           setIsAuthenticated(true);
           setUser(parsedUser);
         } else {
-          // Clear invalid data if user is not a vendor
           localStorage.removeItem('isAuthenticated');
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
         }
       } catch (error) {
         console.error('Error parsing user data:', error);
-        // Clear invalid data
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
@@ -95,12 +90,10 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // Show login form if not authenticated
   if (!isAuthenticated) {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  // Show dashboard if authenticated
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar

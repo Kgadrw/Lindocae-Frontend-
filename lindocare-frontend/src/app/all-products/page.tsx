@@ -1,16 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Heart } from "lucide-react";
-import { getCurrentUserEmail } from "../components/Header";
+import Image from "next/image";
+
+interface Category {
+  _id: string;
+  name: string;
+  image?: string | string[];
+  description?: string;
+}
+
+interface Product {
+  _id: string;
+  id?: number;
+  name: string;
+  price: number;
+  oldPrice?: number;
+  image: string | string[];
+  reviews?: number;
+  rating?: number;
+  tags?: string[];
+  category?: string;
+}
 
 export default function AllProductsPage() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [wishlist, setWishlist] = useState<(number | string)[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -20,8 +38,8 @@ export default function AllProductsPage() {
       fetch("https://lindo-project.onrender.com/product/getAllProduct").then(res => res.json()),
     ])
       .then(([catData, prodData]) => {
-        let cats = Array.isArray(catData) ? catData : catData.categories || [];
-        let prods = Array.isArray(prodData) ? prodData : prodData.products || [];
+        const cats: Category[] = Array.isArray(catData) ? catData : catData.categories || [];
+        const prods: Product[] = Array.isArray(prodData) ? prodData : prodData.products || [];
         setCategories(cats);
         setProducts(prods);
       })
@@ -35,7 +53,7 @@ export default function AllProductsPage() {
     setWishlist(saved ? JSON.parse(saved) : []);
   }, []);
 
-  const toggleWishlist = (id: number) => {
+  const toggleWishlist = (id: number | string) => {
     setWishlist((prev) => {
       const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
       localStorage.setItem("wishlist", JSON.stringify(updated));
@@ -48,7 +66,7 @@ export default function AllProductsPage() {
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500 text-xl">{error}</div>;
 
   // Group products by category name
-  const productsByCategory: Record<string, any[]> = {};
+  const productsByCategory: Record<string, Product[]> = {};
   products.forEach((prod) => {
     if (!prod.category) return;
     if (!productsByCategory[prod.category]) productsByCategory[prod.category] = [];
@@ -74,20 +92,20 @@ export default function AllProductsPage() {
                     <div key={prod._id || prod.id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col">
                       <div className="relative mb-3">
                         {image && (
-                          <img src={image} alt={prod.name} className="w-full h-40 object-cover rounded-xl" />
+                          <Image src={image} alt={prod.name} width={300} height={160} className="w-full h-40 object-cover rounded-xl" />
                         )}
                         {prod.tags && Array.isArray(prod.tags) && prod.tags.map((tag: string) => (
                           <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
                         ))}
                         <button
                           className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                          onClick={() => toggleWishlist(prod.id || prod._id)}
+                          onClick={() => toggleWishlist(prod.id || prod._id || idx)}
                           aria-label="Add to wishlist"
                         >
                           <Heart
                             size={20}
-                            color={wishlist.includes(prod.id || prod._id) ? '#F87171' : '#3B82F6'}
-                            fill={wishlist.includes(prod.id || prod._id) ? '#F87171' : 'none'}
+                            color={wishlist.includes(prod.id || prod._id || idx) ? '#F87171' : '#3B82F6'}
+                            fill={wishlist.includes(prod.id || prod._id || idx) ? '#F87171' : 'none'}
                             strokeWidth={2.2}
                           />
                         </button>
