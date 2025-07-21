@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface Category {
+  image?: string | string[];
+  name: string;
+  description?: string;
+}
+
 interface PromoBannerProps {
-  categories: any[];
+  categories: Category[];
   catLoading: boolean;
 }
 
