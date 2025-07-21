@@ -48,7 +48,6 @@ const CategoryPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [priceMin, setPriceMin] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -120,9 +119,8 @@ const CategoryPage = () => {
     if (selectedDelivery.length > 0) {
       filtered = filtered.filter(p => selectedDelivery.some(d => p.delivery && p.delivery.includes(d)));
     }
-    if (priceMin) filtered = filtered.filter(p => p.price >= parseFloat(priceMin));
     setFilteredProducts(filtered);
-  }, [products, selectedDelivery, priceMin]);
+  }, [products, selectedDelivery]);
 
   // Wishlist logic (same as before)
   useEffect(() => {
@@ -317,12 +315,6 @@ const CategoryPage = () => {
                   ))}
                 </div>
               </div>
-              <div>
-                <div className="font-semibold text-black mb-2">Price Range</div>
-                <div className="flex gap-2">
-                  <input type="number" placeholder="Min" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
-                </div>
-              </div>
             </div>
           </aside>
           {/* Main Content */}
@@ -331,7 +323,7 @@ const CategoryPage = () => {
                     <h2 className="text-2xl font-bold text-black">Products</h2>
               <div className="flex items-center gap-2">
                 <span className="text-black text-sm">Sort by:</span>
-                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value={priceMin} onChange={e => setPriceMin(e.target.value)}>
+                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value="popular" onChange={e => {}}>
                   <option value="popular">Popular</option>
                   <option value="priceLow">Price: Low to High</option>
                   <option value="priceHigh">Price: High to Low</option>
