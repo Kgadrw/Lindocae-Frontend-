@@ -121,12 +121,8 @@ const CategoryPage = () => {
       filtered = filtered.filter(p => selectedDelivery.some(d => p.delivery && p.delivery.includes(d)));
     }
     if (priceMin) filtered = filtered.filter(p => p.price >= parseFloat(priceMin));
-    if (priceMax) filtered = filtered.filter(p => p.price <= parseFloat(priceMax));
-    if (sort === 'priceLow') filtered.sort((a, b) => a.price - b.price);
-    else if (sort === 'priceHigh') filtered.sort((a, b) => b.price - a.price);
-    else if (sort === 'newest') filtered = filtered.slice().reverse();
     setFilteredProducts(filtered);
-  }, [products, selectedDelivery, sort, priceMin, priceMax]);
+  }, [products, selectedDelivery, priceMin]);
 
   // Wishlist logic (same as before)
   useEffect(() => {
@@ -325,7 +321,6 @@ const CategoryPage = () => {
                 <div className="font-semibold text-black mb-2">Price Range</div>
                 <div className="flex gap-2">
                   <input type="number" placeholder="Min" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
-                  <input type="number" placeholder="Max" className="w-1/2 rounded-lg border border-black px-2 py-1 text-sm text-black placeholder-gray-400" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -336,8 +331,11 @@ const CategoryPage = () => {
                     <h2 className="text-2xl font-bold text-black">Products</h2>
               <div className="flex items-center gap-2">
                 <span className="text-black text-sm">Sort by:</span>
-                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value={sort} onChange={e => setSort(e.target.value)}>
-                  {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                <select className="rounded-lg border border-black px-2 py-1 text-sm text-black focus:border-blue-600 focus:ring-blue-600" value={priceMin} onChange={e => setPriceMin(e.target.value)}>
+                  <option value="popular">Popular</option>
+                  <option value="priceLow">Price: Low to High</option>
+                  <option value="priceHigh">Price: High to Low</option>
+                  <option value="newest">Newest</option>
                 </select>
                 <button
                   className={`ml-2 p-2 rounded border border-blue-600 hover:bg-blue-600 hover:text-white ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-blue-600'}`}
