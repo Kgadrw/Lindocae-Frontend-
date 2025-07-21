@@ -49,7 +49,6 @@ const CategoryPage = () => {
   const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [priceMin, setPriceMin] = useState('');
-  const [priceMax, setPriceMax] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isClient, setIsClient] = useState(false);
