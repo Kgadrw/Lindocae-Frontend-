@@ -1,33 +1,58 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-// Template categories (replace with API data later)
-const categories = [
-  { name: 'Cribs', count: 128, image: 'https://images.pexels.com/photos/459225/pexels-photo-459225.jpeg', description: 'Safe and cozy cribs for your baby.' },
-  { name: 'Changing Tables', count: 140, image: 'https://images.pexels.com/photos/3933276/pexels-photo-3933276.jpeg', description: 'Convenient changing tables for easy diaper changes.' },
-  { name: 'Rocking Chairs', count: 95, image: 'https://images.pexels.com/photos/3933275/pexels-photo-3933275.jpeg', description: 'Comfortable rocking chairs for soothing moments.' },
-  { name: 'Baby Dressers', count: 87, image: 'https://images.pexels.com/photos/3933277/pexels-photo-3933277.jpeg', description: 'Spacious dressers for baby clothes and essentials.' },
-  { name: 'Playpens & Playards', count: 77, image: 'https://images.pexels.com/photos/3933278/pexels-photo-3933278.jpeg', description: 'Safe playpens and playards for playtime.' },
-];
+interface Category {
+  _id: string;
+  name: string;
+  description?: string;
+  image?: string;
+  count?: number;
+}
 
 const CategoryLandingPage = () => {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch('https://lindo-project.onrender.com/category/getAllCategories');
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+        let cats = Array.isArray(data) ? data : (data.categories || []);
+        setCategories(cats);
+      } catch {
+        setError('Failed to fetch categories.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 pt-10 pb-16">
         <h1 className="text-3xl font-bold text-black mb-8 text-center">Shop by Category</h1>
+        {loading && <div className="text-center text-gray-500">Loading categories...</div>}
+        {error && <div className="text-center text-red-500">{error}</div>}
+        {!loading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {categories.length === 0 && <div className="col-span-full text-center text-gray-500">No categories found.</div>}
           {categories.map(cat => (
             <div
-              key={cat.name}
+                key={cat._id}
               className="group bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer flex flex-col h-[320px] border border-black"
             >
-              <Link href={`/category/${encodeURIComponent(cat.name)}`} className="block flex-1">
+                <Link href={`/category/${cat._id}`} className="block flex-1">
                 <div className="w-full h-40 overflow-hidden rounded-t-2xl border-b border-black">
                   <img
-                    src={cat.image}
+                      src={cat.image || '/lindo.png'}
                     alt={cat.name}
                     className="w-full h-full object-cover object-center block"
                     style={{ display: 'block', width: '100%', height: '100%' }}
@@ -35,23 +60,16 @@ const CategoryLandingPage = () => {
                 </div>
                 <div className="flex flex-col items-start px-4 pt-4">
                   <div className="font-bold text-lg text-black mb-1 truncate w-full">{cat.name}</div>
-                  <div className="text-sm text-black mb-2">{cat.count} products</div>
+                    <div className="text-sm text-black mb-2">{cat.count ?? 0} products</div>
                 </div>
               </Link>
-              <button
-                className="flex items-center gap-1 text-black hover:text-black px-4 pb-2 pt-1 text-sm font-medium focus:outline-none"
-                onClick={() => setExpanded(expanded === cat.name ? null : cat.name)}
-                aria-label={expanded === cat.name ? 'Hide description' : 'Show description'}
-              >
-                <span>{expanded === cat.name ? 'Hide details' : 'Show details'}</span>
-                <span className={`transform transition-transform ${expanded === cat.name ? 'rotate-90' : ''}`}>→</span>
-              </button>
-              {expanded === cat.name && (
+                {cat.description && (
                 <div className="px-4 pb-4 text-black text-xs transition-all duration-200">{cat.description}</div>
               )}
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

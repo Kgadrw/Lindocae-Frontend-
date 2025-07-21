@@ -102,7 +102,7 @@ const PromoBanner: React.FC<PromoBannerProps> = ({ categories, catLoading }) => 
                   Stay Organized with a Wish List
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Easily curate and save your list of must-have items with just a few clicks. Perfect for planning your baby's nursery or shopping for gifts.
+                  Easily curate and save your list of must-have items with just a few clicks. Perfect for planning your baby&apos;s nursery or shopping for gifts.
                 </p>
               </div>
 
