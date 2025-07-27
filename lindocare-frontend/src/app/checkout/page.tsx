@@ -2,6 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCurrentUserEmail } from '../../components/getCurrentUserEmail';
+
+// Utility: get auth token from localStorage
+function getAuthToken() {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token');
+  }
+  return null;
+}
 
 interface Product {
   id: number;
@@ -23,6 +32,16 @@ const CheckoutPage = () => {
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const email = getCurrentUserEmail();
+      if (!email) {
+        router.push('/login');
+      }
+    }
+  }, [router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -52,7 +71,7 @@ const CheckoutPage = () => {
       return;
     }
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken();
       const items = cartItems.map(item => ({
         productId: item.id,
         quantity: item.quantity || 1,

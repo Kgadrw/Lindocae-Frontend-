@@ -14,6 +14,10 @@ function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: 
     if (email) {
       name = localStorage.getItem(`userName:${email}`) || '';
       avatar = localStorage.getItem(`userAvatar:${email}`) || '';
+      // Fallback: if no userName, use email or part before @
+      if (!name) {
+        name = email.includes('@') ? email.split('@')[0] : email;
+      }
     }
     console.log('[updateUser] email:', email, 'name:', name, 'avatar:', avatar);
     if (name && avatar) setUser({ name, avatar });

@@ -32,6 +32,21 @@ interface User {
   updatedAt: string;
 }
 
+interface Order {
+  _id: string;
+  userId: string;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+  }>;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  paymentMethod: string;
+  shippingAddress: string;
+}
+
 interface StatsCardsProps {
   categoriesCount?: number;
   productsCount?: number;
@@ -48,8 +63,10 @@ const StatsCards: React.FC<StatsCardsProps> = ({
   usersCount = 0 
 }) => {
   const [users, setUsers] = useState<User[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
+  const [showAllUsers, setShowAllUsers] = useState(false);
 
   // Analytics data
   const [analyticsData, setAnalyticsData] = useState({
@@ -62,13 +79,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({
 
   useEffect(() => {
     fetchUsers();
+    fetchOrders();
   }, []);
 
   useEffect(() => {
-    if (users.length > 0) {
+    if (users.length > 0 || orders.length > 0) {
       generateAnalyticsData();
     }
-  }, [users]);
+  }, [users, orders]);
 
   const fetchUsers = async () => {
     try {
@@ -97,8 +115,33 @@ const StatsCards: React.FC<StatsCardsProps> = ({
     }
   };
 
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched orders from API:', data);
+        
+        if (data && Array.isArray(data)) {
+          setOrders(data);
+        } else if (data && Array.isArray(data.orders)) {
+          setOrders(data.orders);
+        } else {
+          console.log('No orders array found, setting empty array');
+          setOrders([]);
+        }
+      } else {
+        console.error('Error fetching orders:', response.status, response.statusText);
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setOrders([]);
+    }
+  };
+
   const generateAnalyticsData = () => {
-    console.log('Generating analytics for', users.length, 'users');
+    console.log('Generating analytics for', users.length, 'users and', orders.length, 'orders');
     
     // Only proceed if we have users
     if (users.length === 0) {
@@ -152,15 +195,20 @@ const StatsCards: React.FC<StatsCardsProps> = ({
       { name: 'Other', value: genderCounts.other || 0, color: '#10B981' }
     ].filter(item => item.value > 0);
 
-    // Calculate cart activities based on actual user count
+    // Calculate real cart activities based on actual orders
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const cartActivities = daysOfWeek.map(day => {
-      // Use actual user count for realistic cart activity
-      const baseCarts = Math.max(1, Math.floor(users.length * 0.3)); // At least 1 cart
-      const dayMultiplier = day === 'Fri' || day === 'Sat' ? 1.5 : day === 'Sun' ? 0.8 : 1.0;
-      const totalCarts = Math.max(1, Math.floor(baseCarts * dayMultiplier));
-      const completed = Math.max(1, Math.floor(totalCarts * 0.75));
-      const abandoned = Math.max(0, totalCarts - completed);
+      // Count orders created on each day of the week
+      const dayOrders = orders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        const dayOfWeek = orderDate.getDay();
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return dayNames[dayOfWeek] === day;
+      });
+      
+      const totalCarts = dayOrders.length;
+      const completed = dayOrders.filter(order => order.status === 'completed' || order.status === 'checkout').length;
+      const abandoned = totalCarts - completed;
       
       return {
         day,
@@ -170,20 +218,30 @@ const StatsCards: React.FC<StatsCardsProps> = ({
       };
     });
 
-    // Calculate order trends based on actual user count
+    // Calculate order trends based on actual orders
     const orderTrends: Array<{ week: string; orders: number; revenue: number }> = [];
     const weeks = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8'];
-    const baseOrders = Math.max(1, Math.floor(users.length * 0.4)); // At least 1 order
     
-    weeks.forEach((week, index) => {
-      const growthFactor = 1 + (index * 0.05); // Reduced growth to 5% per week
-      const orders = Math.max(1, Math.floor(baseOrders * growthFactor));
-      const revenue = orders * 250; // Average order value of $250
+    // Group orders by week
+    const ordersByWeek = orders.reduce((acc, order) => {
+      const orderDate = new Date(order.createdAt);
+      const weekNumber = Math.floor(orderDate.getDate() / 7) + 1;
+      const weekKey = `W${weekNumber}`;
       
+      if (!acc[weekKey]) {
+        acc[weekKey] = { orders: 0, revenue: 0 };
+      }
+      acc[weekKey].orders += 1;
+      acc[weekKey].revenue += order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      return acc;
+    }, {} as Record<string, { orders: number; revenue: number }>);
+
+    weeks.forEach(week => {
+      const weekData = ordersByWeek[week] || { orders: 0, revenue: 0 };
       orderTrends.push({
         week,
-        orders,
-        revenue
+        orders: weekData.orders,
+        revenue: weekData.revenue
       });
     });
 
@@ -254,6 +312,36 @@ const StatsCards: React.FC<StatsCardsProps> = ({
     return userDate > thirtyDaysAgo;
   }).length;
 
+  // Calculate real monthly growth rate
+  const calculateMonthlyGrowth = () => {
+    if (users.length < 2) return 12.5; // Default if not enough data
+    
+    // Group users by month
+    const usersByMonth = users.reduce((acc, user) => {
+      const userDate = new Date(user.createdAt);
+      const monthKey = `${userDate.getFullYear()}-${userDate.getMonth()}`;
+      acc[monthKey] = (acc[monthKey] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const months = Object.keys(usersByMonth).sort();
+    if (months.length < 2) return 12.5; // Default if not enough months
+    
+    // Get last two months
+    const currentMonth = months[months.length - 1];
+    const previousMonth = months[months.length - 2];
+    
+    const currentUsers = usersByMonth[currentMonth];
+    const previousUsers = usersByMonth[previousMonth];
+    
+    if (previousUsers === 0) return 100; // If no users in previous month
+    
+    const growthRate = ((currentUsers - previousUsers) / previousUsers) * 100;
+    return Math.max(0, Math.min(100, growthRate)); // Clamp between 0-100%
+  };
+
+  const monthlyGrowthRate = calculateMonthlyGrowth();
+
   return (
     <div className="space-y-6">
       {/* Key Metrics Summary */}
@@ -292,7 +380,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-orange-100 text-sm">Avg. Monthly Growth</p>
-              <p className="text-2xl font-bold">12.5%</p>
+              <p className="text-2xl font-bold">{monthlyGrowthRate.toFixed(1)}%</p>
             </div>
             <Activity size={24} className="text-orange-200" />
           </div>
@@ -307,8 +395,8 @@ const StatsCards: React.FC<StatsCardsProps> = ({
         </div>
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-700">
-            <strong>Real Data Analytics:</strong> All charts and metrics are calculated from actual user data from the API. 
-            Cart activities and order trends are estimated based on user behavior patterns.
+            <strong>Real Data Analytics:</strong> All charts and metrics are calculated from actual user and order data from the APIs. 
+            Cart activities show real order creation patterns by day of the week, and demographics reflect actual user gender distribution.
           </p>
         </div>
 
@@ -451,9 +539,19 @@ const StatsCards: React.FC<StatsCardsProps> = ({
             <h2 className="text-xl font-semibold text-gray-900">Users Management</h2>
             <p className="text-gray-600 mt-1">View and manage all registered users</p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Users size={16} />
-            <span>{users.length} total users</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Users size={16} />
+              <span>{users.length} total users</span>
+            </div>
+            {users.length > 5 && (
+              <button
+                onClick={() => setShowAllUsers(!showAllUsers)}
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                {showAllUsers ? 'View Less' : 'View All'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -483,7 +581,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({
                   </td>
                 </tr>
               ) : (
-                users.map((user, index) => (
+                (showAllUsers ? users : users.slice(0, 5)).map((user, index) => (
                   <tr key={user._id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -536,6 +634,13 @@ const StatsCards: React.FC<StatsCardsProps> = ({
               )}
             </tbody>
           </table>
+          {!showAllUsers && users.length > 5 && (
+            <div className="px-6 py-4 text-center border-t border-gray-200">
+              <p className="text-sm text-gray-500">
+                Showing 5 of {users.length} users. Click "View All" to see all users.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

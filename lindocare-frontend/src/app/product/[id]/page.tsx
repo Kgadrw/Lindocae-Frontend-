@@ -12,23 +12,66 @@ function getAuthToken() {
   return localStorage.getItem('token');
 }
 
+// Helper to get user ID from token
+function getUserIdFromToken() {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId || payload.id || payload._id || payload.user || null;
+  } catch {
+    return null;
+  }
+}
+
 // Helper to format RWF with thousands separator
 function formatRWF(amount: number) {
   return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
+// Utility: add to cart on server
+async function addToCartOnServer(token: string, productId: string, quantity: number) {
+  const res = await fetch('https://lindo-project.onrender.com/cart/addToCart', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ productId, quantity }),
+  });
+  if (!res.ok) throw new Error('Failed to add to server cart');
+  return res.json();
+}
+
+interface Product {
+  _id: string;
+  id?: number;
+  name: string;
+  price: number;
+  oldPrice?: number;
+  image: string | string[];
+  reviews?: number;
+  rating?: number;
+  tags?: string[];
+  category?: string | { name: string };
+  description?: string;
+  stockType?: string;
+}
+
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [mainImageIdx, setMainImageIdx] = useState(0);
-  const [categories, setCategories] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [toastMsg, setToastMsg] = useState("");
   const [showToast, setShowToast] = useState(false);
+  const [wishlist, setWishlist] = useState<string[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -64,6 +107,37 @@ export default function ProductDetailsPage() {
       });
   }, [id]);
 
+  // Fetch wishlist
+  useEffect(() => {
+    async function fetchWishlist() {
+      const token = getAuthToken();
+      const userId = getUserIdFromToken();
+      if (token && userId) {
+        try {
+          const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+            headers: {
+              'accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) throw new Error('Failed to fetch wishlist');
+          const data = await res.json();
+          setWishlist((data.products || []).map((p: any) => p._id || p.id));
+        } catch {
+          setWishlist([]);
+        }
+      } else {
+        // Guest: fallback to localStorage
+        const email = getCurrentUserEmail();
+        const key = email ? `wishlist_${email}` : 'wishlist';
+        const saved = localStorage.getItem(key);
+        const ids = saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+        setWishlist(ids);
+      }
+    }
+    fetchWishlist();
+  }, []);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"></div>;
   }
@@ -74,8 +148,68 @@ export default function ProductDetailsPage() {
     return <div className="min-h-screen flex items-center justify-center text-gray-500 text-xl">Product not found.</div>;
   }
 
-  // Add to cart handler (adapted from category page)
-  const handleAddToCart = async (product: any) => {
+  // Toggle wishlist handler
+  const toggleWishlist = async (id: string) => {
+    const token = getAuthToken();
+    const userId = getUserIdFromToken();
+    if (token && userId) {
+      try {
+        const res = await fetch('https://lindo-project.onrender.com/wishlist/toggleWishlistProduct', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ productId: id }),
+        });
+        if (!res.ok) {
+          let data = {};
+          try { data = await res.json(); } catch {}
+          if (res.status === 401) {
+            // Clear auth and show login modal
+            localStorage.removeItem('token');
+            localStorage.removeItem('userEmail');
+            setToastMsg('Your session has expired. Please log in again to use the wishlist.');
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+            setWishlist((prev) => prev.filter(pid => pid !== id));
+            return;
+          }
+          setToastMsg((data as any).message || 'Failed to update wishlist.');
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 1200);
+          return;
+        }
+        // Refetch wishlist from backend
+        const wishlistRes = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
+          headers: {
+            'accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const wishlistData = await wishlistRes.json();
+        setWishlist((wishlistData.products || []).map((p: any) => p._id || p.id));
+      } catch (err) {
+        setToastMsg('Network error. Please try again.');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      }
+    } else {
+      // Guest: fallback to localStorage
+      const email = getCurrentUserEmail();
+      const key = email ? `wishlist_${email}` : 'wishlist';
+      setWishlist((prev) => {
+        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
+        localStorage.setItem(key, JSON.stringify(updated));
+        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
+        return updated;
+      });
+    }
+  };
+
+  // Add to cart handler
+  const handleAddToCart = async (product: Product) => {
     const email = getCurrentUserEmail();
     const token = getAuthToken();
     // Ensure image is always a string URL
@@ -85,22 +219,31 @@ export default function ProductDetailsPage() {
     } else if (typeof product.image === 'string' && product.image.trim().length > 0) {
       imageUrl = product.image;
     }
+    
     if (token) {
       // Logged in: add to server cart
       try {
-        await addToCartOnServer(token, product.id || product._id, 1);
+        await addToCartOnServer(token, product.id?.toString() || product._id, quantity);
         // Optionally, update localStorage for instant UI
         const cartKey = `cart:${email}`;
         const cartRaw = localStorage.getItem(cartKey);
         let cart = [];
         try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
-        cart.push({
-          id: String(product.id),
-          name: product.name,
-          price: product.price,
-          image: imageUrl,
-          quantity: 1,
-        });
+        
+        // Check if product already exists in cart
+        const existingIndex = cart.findIndex((item: any) => String(item.id || item._id) === String(product.id || product._id));
+        if (existingIndex > -1) {
+          cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + quantity;
+        } else {
+          cart.push({
+            id: String(product.id || product._id),
+            name: product.name,
+            price: product.price,
+            image: imageUrl,
+            quantity: quantity,
+          });
+        }
+        
         localStorage.setItem(cartKey, JSON.stringify(cart));
         setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
         setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
@@ -118,13 +261,21 @@ export default function ProductDetailsPage() {
       const cartRaw = localStorage.getItem(cartKey);
       let cart = [];
       try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
-      cart.push({
-        id: String(product.id),
-        name: product.name,
-        price: product.price,
-        image: imageUrl,
-        quantity: 1,
-      });
+      
+      // Check if product already exists in cart
+      const existingIndex = cart.findIndex((item: any) => String(item.id || item._id) === String(product.id || product._id));
+      if (existingIndex > -1) {
+        cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + quantity;
+      } else {
+        cart.push({
+          id: String(product.id || product._id),
+          name: product.name,
+          price: product.price,
+          image: imageUrl,
+          quantity: quantity,
+        });
+      }
+      
       localStorage.setItem(cartKey, JSON.stringify(cart));
       setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
       setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
@@ -147,6 +298,12 @@ export default function ProductDetailsPage() {
 
   return (
     <div className="bg-white pt-16 min-h-screen font-montserrat pb-12">
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg">
+          {toastMsg}
+        </div>
+      )}
       <div className="flex flex-col md:flex-row gap-6 rounded-lg p-4 max-w-5xl mx-auto">
         {/* Left: Images */}
         <div className="flex-1 flex flex-col items-center">
@@ -206,15 +363,27 @@ export default function ProductDetailsPage() {
             >+</button>
           </div>
           <div className="text-gray-700 mb-4 whitespace-pre-line">{product.description}</div>
-          {/* Add to cart and brand info at the bottom */}
-          <div className="flex flex-col gap-2 mt-0">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-lg w-full max-w-xs">Add to cart</button>
-            <div className="flex flex-row gap-4 text-sm mt-2">
-              <div>
-              </div>
-              <div>
-                
-              </div>
+          {/* Add to cart and wishlist buttons */}
+          <div className="flex flex-col gap-3 mt-0">
+            <div className="flex gap-3">
+              <button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-lg transition"
+                onClick={() => handleAddToCart(product)}
+              >
+                Add to cart
+              </button>
+              <button
+                className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold py-3 px-4 rounded-lg transition flex items-center justify-center"
+                onClick={() => toggleWishlist(product._id)}
+                aria-label="Add to wishlist"
+              >
+                <Heart
+                  size={24}
+                  color={wishlist.includes(product._id) ? '#F87171' : '#2563eb'}
+                  fill={wishlist.includes(product._id) ? '#F87171' : 'none'}
+                  strokeWidth={2.2}
+                />
+              </button>
             </div>
           </div>
         </div>
@@ -243,13 +412,16 @@ export default function ProductDetailsPage() {
                     {/* Wishlist Icon */}
                     <button
                       className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                      // You may want to implement a toggleWishlist function for related products
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleWishlist(p._id);
+                      }}
                       aria-label="Add to wishlist"
                     >
                       <Heart
                         size={20}
-                        color={'#2563eb'}
-                        fill={'none'}
+                        color={wishlist.includes(p._id) ? '#F87171' : '#2563eb'}
+                        fill={wishlist.includes(p._id) ? '#F87171' : 'none'}
                         strokeWidth={2.2}
                       />
                     </button>

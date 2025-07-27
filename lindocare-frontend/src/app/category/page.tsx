@@ -56,6 +56,7 @@ const CategoryLandingPage = () => {
                   onClick={() => {
                     if (typeof window !== 'undefined') {
                       localStorage.setItem('selectedCategoryId', cat._id);
+                      localStorage.setItem('selectedCategoryName', cat.name);
                     }
                   }}
                 >

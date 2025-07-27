@@ -37,15 +37,15 @@ const Footer = () => {
             {categories.length > 0 ? (
               categories.map(cat => (
                 <li key={cat._id}>
-                  <a href={`/category/${cat._id}`} className="hover:underline">{cat.name}</a>
+                  <Link href={`/all-products?category=${encodeURIComponent(cat.name)}`} className="hover:underline">{cat.name}</Link>
                 </li>
               ))
             ) : (
               <>
-                <li><a href="#" className="hover:underline">Strollers</a></li>
-                <li><a href="#" className="hover:underline">Nursery</a></li>
-                <li><a href="#" className="hover:underline">Maternity</a></li>
-                <li><a href="#" className="hover:underline">Gift Cards</a></li>
+                <li><Link href="/all-products?category=Strollers" className="hover:underline">Strollers</Link></li>
+                <li><Link href="/all-products?category=Nursery" className="hover:underline">Nursery</Link></li>
+                <li><Link href="/all-products?category=Maternity" className="hover:underline">Maternity</Link></li>
+                <li><Link href="/all-products?category=Gift%20Cards" className="hover:underline">Gift Cards</Link></li>
               </>
             )}
           </ul>

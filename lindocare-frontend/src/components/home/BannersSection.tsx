@@ -115,7 +115,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                     Shop Now
                   </Link>
                   <Link 
-                    href="/category/nursery"
+                    href="/all-products"
                     className=" bg-yellow-300  transform hover:scale-105 text-white hover:text-lindo-yellow px-6 py-3 rounded-full font-semibold text-base transition-colors duration-300"
                   >
                     View Categories

@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import Image from "next/image";
 import IconsRow from '../../components/home/IconsRow'; // using the provided sliding/animated version
-import { useSWR } from 'swr';
 import Link from 'next/link'; // Added for Next.js Link
+import { useSearchParams } from 'next/navigation';
 
 interface Category {
   _id: string;
@@ -72,6 +72,8 @@ const ProductSkeleton = () => (
 );
 
 export default function AllProductsPage() {
+  const searchParams = useSearchParams();
+  const categoryQuery = searchParams.get('category');
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [validProductIds, setValidProductIds] = useState<string[]>([]);
@@ -84,42 +86,102 @@ export default function AllProductsPage() {
   const [iconsError, setIconsError] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedId = localStorage.getItem('selectedCategoryId') || '';
-      setSelectedCategoryId(storedId);
-      // If we have categories loaded, set selectedCategory to the matching name
-      if (storedId && categories.length > 0) {
-        const match = categories.find(cat => cat._id === storedId);
-        if (match) setSelectedCategory(match.name);
-      }
-    }
-  }, [categories]);
-
+  // Fetch categories and set initial category selection
   useEffect(() => {
     setLoading(true);
     setError("");
+    
     fetch("https://lindo-project.onrender.com/category/getAllCategories")
       .then(res => res.json())
       .then(catData => {
         const cats: Category[] = Array.isArray(catData) ? catData : catData.categories || [];
         setCategories(cats);
-        // Fetch products by category if selected, else all products
-        const productsUrl = selectedCategoryId
-          ? `https://lindo-project.onrender.com/product/getProductsByCategory/${selectedCategoryId}`
-          : "https://lindo-project.onrender.com/product/getAllProduct";
-        return fetch(productsUrl).then(res => res.json());
+        
+        // Determine the selected category
+        let categoryToUse = '';
+        
+        if (categoryQuery && cats.length > 0) {
+          // Find the category by name (case-insensitive)
+          const match = cats.find(cat => cat.name.toLowerCase() === categoryQuery.toLowerCase());
+          if (match) {
+            setSelectedCategory(match.name);
+            setSelectedCategoryId(match._id);
+            categoryToUse = match._id;
+          } else {
+            setSelectedCategory('All');
+            setSelectedCategoryId('');
+          }
+        } else if (cats.length > 0) {
+          // Check localStorage for selected category if no URL query
+          const storedCategoryId = localStorage.getItem('selectedCategoryId');
+          const storedCategoryName = localStorage.getItem('selectedCategoryName');
+          if (storedCategoryId) {
+            const match = cats.find(cat => cat._id === storedCategoryId);
+            if (match) {
+              setSelectedCategory(match.name);
+              setSelectedCategoryId(storedCategoryId);
+              categoryToUse = storedCategoryId;
+            } else {
+              setSelectedCategory('All');
+              setSelectedCategoryId('');
+              localStorage.removeItem('selectedCategoryId');
+              localStorage.removeItem('selectedCategoryName');
+            }
+          } else {
+            setSelectedCategory('All');
+            setSelectedCategoryId('');
+          }
+        }
+        
+        // Store the category to use for initial product fetch
+        if (categoryToUse) {
+          localStorage.setItem('initialCategoryId', categoryToUse);
+        }
       })
+      .catch(() => setError("Failed to fetch categories."))
+      .finally(() => setLoading(false));
+  }, [categoryQuery]); // Run when categoryQuery changes
+
+  // Fetch products based on selected category
+  useEffect(() => {
+    // Skip if we don't have categories yet
+    if (categories.length === 0) return;
+    
+    setLoading(true);
+    setError("");
+    
+    // Determine which category to use
+    let categoryToUse = selectedCategoryId;
+    
+    // If no selectedCategoryId but we have an initial category from localStorage, use that
+    if (!categoryToUse) {
+      const initialCategoryId = localStorage.getItem('initialCategoryId');
+      if (initialCategoryId) {
+        categoryToUse = initialCategoryId;
+      }
+    }
+    
+    const productsUrl = categoryToUse
+      ? `https://lindo-project.onrender.com/product/getProductsByCategory/${categoryToUse}`
+      : "https://lindo-project.onrender.com/product/getAllProduct";
+    
+    fetch(productsUrl)
+      .then(res => res.json())
       .then(prodData => {
         let prods: Product[] = Array.isArray(prodData) ? prodData : prodData.products || [];
         // Filter out products without a valid _id
         prods = prods.filter(p => p._id && typeof p._id === 'string' && p._id.length > 0);
         setProducts(prods);
         setValidProductIds(prods.map(p => p._id));
+        
+        // Clear the initial category after first load
+        if (localStorage.getItem('initialCategoryId')) {
+          localStorage.removeItem('initialCategoryId');
+        }
       })
-      .catch(() => setError("Failed to fetch products or categories."))
+      .catch(() => setError("Failed to fetch products."))
       .finally(() => setLoading(false));
-  }, [selectedCategoryId]);
+  }, [selectedCategoryId, categories.length]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -254,6 +316,16 @@ export default function AllProductsPage() {
     setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
   };
 
+  // Clear localStorage when user manually changes category filter
+  useEffect(() => {
+    if (selectedCategoryId === '' && typeof window !== 'undefined') {
+      localStorage.removeItem('selectedCategoryId');
+      localStorage.removeItem('selectedCategoryName');
+    }
+  }, [selectedCategoryId]);
+
+
+
   if (loading) return (
     <div className="min-h-screen bg-gray-50 pb-16 px-2 md:px-4 lg:px-8 font-sans flex items-center justify-center">
       <div className="max-w-7xl w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-10">
@@ -282,6 +354,7 @@ export default function AllProductsPage() {
                 setSelectedCategoryId('');
                 if (typeof window !== 'undefined') {
                   localStorage.removeItem('selectedCategoryId');
+                  localStorage.removeItem('selectedCategoryName');
                 }
               }}
             >
@@ -298,6 +371,7 @@ export default function AllProductsPage() {
                         setSelectedCategoryId(cat._id);
                         if (typeof window !== 'undefined') {
                           localStorage.setItem('selectedCategoryId', cat._id);
+                          localStorage.setItem('selectedCategoryName', cat.name);
                         }
                       }}
                     >
@@ -312,6 +386,7 @@ export default function AllProductsPage() {
                       setSelectedCategoryId('');
                       if (typeof window !== 'undefined') {
                         localStorage.removeItem('selectedCategoryId');
+                        localStorage.removeItem('selectedCategoryName');
                       }
                       window.location.href = '/all-products';
                     }}
@@ -328,6 +403,7 @@ export default function AllProductsPage() {
                       setSelectedCategoryId(cat._id);
                       if (typeof window !== 'undefined') {
                         localStorage.setItem('selectedCategoryId', cat._id);
+                        localStorage.setItem('selectedCategoryName', cat.name);
                       }
                     }}
                   >

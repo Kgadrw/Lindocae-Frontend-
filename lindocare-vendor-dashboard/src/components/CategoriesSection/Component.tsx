@@ -2,10 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 
 const API_URL = 'https://lindo-project.onrender.com/category';
 const ICONS_URL = 'https://lindo-project.onrender.com/icons';
+const PRODUCTS_URL = 'https://lindo-project.onrender.com/product';
 
 const CategoriesSection: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [icons, setIcons] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showIconModal, setShowIconModal] = useState(false);
@@ -20,6 +22,12 @@ const CategoriesSection: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const iconFileInputRef = useRef<HTMLInputElement>(null);
   const [editIcon, setEditIcon] = useState<any | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+
+  // Add state for products grouped by category
+  const [productsByCategory, setProductsByCategory] = useState<Record<string, any[]>>({});
 
   // Fetch categories
   const fetchCategories = async () => {
@@ -46,10 +54,74 @@ const CategoriesSection: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchCategories(); fetchIcons(); }, []);
+  // Fetch products
+  const fetchProducts = async () => {
+    try {
+      // First fetch all categories
+      const categoriesRes = await fetch(`${API_URL}/getAllCategories`);
+      const categoriesData = await categoriesRes.json();
+      const allCategories = categoriesData.categories || [];
+      
+      // Fetch products for each category
+      const productsByCategory: Record<string, any[]> = {};
+      
+      await Promise.all(
+        allCategories.map(async (category: any) => {
+          try {
+            // Fetch products for this specific category
+            const productsRes = await fetch(`${PRODUCTS_URL}/getProductsByCategory/${category._id}`);
+            if (productsRes.ok) {
+              const productsData = await productsRes.json();
+              const categoryProducts = Array.isArray(productsData) ? productsData : productsData.products || [];
+              
+              // Fetch detailed information for each product in this category
+              const detailedProducts = await Promise.all(
+                categoryProducts.map(async (product: any) => {
+                  try {
+                    const detailRes = await fetch(`${PRODUCTS_URL}/getProductById/${product._id || product.id}`);
+                    if (detailRes.ok) {
+                      const detailData = await detailRes.json();
+                      return detailData.product || detailData;
+                    }
+                    return product; // Fallback to original product data if detail fetch fails
+                  } catch (error) {
+                    console.error(`Error fetching product details for ${product._id}:`, error);
+                    return product; // Fallback to original product data
+                  }
+                })
+              );
+              
+              productsByCategory[category._id] = detailedProducts;
+            } else {
+              productsByCategory[category._id] = [];
+            }
+          } catch (error) {
+            console.error(`Error fetching products for category ${category._id}:`, error);
+            productsByCategory[category._id] = [];
+          }
+        })
+      );
+      
+      // Convert to flat array for the products state (for backward compatibility)
+      const allProducts = Object.values(productsByCategory).flat();
+      setProducts(allProducts);
+      
+      // Store the grouped products for use in the component
+      setProductsByCategory(productsByCategory);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setProducts([]);
+    }
+  };
+
+  useEffect(() => { 
+    fetchCategories(); 
+    fetchIcons(); 
+    fetchProducts(); 
+  }, []);
 
   // Handle form input
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, files } = e.target as HTMLInputElement;
     if (name === 'image' && files) {
       setForm(f => ({ ...f, image: files[0] }));
@@ -57,7 +129,7 @@ const CategoriesSection: React.FC = () => {
       setForm(f => ({ ...f, [name]: value }));
     }
   };
-  const handleIconFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleIconFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, files } = e.target as HTMLInputElement;
     if (name === 'image' && files) {
       setIconForm(f => ({ ...f, image: files[0] }));
@@ -199,6 +271,88 @@ const CategoriesSection: React.FC = () => {
     setFormLoading(false);
   };
 
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  // Edit product
+  const openEditProductModal = (product: any) => {
+    setEditingProduct(product);
+    setShowProductModal(true);
+  };
+
+  // Delete product
+  const handleDeleteProduct = async (productId: string, categoryId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    
+    try {
+      const res = await fetch(`${PRODUCTS_URL}/deleteProduct/${productId}`, { method: 'DELETE' });
+      if (res.ok) {
+        // Remove product from the category
+        const updatedProducts = productsByCategory[categoryId].filter(p => p._id !== productId);
+        setProductsByCategory(prev => ({
+          ...prev,
+          [categoryId]: updatedProducts
+        }));
+        setSuccessMessage('Product deleted successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
+  };
+
+  // Handle product form submission
+  const handleProductFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    setFormLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', editingProduct.name);
+      formData.append('description', editingProduct.description || '');
+      formData.append('price', editingProduct.price?.toString() || '0');
+      formData.append('categoryId', editingProduct.categoryId?._id || editingProduct.categoryId || '');
+
+      const res = await fetch(`${PRODUCTS_URL}/updateProduct/${editingProduct._id}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const updatedProduct = await res.json();
+        
+        // Update the product in the category
+        const categoryId = editingProduct.categoryId?._id || editingProduct.categoryId;
+        const updatedProducts = productsByCategory[categoryId].map(p => 
+          p._id === editingProduct._id ? updatedProduct : p
+        );
+        
+        setProductsByCategory(prev => ({
+          ...prev,
+          [categoryId]: updatedProducts
+        }));
+        
+        setShowProductModal(false);
+        setEditingProduct(null);
+        setSuccessMessage('Product updated successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   // Group icons by categoryId
   const iconsByCategory: Record<string, any[]> = {};
   icons.forEach(icon => {
@@ -224,9 +378,9 @@ const CategoriesSection: React.FC = () => {
         <table className="min-w-full text-sm text-left border-separate border-spacing-0">
           <thead>
             <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <th className="px-6 py-3 font-semibold">Image</th>
-              <th className="px-6 py-3 font-semibold">Name</th>
+              <th className="px-6 py-3 font-semibold">Category</th>
               <th className="px-6 py-3 font-semibold">Description</th>
+              <th className="px-6 py-3 font-semibold">Products</th>
               <th className="px-6 py-3 font-semibold">Created</th>
               <th className="px-6 py-3 font-semibold text-center">Actions</th>
             </tr>
@@ -236,31 +390,142 @@ const CategoriesSection: React.FC = () => {
               <tr><td colSpan={5} className="text-center py-8 text-gray-400">Loading...</td></tr>
             ) : categories.length === 0 ? (
               <tr><td colSpan={5} className="text-center py-8 text-gray-400">No categories found.</td></tr>
-            ) : categories.map((cat, index) => (
-              <tr key={cat._id} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}`}>
-                <td className="px-6 py-4 align-middle">
-                  <img src={cat.image?.[0] || cat.image} alt={cat.name} className="w-16 h-10 object-cover rounded-lg border border-gray-200" />
-                </td>
-                <td className="px-6 py-4 align-middle font-semibold text-blue-700">{cat.name}</td>
-                <td className="px-6 py-4 align-middle text-gray-700">{cat.description}</td>
-                <td className="px-6 py-4 align-middle text-gray-500">{new Date(cat.createdAt).toLocaleDateString()}</td>
-                <td className="px-6 py-4 align-middle text-center flex gap-2 items-center justify-center">
-                  <button
-                    className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-1"
-                    onClick={() => openEditModal(cat)}
-                  >
-                    <span role="img" aria-label="Edit">✏️</span> Edit
-                  </button>
-                  <button
-                    className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
-                    onClick={() => handleDelete(cat._id)}
-                    disabled={formLoading}
-                  >
-                    <span role="img" aria-label="Delete">🗑️</span> Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            ) : categories.map((cat, index) => {
+              const categoryProducts = productsByCategory[cat._id] || [];
+              const isExpanded = expandedCategories.has(cat._id);
+              return (
+                <React.Fragment key={cat._id}>
+                  {/* Category Row */}
+                  <tr className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'} hover:bg-blue-100`}>
+                    <td className="px-6 py-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleCategoryExpansion(cat._id)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                        <img src={cat.image?.[0] || cat.image} alt={cat.name} className="w-16 h-10 object-cover rounded-lg border border-gray-200" />
+                        <div>
+                          <div className="font-semibold text-blue-700">{cat.name}</div>
+                          <div className="text-xs text-gray-500">ID: {cat._id.slice(-8)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-middle text-gray-700 max-w-xs">
+                      {cat.description}
+                    </td>
+                    <td className="px-6 py-4 align-middle">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">
+                          {categoryProducts.length} products
+                        </span>
+                        {categoryProducts.length > 0 && (
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            categoryProducts.length > 5 ? 'bg-green-100 text-green-800' : 
+                            categoryProducts.length > 0 ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {categoryProducts.length > 5 ? 'High' : categoryProducts.length > 0 ? 'Medium' : 'Low'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-middle text-gray-500">
+                      {new Date(cat.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 align-middle text-center">
+                      <div className="flex gap-2 items-center justify-center">
+                        <button
+                          className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-1"
+                          onClick={() => openEditModal(cat)}
+                        >
+                          <span role="img" aria-label="Edit">✏️</span> Edit
+                        </button>
+                        <button
+                          className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
+                          onClick={() => handleDelete(cat._id)}
+                          disabled={formLoading}
+                        >
+                          <span role="img" aria-label="Delete">🗑️</span> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Products under this category - only show if expanded */}
+                  {isExpanded && (
+                    <>
+                      {categoryProducts.length === 0 ? (
+                        <tr className={`transition-colors ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                          <td colSpan={5} className="px-6 py-4 align-middle">
+                            <div className="pl-8 text-sm text-gray-400 italic flex items-center gap-2">
+                              <span>📦</span> No products in this category
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        categoryProducts.map((product, productIndex) => (
+                          <tr key={`${cat._id}-${product._id}`} className={`transition-colors ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}>
+                            <td className="px-6 py-3 align-middle">
+                              <div className="flex items-center pl-8">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                                <img 
+                                  src={product.image?.[0] || product.image || '/lindo.png'} 
+                                  alt={product.name} 
+                                  className="w-12 h-8 object-cover rounded border border-gray-200 mr-3" 
+                                />
+                                <div>
+                                  <div className="text-sm text-gray-700 font-medium">{product.name}</div>
+                                  <div className="text-xs text-gray-500">ID: {product._id?.slice(-8)}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 align-middle">
+                              <div className="text-sm text-gray-600 max-w-xs truncate">
+                                {product.description || 'No description'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 align-middle">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-green-600">
+                                  ${product.price?.toFixed(2) || '0.00'}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {product.quantity || 0} in stock
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 align-middle text-gray-500">
+                              <div className="text-xs">
+                                {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : ''}
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 align-middle text-center">
+                              <div className="flex gap-1 items-center justify-center">
+                                <button
+                                  onClick={() => openEditProductModal(product)}
+                                  className="bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 transition-colors"
+                                  title="Edit Product"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(product._id, cat._id)}
+                                  className="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 transition-colors"
+                                  title="Delete Product"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -487,6 +752,92 @@ const CategoriesSection: React.FC = () => {
               >
                 {formLoading ? 'Saving...' : (editIcon ? 'Save Changes' : 'Add Icon')}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Product Edit Modal */}
+      {showProductModal && editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
+              <button
+                onClick={() => {
+                  setShowProductModal(false);
+                  setEditingProduct(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold focus:outline-none"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleProductFormSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                <input
+                  type="text"
+                  value={editingProduct.name || ''}
+                  onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={editingProduct.description || ''}
+                  onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingProduct.price || 0}
+                  onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={editingProduct.categoryId?._id || editingProduct.categoryId || ''}
+                  onChange={(e) => setEditingProduct({...editingProduct, categoryId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={formLoading}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {formLoading ? 'Updating...' : 'Update Product'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setEditingProduct(null);
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           </div>
         </div>

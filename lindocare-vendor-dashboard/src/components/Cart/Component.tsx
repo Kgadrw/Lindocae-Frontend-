@@ -39,6 +39,8 @@ interface UserCart {
   createdAt: string;
   updatedAt: string;
   deliveryNotes?: string;
+  paymentMethod?: string;
+  shippingAddress?: string;
 }
 
 interface Product {
@@ -66,194 +68,66 @@ const CartComponent: React.FC = () => {
     try {
       setLoading(true);
       
-      // TODO: Backend endpoint needs to be created: /cart/getAllUserCarts
-      // For now, using mock data to demonstrate the UI
-      // This would be replaced with actual API call when the endpoint is available
-      
-      // Mock data for demonstration
-      const mockCarts: UserCart[] = [
-        {
-          _id: '1',
-          userId: 'user1',
-          user: {
-            _id: 'user1',
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@example.com',
-            phone: '123-456-7890',
-            address: {
-              street: '123 Main St',
-              city: 'Anytown',
-              state: 'CA',
-              zipCode: '12345',
-              country: 'USA'
-            },
-            image: ['https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face']
-          },
-          items: [
-            {
-              productId: 'prod1',
-              quantity: 2,
-              price: 299.99,
-              product: {
-                _id: 'prod1',
-                name: 'Premium Baby Crib',
-                description: 'Safe and comfortable crib for your little one',
-                price: 299.99,
-                image: ['https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=150&h=150&fit=crop']
-              }
-            },
-            {
-              productId: 'prod2',
-              quantity: 1,
-              price: 89.99,
-              product: {
-                _id: 'prod2',
-                name: 'Baby Changing Table',
-                description: 'Convenient changing table with storage',
-                price: 89.99,
-                image: ['https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=150&h=150&fit=crop']
-              }
-            }
-          ],
-          status: 'pending',
-          createdAt: '2024-01-15T10:30:00Z',
-          updatedAt: '2024-01-15T10:30:00Z',
-          deliveryNotes: 'Please deliver between 9 AM - 5 PM. Ring doorbell twice.'
+      // Fetch real orders from the backend
+      const response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders', {
+        method: 'GET',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
         },
-        {
-          _id: '2',
-          userId: 'user2',
-          user: {
-            _id: 'user2',
-            firstName: 'Sarah',
-            lastName: 'Wilson',
-            email: 'sarah.wilson@example.com',
-            phone: '987-654-3210',
-            address: {
-              street: '456 Oak Ave',
-              city: 'Othertown',
-              state: 'NY',
-              zipCode: '67890',
-              country: 'USA'
-            },
-            image: ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face']
-          },
-          items: [
-            {
-              productId: 'prod3',
-              quantity: 1,
-              price: 159.99,
-              product: {
-                _id: 'prod3',
-                name: 'Rocking Chair',
-                description: 'Comfortable rocking chair for nursing',
-                price: 159.99,
-                image: ['https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=150&h=150&fit=crop']
-              }
-            }
-          ],
-          status: 'checkout',
-          createdAt: '2024-01-14T15:45:00Z',
-          updatedAt: '2024-01-15T09:20:00Z',
-          deliveryNotes: 'Leave with doorman if not home. Building access code: 1234'
-        },
-        {
-          _id: '3',
-          userId: 'user3',
-          user: {
-            _id: 'user3',
-            firstName: 'Michael',
-            lastName: 'Brown',
-            email: 'michael.brown@example.com',
-            phone: '112-358-4697',
-            address: {
-              street: '789 Pine Ln',
-              city: 'Smalltown',
-              state: 'TX',
-              zipCode: '12345',
-              country: 'USA'
-            },
-            image: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face']
-          },
-          items: [
-            {
-              productId: 'prod4',
-              quantity: 3,
-              price: 45.99,
-              product: {
-                _id: 'prod4',
-                name: 'Baby Clothes Set',
-                description: 'Soft cotton baby clothes set',
-                price: 45.99,
-                image: ['https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=150&h=150&fit=crop']
-              }
-            },
-            {
-              productId: 'prod5',
-              quantity: 1,
-              price: 79.99,
-              product: {
-                _id: 'prod5',
-                name: 'Baby Monitor',
-                description: 'Digital baby monitor with night vision',
-                price: 79.99,
-                image: ['https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=150&h=150&fit=crop']
-              }
-            }
-          ],
-          status: 'completed',
-          createdAt: '2024-01-13T08:15:00Z',
-          updatedAt: '2024-01-14T16:30:00Z',
-          deliveryNotes: 'Delivered successfully on 2024-01-14. Customer was home.'
-        },
-        {
-          _id: '4',
-          userId: 'user4',
-          user: {
-            _id: 'user4',
-            firstName: 'Emily',
-            lastName: 'Davis',
-            email: 'emily.davis@example.com',
-            phone: '555-123-4567',
-            address: {
-              street: '101 Cedar St',
-              city: 'Bigtown',
-              state: 'FL',
-              zipCode: '98765',
-              country: 'USA'
-            },
-            image: ['https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face']
-          },
-          items: [
-            {
-              productId: 'prod6',
-              quantity: 1,
-              price: 199.99,
-              product: {
-                _id: 'prod6',
-                name: 'Baby Stroller',
-                description: 'Lightweight and foldable baby stroller',
-                price: 199.99,
-                image: ['https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=150&h=150&fit=crop']
-              }
-            }
-          ],
-          status: 'abandoned',
-          createdAt: '2024-01-12T11:20:00Z',
-          updatedAt: '2024-01-12T14:45:00Z',
-          deliveryNotes: 'Cart abandoned - customer may return later'
-        }
-      ];
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      });
       
-      setUserCarts(mockCarts);
-      console.log('Loaded mock cart data for demonstration');
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
+      }
       
+      const ordersData = await response.json();
+      const orders = Array.isArray(ordersData) ? ordersData : ordersData.orders || [];
+      
+      // Transform orders to match UserCart interface
+      const transformedCarts: UserCart[] = orders.map((order: any) => ({
+        _id: order._id || order.id,
+        userId: order.userId || order.user?._id || 'unknown',
+        user: {
+          _id: order.user?._id || order.userId || 'unknown',
+          firstName: order.user?.firstName || order.user?.name?.split(' ')[0] || 'Unknown',
+          lastName: order.user?.lastName || order.user?.name?.split(' ').slice(1).join(' ') || 'User',
+          email: order.user?.email || 'unknown@example.com',
+          phone: order.user?.phone || '',
+          address: {
+            street: order.shippingAddress || '',
+            city: 'Kigali',
+            state: 'Kigali',
+            zipCode: '00000',
+            country: 'Rwanda'
+          },
+          image: order.user?.image || []
+        },
+        items: order.items?.map((item: any) => ({
+          productId: item.productId || item._id,
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          product: {
+            _id: item.productId || item._id,
+            name: item.product?.name || 'Product',
+            description: item.product?.description || '',
+            price: item.price || 0,
+            image: item.product?.image || []
+          }
+        })) || [],
+        status: order.status || 'pending',
+        createdAt: order.createdAt || new Date().toISOString(),
+        updatedAt: order.updatedAt || new Date().toISOString(),
+        deliveryNotes: order.deliveryNotes || '',
+        paymentMethod: order.paymentMethod || 'cash',
+        shippingAddress: order.shippingAddress || ''
+      }));
+      
+      setUserCarts(transformedCarts);
     } catch (error) {
-      console.error('Error loading cart data:', error);
+      console.error('Error fetching orders:', error);
+      setErrorMessage('Failed to fetch orders. Please try again.');
+      // Fallback to mock data if API fails
       setUserCarts([]);
     } finally {
       setLoading(false);
@@ -502,15 +376,16 @@ const CartComponent: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm text-left border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-                  <th className="px-6 py-3 font-semibold">Customer Info</th>
-                  <th className="px-6 py-3 font-semibold">Delivery Address</th>
-                  <th className="px-6 py-3 font-semibold">Cart Items</th>
-                  <th className="px-6 py-3 font-semibold">Total Value</th>
-                  <th className="px-6 py-3 font-semibold">Status</th>
-                  <th className="px-6 py-3 font-semibold">Delivery Notes</th>
-                  <th className="px-6 py-3 font-semibold">Created</th>
+              <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <tr>
+                  <th className="px-6 py-3 font-semibold text-left">Customer</th>
+                  <th className="px-6 py-3 font-semibold text-left">Shipping Address</th>
+                  <th className="px-6 py-3 font-semibold text-left">Items</th>
+                  <th className="px-6 py-3 font-semibold text-center">Total</th>
+                  <th className="px-6 py-3 font-semibold text-center">Payment Method</th>
+                  <th className="px-6 py-3 font-semibold text-center">Status</th>
+                  <th className="px-6 py-3 font-semibold text-left">Delivery Notes</th>
+                  <th className="px-6 py-3 font-semibold text-center">Date</th>
                   <th className="px-6 py-3 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
@@ -544,16 +419,13 @@ const CartComponent: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 align-middle">
-                      {cart.user?.address ? (
+                      {cart.shippingAddress ? (
                         <div className="text-xs">
-                          <div className="font-medium text-gray-900">{cart.user.address.street}</div>
-                          <div className="text-gray-700">
-                            {cart.user.address.city}, {cart.user.address.state} {cart.user.address.zipCode}
-                          </div>
-                          <div className="text-gray-600">{cart.user.address.country}</div>
+                          <div className="font-medium text-gray-900">{cart.shippingAddress}</div>
+                          <div className="text-gray-700">Kigali, Rwanda</div>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-500">No address provided</div>
+                        <div className="text-xs text-gray-500">No shipping address</div>
                       )}
                     </td>
                     <td className="px-6 py-4 align-middle">
@@ -568,6 +440,17 @@ const CartComponent: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 align-middle font-semibold text-gray-900">
                       ${calculateCartTotal(cart.items).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 align-middle text-center">
+                      <div className="text-xs">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          cart.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' :
+                          cart.paymentMethod === 'card' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {cart.paymentMethod?.toUpperCase() || 'CASH'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center gap-2">

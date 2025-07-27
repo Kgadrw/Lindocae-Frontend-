@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Eye, EyeOff, CheckCircle, XCircle, UserPlus, User } from 'lucide-react';
 import Link from 'next/link';
@@ -117,6 +117,23 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  // Handle Google OAuth callback
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const googleEmail = params.get('email');
+      const googleUserId = params.get('user');
+      const loginValue = googleEmail || googleUserId;
+      if (loginValue) {
+        localStorage.setItem('userEmail', loginValue);
+        // Optionally set userName and avatar if available
+        localStorage.setItem(`userName:${loginValue}`, loginValue.includes('@') ? loginValue.split('@')[0] : loginValue);
+        window.dispatchEvent(new StorageEvent('storage', { key: 'userEmail' }));
+        window.location.replace('/'); // Force full reload so header updates
+      }
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-2">
       <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-8 mx-4 flex flex-col items-center border border-yellow-200" style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}>
@@ -162,10 +179,23 @@ const LoginPage: React.FC = () => {
             {registerSuccess && <div className="text-green-600 text-xs font-semibold mt-1">{registerSuccess}</div>}
             <button
               type="submit"
-              className="w-full rounded-full border-2 border-black text-black font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-gray-50 transition"
+              className="w-full rounded-full bg-blue-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 transition"
               disabled={registerLoading}
             >
               <UserPlus size={18} /> Create Account
+            </button>
+            <div className="flex items-center my-2">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="mx-2 text-gray-400 text-xs">or</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.href = 'https://lindo-project.onrender.com/auth/google'}
+              className="w-full flex items-center justify-center gap-2 rounded-full border border-blue-600 bg-white text-blue-700 font-semibold py-2 text-base shadow hover:bg-blue-50 transition"
+            >
+              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" width={24} height={24} />
+              Continue with Google
             </button>
             <div className="text-xs text-gray-500 text-center mt-2">
               By creating an account, you agree to our{' '}
@@ -213,10 +243,23 @@ const LoginPage: React.FC = () => {
             {loginSuccess && <div className="text-green-600 text-xs font-semibold mt-1">{loginSuccess}</div>}
             <button
               type="submit"
-              className="w-full rounded-full bg-teal-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-teal-700 transition"
+              className="w-full rounded-full bg-blue-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 transition"
               disabled={loginLoading}
             >
               <User size={18} /> Sign In
+            </button>
+            <div className="flex items-center my-2">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="mx-2 text-gray-400 text-xs">or</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.href = 'https://lindo-project.onrender.com/auth/google'}
+              className="w-full flex items-center justify-center gap-2 rounded-full border border-blue-600 bg-white text-blue-700 font-semibold py-2 text-base shadow hover:bg-blue-50 transition"
+            >
+              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" width={24} height={24} />
+              Continue with Google
             </button>
             <Link href="/forgot-password" className="text-xs text-blue-700 hover:underline text-center mt-2">Forgot your password?</Link>
           </form>
