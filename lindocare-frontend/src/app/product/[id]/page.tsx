@@ -5,6 +5,7 @@ import { Heart, Star } from 'lucide-react';
 import Image from 'next/image';
 import { getCurrentUserEmail } from '../../../components/Header';
 import Link from 'next/link';
+import OfflineError from '../../../components/OfflineError';
 
 // Helper to get auth token
 function getAuthToken() {
@@ -120,7 +121,7 @@ export default function ProductDetailsPage() {
               'Authorization': `Bearer ${token}`,
             },
           });
-          if (!res.ok) throw new Error('Failed to fetch wishlist');
+          if (!res.ok) throw new Error('Network error. Please check your connection.');
           const data = await res.json();
           setWishlist((data.products || []).map((p: any) => p._id || p.id));
         } catch {
@@ -142,7 +143,7 @@ export default function ProductDetailsPage() {
     return <div className="min-h-screen flex items-center justify-center"></div>;
   }
   if (error) {
-    return <div className="min-h-screen flex items-center justify-center text-red-500 text-xl">{error}</div>;
+    return <OfflineError message={error} onRetry={() => window.location.reload()} />;
   }
   if (!product) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500 text-xl">Product not found.</div>;
@@ -361,6 +362,19 @@ export default function ProductDetailsPage() {
               onClick={() => setQuantity(q => q + 1)}
               aria-label="Increase quantity"
             >+</button>
+          </div>
+          {/* Total Price Display */}
+          <div className="bg-blue-50 p-4 rounded-lg mb-4">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-gray-700">Total Price:</span>
+              <span className="text-2xl font-bold text-blue-900">{formatRWF(product.price * quantity)} RWF</span>
+            </div>
+            {product.oldPrice && (
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-sm text-gray-500">Original Total:</span>
+                <span className="text-lg line-through text-gray-400">{formatRWF(product.oldPrice * quantity)} RWF</span>
+              </div>
+            )}
           </div>
           <div className="text-gray-700 mb-4 whitespace-pre-line">{product.description}</div>
           {/* Add to cart and wishlist buttons */}

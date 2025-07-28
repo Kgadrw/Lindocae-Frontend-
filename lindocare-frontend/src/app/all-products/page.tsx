@@ -5,6 +5,7 @@ import Image from "next/image";
 import IconsRow from '../../components/home/IconsRow'; // using the provided sliding/animated version
 import Link from 'next/link'; // Added for Next.js Link
 import { useSearchParams } from 'next/navigation';
+import OfflineError from '../../components/OfflineError';
 
 interface Category {
   _id: string;
@@ -85,6 +86,7 @@ export default function AllProductsPage() {
   const [iconsLoading, setIconsLoading] = useState(true);
   const [iconsError, setIconsError] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [sortBy, setSortBy] = useState('latest');
 
   // Fetch categories and set initial category selection
   useEffect(() => {
@@ -138,7 +140,7 @@ export default function AllProductsPage() {
           localStorage.setItem('initialCategoryId', categoryToUse);
         }
       })
-      .catch(() => setError("Failed to fetch categories."))
+      .catch(() => setError("Network error. Please check your connection."))
       .finally(() => setLoading(false));
   }, [categoryQuery]); // Run when categoryQuery changes
 
@@ -179,7 +181,7 @@ export default function AllProductsPage() {
           localStorage.removeItem('initialCategoryId');
         }
       })
-      .catch(() => setError("Failed to fetch products."))
+      .catch(() => setError("Network error. Please check your connection."))
       .finally(() => setLoading(false));
   }, [selectedCategoryId, categories.length]);
 
@@ -253,7 +255,7 @@ export default function AllProductsPage() {
         else if (data && Array.isArray(data.icons)) iconsArr = data.icons;
         setIcons(iconsArr);
       })
-      .catch(() => setIconsError('Failed to fetch icons.'))
+      .catch(() => setIconsError('Network error. Please check your connection.'))
       .finally(() => setIconsLoading(false));
   }, []);
 
@@ -333,36 +335,88 @@ export default function AllProductsPage() {
       </div>
     </div>
   );
-  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500 text-xl">{error}</div>;
+  if (error) return <OfflineError message={error} onRetry={() => window.location.reload()} />;
 
-  // Products are already filtered by backend if selectedCategoryId is set
-  const filteredProducts = products;
+  // Sort and filter products
+  const sortedProducts = [...products].sort((a, b) => {
+    switch (sortBy) {
+      case 'latest':
+        // Sort by _id (assuming newer products have higher IDs) or by creation date
+        return String(b._id).localeCompare(String(a._id));
+      case 'oldest':
+        return String(a._id).localeCompare(String(b._id));
+      case 'price-low':
+        return a.price - b.price;
+      case 'price-high':
+        return b.price - a.price;
+      case 'name':
+        return a.name.localeCompare(b.name);
+      default:
+        return 0;
+    }
+  });
+
+  const filteredProducts = sortedProducts;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 px-2 md:px-4 lg:px-8 font-sans">
+    <div className="min-h-screen bg-gray-50 p-2 font-sans">
       <div className="max-w-7xl mx-auto pt-10 pb-16">
         {/* Icons Row at the top */}
  
         {/* Category filter row with 'More >' if many categories */}
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-3 mb-8 justify-center">
-            <button
-              key="all"
-              className={`px-5 py-2 rounded-full font-bold transition-colors ${selectedCategoryId === '' ? 'bg-yellow-400 text-blue-900' : 'text-white bg-blue-600 hover:bg-blue-700'}`}
-              onClick={() => {
-                setSelectedCategory('All');
-                setSelectedCategoryId('');
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem('selectedCategoryId');
-                  localStorage.removeItem('selectedCategoryName');
-                }
-              }}
-            >
-              All
-            </button>
-            {categories.length > 7
-              ? ([
-                  ...categories.slice(0, 6).map(cat => (
+          <div className="flex flex-wrap gap-3 mb-8 justify-between items-center">
+            {/* Categories on the left */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                key="all"
+                className={`px-5 py-2 rounded-full font-bold transition-colors ${selectedCategoryId === '' ? 'bg-yellow-400 text-blue-900' : 'text-white bg-blue-600 hover:bg-blue-700'}`}
+                onClick={() => {
+                  setSelectedCategory('All');
+                  setSelectedCategoryId('');
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('selectedCategoryId');
+                    localStorage.removeItem('selectedCategoryName');
+                  }
+                }}
+              >
+                All
+              </button>
+              {categories.length > 7
+                ? ([
+                    ...categories.slice(0, 6).map(cat => (
+                      <button
+                        key={cat._id}
+                        className={`px-5 py-2 rounded-full font-bold transition-colors ${cat._id === selectedCategoryId ? 'bg-yellow-400 text-blue-900' : 'text-white bg-blue-600 hover:bg-blue-700'}`}
+                        onClick={() => {
+                          setSelectedCategory(cat.name);
+                          setSelectedCategoryId(cat._id);
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('selectedCategoryId', cat._id);
+                            localStorage.setItem('selectedCategoryName', cat.name);
+                          }
+                        }}
+                      >
+                        {cat.name}
+                      </button>
+                    )),
+                    <button
+                      key="more"
+                      className="px-5 py-2 rounded-full font-bold transition-colors text-white bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        setSelectedCategory('All');
+                        setSelectedCategoryId('');
+                        if (typeof window !== 'undefined') {
+                          localStorage.removeItem('selectedCategoryId');
+                          localStorage.removeItem('selectedCategoryName');
+                        }
+                        window.location.href = '/all-products';
+                      }}
+                    >
+                      More &gt;
+                    </button>
+                  ])
+                : categories.map(cat => (
                     <button
                       key={cat._id}
                       className={`px-5 py-2 rounded-full font-bold transition-colors ${cat._id === selectedCategoryId ? 'bg-yellow-400 text-blue-900' : 'text-white bg-blue-600 hover:bg-blue-700'}`}
@@ -377,39 +431,25 @@ export default function AllProductsPage() {
                     >
                       {cat.name}
                     </button>
-                  )),
-                  <button
-                    key="more"
-                    className="px-5 py-2 rounded-full font-bold transition-colors text-white bg-blue-600 hover:bg-blue-700"
-                    onClick={() => {
-                      setSelectedCategory('All');
-                      setSelectedCategoryId('');
-                      if (typeof window !== 'undefined') {
-                        localStorage.removeItem('selectedCategoryId');
-                        localStorage.removeItem('selectedCategoryName');
-                      }
-                      window.location.href = '/all-products';
-                    }}
-                  >
-                    More &gt;
-                  </button>
-                ])
-              : categories.map(cat => (
-                  <button
-                    key={cat._id}
-                    className={`px-5 py-2 rounded-full font-bold transition-colors ${cat._id === selectedCategoryId ? 'bg-yellow-400 text-blue-900' : 'text-white bg-blue-600 hover:bg-blue-700'}`}
-                    onClick={() => {
-                      setSelectedCategory(cat.name);
-                      setSelectedCategoryId(cat._id);
-                      if (typeof window !== 'undefined') {
-                        localStorage.setItem('selectedCategoryId', cat._id);
-                        localStorage.setItem('selectedCategoryName', cat.name);
-                      }
-                    }}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
+                  ))}
+            </div>
+            
+            {/* Sort dropdown on the right */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort-select" className="text-sm font-semibold text-gray-700">Sort by:</label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+              >
+                <option value="latest">Latest</option>
+                <option value="oldest">Oldest</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="name">Name: A to Z</option>
+              </select>
+            </div>
           </div>
         )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

@@ -155,7 +155,7 @@ export default function Home() {
         }
       })
       .catch((err) => {
-        setCatError('Failed to fetch categories.');
+        setCatError('Network error. Please check your connection.');
         console.error('Fetch categories error:', err);
       })
       .finally(() => setCatLoading(false));
@@ -171,7 +171,7 @@ export default function Home() {
         else if (data && Array.isArray(data.products)) setProducts(data.products);
         else setProducts([]);
       })
-      .catch(() => setProdError('Failed to fetch products.'))
+      .catch(() => setProdError('Network error. Please check your connection.'))
       .finally(() => setProdLoading(false));
   }, []);
 
@@ -188,7 +188,7 @@ export default function Home() {
               'Authorization': `Bearer ${token}`,
             },
           });
-          if (!res.ok) throw new Error('Failed to fetch wishlist');
+          if (!res.ok) throw new Error('Network error. Please check your connection.');
           const data = await res.json();
           setWishlist((data.products || []).map((p: any) => p._id || p.id));
         } catch {
@@ -341,7 +341,6 @@ export default function Home() {
         <BannersSection banners={banners} bannerLoading={bannerLoading} bannerError={bannerError} />
         {/* Category Icons Row */}
         {/* Category Cards as Slider */}
-        {console.log('DEBUG categories:', categories)}
         <CategoriesSlider categories={categories} catLoading={catLoading} catError={catError} />
         {/* Promo/Info Banners */}
         <AdsSection ads={ads} adsLoading={adsLoading} adsError={adsError} />

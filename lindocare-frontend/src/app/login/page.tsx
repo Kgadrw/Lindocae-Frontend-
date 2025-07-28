@@ -179,10 +179,19 @@ const LoginPage: React.FC = () => {
             {registerSuccess && <div className="text-green-600 text-xs font-semibold mt-1">{registerSuccess}</div>}
             <button
               type="submit"
-              className="w-full rounded-full bg-blue-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 transition"
+              className="w-full rounded-full bg-blue-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={registerLoading}
             >
-              <UserPlus size={18} /> Create Account
+              {registerLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  <UserPlus size={18} /> Create Account
+                </>
+              )}
             </button>
             <div className="flex items-center my-2">
               <div className="flex-grow border-t border-gray-200"></div>
@@ -243,10 +252,19 @@ const LoginPage: React.FC = () => {
             {loginSuccess && <div className="text-green-600 text-xs font-semibold mt-1">{loginSuccess}</div>}
             <button
               type="submit"
-              className="w-full rounded-full bg-blue-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 transition"
+              className="w-full rounded-full bg-blue-600 text-white font-bold py-2 text-base mt-2 flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loginLoading}
             >
-              <User size={18} /> Sign In
+              {loginLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Signing In...
+                </>
+              ) : (
+                <>
+                  <User size={18} /> Sign In
+                </>
+              )}
             </button>
             <div className="flex items-center my-2">
               <div className="flex-grow border-t border-gray-200"></div>

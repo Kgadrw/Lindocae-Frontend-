@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import OfflineError from '../OfflineError';
 
 interface Banner {
   _id?: string;
@@ -50,13 +51,19 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
     setLoadingBannerId(banner._id);
     try {
       const res = await fetch(`https://lindo-project.onrender.com/banner/getCategoryByBanner/${banner._id}`);
-      if (!res.ok) throw new Error('Failed to fetch category');
+      if (!res.ok) throw new Error('Network error. Please check your connection.');
       const data = await res.json();
       const categoryId = data?.category?._id || data?.categoryId || data?._id || data?.id;
+      const categoryName = data?.category?.name || data?.name || 'Category';
       if (categoryId) {
         if (typeof window !== 'undefined') {
+          // Store the category ID and name for filtering in all-products page
           localStorage.setItem('selectedCategoryId', categoryId);
+          localStorage.setItem('selectedCategoryName', categoryName);
+          // Clear any previous category selection to ensure fresh start
+          localStorage.removeItem('initialCategoryId');
         }
+        // Navigate to all-products page - it will automatically filter to this category
         router.push('/all-products');
       }
     } catch (err) {
@@ -71,7 +78,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
       {bannerLoading ? (
         <BannerSkeleton />
       ) : bannerError ? (
-        <div className="text-center text-red-500 py-8">{typeof bannerError === 'string' ? bannerError : bannerError?.message || String(bannerError)}</div>
+        <OfflineError message={typeof bannerError === 'string' ? bannerError : (bannerError as Error)?.message || String(bannerError)} />
       ) : bannerData.length === 0 ? (
         <div className="text-center text-gray-500 py-8"></div>
       ) : (
@@ -124,12 +131,13 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
               </div>
             </div>
           </div>
+          
 
           {/* 2x2 grid of baby product images on the right */}
           <div className="lg:col-span-5 grid grid-cols-2 gap-3">
             {/* Top-left: First banner */}
             <a
-              href={gridBanners[0]?.category ? `/category/${encodeURIComponent(gridBanners[0].category)}` : '#'}
+              href="#"
               className="group cursor-pointer"
               onClick={gridBanners[0]?._id ? (e) => handleBannerClick(gridBanners[0], e) : undefined}
             >
@@ -166,7 +174,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
             {/* Top-right: Second banner */}
             <a
-              href={gridBanners[1]?.category ? `/category/${encodeURIComponent(gridBanners[1].category)}` : '#'}
+              href="#"
               className="group cursor-pointer"
               onClick={gridBanners[1]?._id ? (e) => handleBannerClick(gridBanners[1], e) : undefined}
             >
@@ -203,7 +211,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
             {/* Bottom-left: Third banner */}
             <a
-              href={gridBanners[2]?.category ? `/category/${encodeURIComponent(gridBanners[2].category)}` : '#'}
+              href="#"
               className="group cursor-pointer"
               onClick={gridBanners[2]?._id ? (e) => handleBannerClick(gridBanners[2], e) : undefined}
             >
@@ -240,7 +248,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
 
             {/* Bottom-right: Fourth banner */}
             <a
-              href={gridBanners[3]?.category ? `/category/${encodeURIComponent(gridBanners[3].category)}` : '#'}
+              href="#"
               className="group cursor-pointer"
               onClick={gridBanners[3]?._id ? (e) => handleBannerClick(gridBanners[3], e) : undefined}
             >

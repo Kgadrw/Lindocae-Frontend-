@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import OfflineError from '../OfflineError';
 
 interface Icon {
   _id?: string;
@@ -30,8 +31,10 @@ const IconsRowSkeleton = () => (
 const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [visibleIconsCount, setVisibleIconsCount] = useState(6);
+  const [showDots, setShowDots] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const maxIndex = Math.max(0, (icons?.length || 0) - 6); // Show 6 icons at a time
+  const maxIndex = Math.max(0, (icons?.length || 0) - visibleIconsCount);
 
   // Array of random border colors
   const borderColors = [
@@ -54,8 +57,39 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
     return borderColors[index % borderColors.length];
   };
 
+  // Calculate visible icons count based on screen width
+  const calculateVisibleIcons = () => {
+    if (typeof window === 'undefined') return 6;
+    
+    const screenWidth = window.innerWidth;
+    const iconWidth = 100; // min-w-[100px]
+    const gap = 20; // gap-5 = 20px
+    
+    // Calculate how many icons can fit in the visible area
+    const containerWidth = screenWidth - 32; // Account for padding/margins
+    const iconsThatFit = Math.floor(containerWidth / (iconWidth + gap));
+    
+    return Math.max(1, Math.min(iconsThatFit, icons?.length || 6));
+  };
+
+  // Update visible icons count on window resize
   useEffect(() => {
-    if (!icons || icons.length <= 6) return;
+    const updateVisibleIcons = () => {
+      const newVisibleCount = calculateVisibleIcons();
+      setVisibleIconsCount(newVisibleCount);
+      
+      // Show dots only if there are more icons than can fit on screen
+      setShowDots((icons?.length || 0) > newVisibleCount);
+    };
+
+    updateVisibleIcons();
+    
+    window.addEventListener('resize', updateVisibleIcons);
+    return () => window.removeEventListener('resize', updateVisibleIcons);
+  }, [icons?.length]);
+
+  useEffect(() => {
+    if (!icons || icons.length <= visibleIconsCount) return;
 
     const slideInterval = setInterval(() => {
       if (!isPaused) {
@@ -76,7 +110,7 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
       clearInterval(slideInterval);
       clearInterval(pauseInterval);
     };
-  }, [icons, maxIndex, isPaused]);
+  }, [icons, maxIndex, isPaused, visibleIconsCount]);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -93,7 +127,7 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
       {iconsLoading ? (
         <IconsRowSkeleton />
       ) : iconsError ? (
-        <div className="text-center text-red-500 py-8">{typeof iconsError === 'string' ? iconsError : (iconsError as Error)?.message || String(iconsError)}</div>
+        <OfflineError message={typeof iconsError === 'string' ? iconsError : (iconsError as Error)?.message || String(iconsError)} />
       ) : icons?.length === 0 ? (
         <div className="text-center text-gray-500 py-8"></div>
       ) : (
@@ -166,15 +200,15 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
             })}
           </div>
           
-          {/* Auto-slide indicator */}
-          {icons && icons.length > 6 && (
+          {/* Auto-slide indicator - only show when there are hidden icons */}
+          {showDots && icons && icons.length > visibleIconsCount && (
             <div className="flex justify-center mt-4">
               <div className="flex space-x-2">
-                {Array.from({ length: Math.ceil(icons.length / 6) }).map((_, idx) => (
+                {Array.from({ length: Math.ceil(icons.length / visibleIconsCount) }).map((_, idx) => (
                   <div
                     key={idx}
                     className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      Math.floor(currentIndex / 6) === idx ? 'bg-orange-500' : 'bg-gray-300'
+                      Math.floor(currentIndex / visibleIconsCount) === idx ? 'bg-orange-500' : 'bg-gray-300'
                     }`}
                   />
                 ))}

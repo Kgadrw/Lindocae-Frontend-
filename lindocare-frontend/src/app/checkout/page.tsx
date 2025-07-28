@@ -27,11 +27,29 @@ function formatRWF(amount: number) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('pesapal');
   const [shippingAddress, setShippingAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerFirstName, setCustomerFirstName] = useState('');
+  const [customerLastName, setCustomerLastName] = useState('');
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentRedirectUrl, setPaymentRedirectUrl] = useState('');
+  const [users, setUsers] = useState<any[]>([]); // Store users for header
   const router = useRouter();
+
+  // Fetch users for header
+  useEffect(() => {
+    fetch('https://lindo-project.onrender.com/user/getAllUsers')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setUsers(data);
+        else if (data && Array.isArray(data.users)) setUsers(data.users);
+        else setUsers([]);
+      })
+      .catch(() => setUsers([]));
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -65,42 +83,60 @@ const CheckoutPage = () => {
     e.preventDefault();
     setOrderStatus({});
     setIsSubmitting(true);
-    if (!paymentMethod || !shippingAddress) {
-      setOrderStatus({ error: 'Please provide payment method and shipping address.' });
+    
+    // Validate required fields
+    if (!paymentMethod || !shippingAddress || !customerPhone || !customerEmail || !customerFirstName || !customerLastName) {
+      setOrderStatus({ error: 'Please fill in all required fields.' });
       setIsSubmitting(false);
       return;
     }
+
     try {
       const token = getAuthToken();
-      const items = cartItems.map(item => ({
-        productId: item.id,
-        quantity: item.quantity || 1,
-        price: item.price,
-      }));
-      const body = {
+      
+      // First create the order
+      const orderBody = {
         paymentMethod,
         shippingAddress,
-        items,
+        customerEmail,
+        customerPhone,
+        customerName: `${customerFirstName} ${customerLastName}`,
       };
-      const res = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
+
+      const orderRes = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
         method: 'POST',
         headers: {
           'accept': 'application/json',
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(orderBody),
       });
-      if (res.status === 201) {
-        setOrderStatus({ success: 'Order placed successfully!' });
-        // Optionally clear cart
-        const email = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : '';
-        if (email) {
-          localStorage.setItem(`cart:${email}`, JSON.stringify([]));
-          setCartItems([]);
+
+      if (orderRes.status === 201) {
+        const orderData = await orderRes.json();
+        const orderId = orderData.order?._id || orderData.orderId || orderData._id;
+        const redirectUrl = orderData.redirectUrl || orderData.order?.pesapalRedirectUrl;
+
+        if (redirectUrl) {
+          setPaymentRedirectUrl(redirectUrl);
+          setOrderStatus({ success: 'Payment initiated successfully! Redirecting to payment gateway...' });
+          
+          // Redirect to Pesapal payment page
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 2000);
+        } else {
+          setOrderStatus({ error: 'Payment gateway not available. Please try again.' });
         }
+      } else if (orderRes.status === 401) {
+        setOrderStatus({ error: 'Please log in to complete your order.' });
+        // Redirect to login page
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
       } else {
-        const data = await res.json().catch(() => ({}));
+        const data = await orderRes.json().catch(() => ({}));
         setOrderStatus({ error: data.message || 'Failed to place order.' });
       }
     } catch (err) {
@@ -166,24 +202,67 @@ const CheckoutPage = () => {
                 <div className="flex gap-4 items-center mt-2">
                   <button
                     type="button"
-                    className={`rounded-lg p-1 flex flex-col items-center justify-center transition-all bg-white shadow-none ${paymentMethod === 'mtn' ? 'ring-2 ring-yellow-400' : ''}`}
-                    onClick={() => setPaymentMethod('mtn')}
+                    className={`rounded-lg p-1 flex flex-col items-center justify-center transition-all bg-white shadow-none ${paymentMethod === 'pesapal' ? 'ring-2 ring-green-400' : ''}`}
+                    onClick={() => setPaymentMethod('pesapal')}
                   >
-                    <img src="/mtn.jpg" alt="MTN" className="w-12 h-12 object-contain" />
-                    <span className="mt-1 text-xs font-semibold text-yellow-700">MTN</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`rounded-lg p-1 flex flex-col items-center justify-center transition-all bg-white shadow-none ${paymentMethod === 'airtel' ? 'ring-2 ring-red-400' : ''}`}
-                    onClick={() => setPaymentMethod('airtel')}
-                  >
-                    <img src="/airtel.png" alt="Airtel" className="w-12 h-12 object-contain" />
-                    <span className="mt-1 text-xs font-semibold text-red-700">Airtel</span>
+                    <img src="/pesapal.jpg" alt="Pesapal" className="w-12 h-12 object-contain" />
+                    <span className="mt-1 text-xs font-semibold text-green-700">Pesapal</span>
                   </button>
                 </div>
               </div>
+              
+              {/* Customer Information */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    value={customerFirstName}
+                    onChange={e => setCustomerFirstName(e.target.value)}
+                    placeholder="John"
+                    required
+                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    value={customerLastName}
+                    onChange={e => setCustomerLastName(e.target.value)}
+                    placeholder="Doe"
+                    required
+                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                  />
+                </div>
+              </div>
+              
               <div>
-                <label className="block text-xs text-gray-700 mb-1">Shipping Address</label>
+                <label className="block text-xs text-gray-700 mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={e => setCustomerEmail(e.target.value)}
+                  placeholder="customer@example.com"
+                  required
+                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  placeholder="+254712345678"
+                  required
+                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Shipping Address *</label>
                 <input
                   type="text"
                   value={shippingAddress}
@@ -197,10 +276,10 @@ const CheckoutPage = () => {
               {orderStatus.success && <div className="text-green-600 text-xs font-semibold mt-1">{orderStatus.success}</div>}
               <button
                 type="submit"
-                className="w-full rounded bg-blue-700 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
+                className="w-full rounded bg-green-600 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
                 disabled={cartItems.length === 0 || isSubmitting}
               >
-                {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                {isSubmitting ? 'Initializing Payment...' : 'Pay with Pesapal'}
               </button>
             </form>
           )}
