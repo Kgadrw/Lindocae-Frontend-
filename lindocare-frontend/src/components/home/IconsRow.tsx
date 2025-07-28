@@ -157,11 +157,18 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
                           const data = await res.json();
                           const catId = data?._id || data?.category?._id;
                           const catName = data?.name || data?.category?.name;
-                          if (catId) localStorage.setItem('selectedCategoryId', catId);
-                          if (catName) localStorage.setItem('selectedCategoryName', catName);
+                          if (catName) {
+                            // Navigate to all-products with category filtering using URL parameters
+                            window.location.href = `/all-products?category=${encodeURIComponent(catName)}`;
+                          } else {
+                            window.location.href = '/all-products';
+                          }
+                        } else {
+                          window.location.href = '/all-products';
                         }
-                      } catch {}
-                      window.location.href = '/all-products';
+                      } catch {
+                        window.location.href = '/all-products';
+                      }
                     }
                   }}
                 >

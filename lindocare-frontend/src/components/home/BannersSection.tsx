@@ -55,16 +55,9 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
       const data = await res.json();
       const categoryId = data?.category?._id || data?.categoryId || data?._id || data?.id;
       const categoryName = data?.category?.name || data?.name || 'Category';
-      if (categoryId) {
-        if (typeof window !== 'undefined') {
-          // Store the category ID and name for filtering in all-products page
-          localStorage.setItem('selectedCategoryId', categoryId);
-          localStorage.setItem('selectedCategoryName', categoryName);
-          // Clear any previous category selection to ensure fresh start
-          localStorage.removeItem('initialCategoryId');
-        }
-        // Navigate to all-products page - it will automatically filter to this category
-        router.push('/all-products');
+      if (categoryId && categoryName) {
+        // Navigate to all-products with category filtering using URL parameters
+        router.push(`/all-products?category=${encodeURIComponent(categoryName)}`);
       }
     } catch (err) {
       // Optionally show error

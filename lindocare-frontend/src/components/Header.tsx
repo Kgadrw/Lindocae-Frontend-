@@ -81,6 +81,13 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   const [allCategories, setAllCategories] = useState<{_id?:string, name:string}[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  
+  // Add state for category hover dropdown
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<{[key: string]: any[]}>({});
+  const [loadingCategoryProducts, setLoadingCategoryProducts] = useState<{[key: string]: boolean}>({});
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Scroll detection
   React.useEffect(() => {
@@ -282,6 +289,80 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     selectedCategoryId = highlightActive ? (localStorage.getItem('selectedCategoryId') || '') : '';
   }
 
+  // Fetch products for a specific category
+  const fetchCategoryProducts = async (categoryId: string) => {
+    if (categoryProducts[categoryId]) return; // Already loaded
+    
+    setLoadingCategoryProducts(prev => ({ ...prev, [categoryId]: true }));
+    try {
+      const res = await fetch(`https://lindo-project.onrender.com/product/getProductsByCategory/${categoryId}`);
+      if (res.ok) {
+        const data = await res.json();
+        let prods = [];
+        if (Array.isArray(data)) prods = data;
+        else if (data && Array.isArray(data.products)) prods = data.products;
+        setCategoryProducts(prev => ({ ...prev, [categoryId]: prods.slice(0, 8) })); // Limit to 8 products
+      } else {
+        setCategoryProducts(prev => ({ ...prev, [categoryId]: [] }));
+      }
+    } catch {
+      setCategoryProducts(prev => ({ ...prev, [categoryId]: [] }));
+    } finally {
+      setLoadingCategoryProducts(prev => ({ ...prev, [categoryId]: false }));
+    }
+  };
+
+  // Handle category hover
+  const handleCategoryHover = (categoryId: string) => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Set a small delay before showing the dropdown
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredCategory(categoryId);
+      setShowCategoryDropdown(categoryId);
+      if (!categoryProducts[categoryId] && !loadingCategoryProducts[categoryId]) {
+        fetchCategoryProducts(categoryId);
+      }
+    }, 200); // 200ms delay
+  };
+
+  const handleCategoryLeave = () => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Add a small delay before hiding to allow moving mouse to dropdown
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredCategory(null);
+      setShowCategoryDropdown(null);
+    }, 100);
+  };
+
+  // Handle dropdown hover to keep it open
+  const handleDropdownHover = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+  };
+
+  const handleDropdownLeave = () => {
+    setHoveredCategory(null);
+    setShowCategoryDropdown(null);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <header className="w-full bg-white shadow-md sticky top-0 z-50">
       {/* Top Promo Bar */}
@@ -339,27 +420,82 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         </div>
         {/* Category Navigation */}
         {propCategories && propCategories.length > 0 && (
-          <nav className="flex gap-2 ml-4">
+          <nav className="flex gap-2 ml-4 relative">
             {(propCategories.length > 4
               ? [
                   ...propCategories.slice(0, 4).map(cat => (
-                    <button
-                      key={cat._id || cat.name}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${highlightActive && selectedCategoryId === cat._id ? 'text-yellow-600 underline' : 'text-gray-700 hover:text-blue-700'}`}
-                      onClick={() => onCategoryClick && onCategoryClick(cat)}
-                      type="button"
-                    >
-                      {cat.name}
-                    </button>
+                    <div key={cat._id || cat.name} className="relative">
+                      <button
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${highlightActive && selectedCategoryId === cat._id ? 'text-yellow-600 underline' : 'text-gray-700 hover:text-blue-700'}`}
+                        onClick={() => onCategoryClick && onCategoryClick(cat)}
+                        onMouseEnter={() => cat._id && handleCategoryHover(cat._id)}
+                        onMouseLeave={handleCategoryLeave}
+                        type="button"
+                      >
+                        {cat.name}
+                      </button>
+                      {/* Category Products Dropdown */}
+                      {showCategoryDropdown === (cat._id || '') && (
+                        <div 
+                          className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 w-80 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200"
+                          onMouseEnter={handleDropdownHover}
+                          onMouseLeave={handleDropdownLeave}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-semibold text-gray-900 text-sm">{cat.name} Products</h3>
+                            <button
+                              onClick={() => cat._id && router.push(`/all-products?category=${encodeURIComponent(cat.name)}`)}
+                              className="text-blue-600 text-xs hover:underline"
+                            >
+                              View All
+                            </button>
+                          </div>
+                          {loadingCategoryProducts[cat._id || ''] ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              {[...Array(4)].map((_, i) => (
+                                <div key={i} className="animate-pulse">
+                                  <div className="bg-gray-200 h-16 rounded-lg mb-2"></div>
+                                  <div className="bg-gray-200 h-3 rounded w-3/4"></div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : categoryProducts[cat._id || '']?.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              {categoryProducts[cat._id || ''].map((product: any) => (
+                                <div key={product._id} className="group cursor-pointer hover:bg-gray-50 rounded-lg p-1 transition-colors" onClick={() => router.push(`/product/${product._id}`)}>
+                                  <div className="relative">
+                                    <img 
+                                      src={product.image} 
+                                      alt={product.name}
+                                      className="w-full h-16 object-cover rounded-lg border border-gray-200 group-hover:border-blue-300 transition-colors"
+                                    />
+                                    {product.tags && product.tags.length > 0 && (
+                                      <span className="absolute top-1 left-1 px-1 py-0.5 bg-white border border-gray-300 text-gray-600 text-xs rounded">
+                                        {product.tags[0]}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-1">
+                                    <div className="text-xs font-medium text-gray-900 truncate">{product.name}</div>
+                                    <div className="text-xs text-gray-600">RWF {product.price?.toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center text-gray-500 text-sm py-4">
+                              No products found in this category
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )),
                   <button
                     key="more"
                     className="px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer text-gray-700 hover:text-blue-700"
                     onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        localStorage.removeItem('selectedCategoryId');
-                      }
-                      window.location.href = '/all-products';
+                      router.push('/all-products');
                     }}
                     type="button"
                   >
@@ -367,14 +503,72 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                   </button>
                 ]
               : propCategories.map(cat => (
-                  <button
-                    key={cat._id || cat.name}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${highlightActive && selectedCategoryId === cat._id ? 'text-yellow-600 underline' : 'text-gray-700 hover:text-blue-700'}`}
-                    onClick={() => onCategoryClick && onCategoryClick(cat)}
-                    type="button"
-                  >
-                    {cat.name}
-                  </button>
+                  <div key={cat._id || cat.name} className="relative">
+                    <button
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${highlightActive && selectedCategoryId === cat._id ? 'text-yellow-600 underline' : 'text-gray-700 hover:text-blue-700'}`}
+                      onClick={() => onCategoryClick && onCategoryClick(cat)}
+                      onMouseEnter={() => cat._id && handleCategoryHover(cat._id)}
+                      onMouseLeave={handleCategoryLeave}
+                      type="button"
+                    >
+                      {cat.name}
+                    </button>
+                    {/* Category Products Dropdown */}
+                    {showCategoryDropdown === (cat._id || '') && (
+                      <div 
+                        className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 w-80 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200"
+                        onMouseEnter={handleDropdownHover}
+                        onMouseLeave={handleDropdownLeave}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-gray-900 text-sm">{cat.name} Products</h3>
+                          <button
+                            onClick={() => cat._id && router.push(`/all-products?category=${encodeURIComponent(cat.name)}`)}
+                            className="text-blue-600 text-xs hover:underline"
+                          >
+                            View All
+                          </button>
+                        </div>
+                        {loadingCategoryProducts[cat._id || ''] ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {[...Array(4)].map((_, i) => (
+                              <div key={i} className="animate-pulse">
+                                <div className="bg-gray-200 h-16 rounded-lg mb-2"></div>
+                                <div className="bg-gray-200 h-3 rounded w-3/4"></div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : categoryProducts[cat._id || '']?.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {categoryProducts[cat._id || ''].map((product: any) => (
+                              <div key={product._id} className="group cursor-pointer hover:bg-gray-50 rounded-lg p-1 transition-colors" onClick={() => router.push(`/product/${product._id}`)}>
+                                <div className="relative">
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-full h-16 object-cover rounded-lg border border-gray-200 group-hover:border-blue-300 transition-colors"
+                                  />
+                                  {product.tags && product.tags.length > 0 && (
+                                    <span className="absolute top-1 left-1 px-1 py-0.5 bg-white border border-gray-300 text-gray-600 text-xs rounded">
+                                      {product.tags[0]}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="mt-1">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{product.name}</div>
+                                  <div className="text-xs text-gray-600">RWF {product.price?.toLocaleString()}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-500 text-sm py-4">
+                            No products found in this category
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))
             )}
           </nav>
@@ -540,7 +734,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           {loading ? (
             <span className="text-gray-400 animate-pulse px-4 py-3">Loading categories...</span>
           ) : (propCategories && propCategories.length > 0) ? propCategories.map(cat => (
-            <Link key={cat._id || cat.name} href={`/category/${encodeURIComponent(cat.name)}`} className="block hover:text-gray-200 px-4 py-3 text-black text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
+            <Link key={cat._id || cat.name} href={cat._id ? `/all-products?category=${encodeURIComponent(cat.name)}` : `/all-products`} className="block hover:text-gray-200 px-4 py-3 text-black text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
               {cat.name}
             </Link>
           )) : null}
@@ -549,18 +743,18 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       {/* Bottom Navigation Bar for Mobile */}
       <div className="fixed bottom-0 left-0 w-full bg-white shadow-t z-50 md:hidden flex justify-evenly items-center py-2 border-t border-gray-200 px-0.5">
         <Link href="/">
-          <button className="flex flex-col items-center bg-[#2056A7] text-white hover:bg-[#FFE600] hover:text-[#2056A7] focus:bg-[#FFE600] focus:text-[#2056A7] rounded-full p-2 transition-colors">
-            <Home size={24} color="#000000" strokeWidth={2.5} />
+          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors">
+            <Home size={24} strokeWidth={2.5} />
             <span className="text-xs">Home</span>
           </button>
         </Link>
-        <button onClick={() => setNavOpen(true)} className="flex flex-col items-center bg-[#2056A7] text-white hover:bg-[#FFE600] hover:text-[#2056A7] focus:bg-[#FFE600] focus:text-[#2056A7] rounded-full p-2 transition-colors cursor-pointer">
-          <List size={24} color="#000000" strokeWidth={2.5} className="cursor-pointer" />
+        <button onClick={() => setNavOpen(true)} className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors cursor-pointer">
+          <List size={24} strokeWidth={2.5} className="cursor-pointer" />
           <span className="text-xs">Categories</span>
         </button>
         <Link href="/cart">
-          <button className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors relative cursor-pointer">
-            <ShoppingCart size={24} color="#000000" strokeWidth={2.5} className="cursor-pointer" />
+          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors relative cursor-pointer">
+            <ShoppingCart size={24} strokeWidth={2.5} className="cursor-pointer" />
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                 {cartCount}
@@ -570,14 +764,14 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           </button>
         </Link>
         <Link href="/checkout">
-          <button className="flex flex-col items-center bg-[#2056A7] text-white hover:bg-[#FFE600] hover:text-white rounded-full p-2 transition-colors cursor-pointer">
-            <Lock size={24} color="#000000" strokeWidth={2.5} className="cursor-pointer" />
-            <span className="ml-2 text-xs">Checkout</span>
+          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] p-2 transition-colors cursor-pointer">
+            <Lock size={24} strokeWidth={2.5} className="cursor-pointer" />
+            <span className="text-xs">Checkout</span>
           </button>
         </Link>
         <Link href="/wishlist">
-          <button className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors relative cursor-pointer">
-            <Heart size={24} color="#000000" strokeWidth={2.5} className="cursor-pointer" />
+          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors relative cursor-pointer">
+            <Heart size={24} strokeWidth={2.5} className="cursor-pointer" />
             {wishlistCount > 0 && (
               <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
                 {wishlistCount}
@@ -587,7 +781,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           </button>
         </Link>
           {user ? (
-          <button onClick={() => setDropdownOpen(v => !v)} className="flex flex-col items-center bg-[#FFE600] text-[#2056A7] hover:bg-[#2056A7] hover:text-white focus:bg-[#2056A7] focus:text-white rounded-full p-2 transition-colors">
+          <button onClick={() => setDropdownOpen(v => !v)} className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors">
             <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
               {user.name.charAt(0).toUpperCase()}
             </div>
@@ -595,18 +789,16 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           </button>
           ) : (
             <div className="flex flex-col items-center gap-0.5">
-              <button
-                className="px-2 py-0.5 rounded bg-[#2056A7] text-white text-[11px] font-semibold shadow hover:bg-[#FFE600] hover:text-[#2056A7] transition w-16"
-                onClick={e => { e.stopPropagation(); setLoginMode('register'); setLoginOpen(true); }}
-              >
-                Create
-              </button>
-              <button
-                className="px-2 py-0.5 rounded bg-[#FFE600] text-[#2056A7] text-[11px] font-semibold shadow hover:bg-[#2056A7] hover:text-white transition w-16"
-                onClick={e => { e.stopPropagation(); setLoginMode('login'); setLoginOpen(true); }}
-              >
-                Sign In
-              </button>
+              <Link href="/login">
+                <button className="px-2 py-0.5 rounded text-[#2056A7] text-[11px] font-semibold hover:text-[#FFE600] transition w-16">
+                  Create
+                </button>
+              </Link>
+              <Link href="/login">
+                <button className="px-2 py-0.5 rounded text-[#FFE600] text-[11px] font-semibold hover:text-[#2056A7] transition w-16">
+                  Sign In
+                </button>
+              </Link>
             <span className="text-xs">Account</span>
             </div>
           )}

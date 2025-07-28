@@ -137,9 +137,9 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                     className="bg-gray-50 border border-gray-200 hover:border-gray-400 transition flex flex-col h-[280px] overflow-hidden flex-shrink-0  cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
                     onClick={e => {
                       if (typeof window !== 'undefined' && cat._id) {
-                        localStorage.setItem('selectedCategoryId', cat._id);
-                        localStorage.setItem('selectedCategoryName', cat.name);
-                        // Next.js Link will handle navigation
+                        e.preventDefault();
+                        // Navigate to all-products with category filtering using URL parameters
+                        window.location.href = `/all-products?category=${encodeURIComponent(cat.name)}`;
                       }
                     }}
                     onMouseEnter={() => setIsHovered(true)}

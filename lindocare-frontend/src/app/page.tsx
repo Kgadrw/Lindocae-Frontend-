@@ -12,6 +12,7 @@ import AdsSection from '../components/home/AdsSection';
 import IconsRow from '../components/home/IconsRow';
 import NewArrivalsSection from '../components/home/NewArrivalsSection';
 import SocialShareBar from '../components/SocialShareBar';
+import VideoSection from '../components/home/VideoSection';
 
 // Add helpers for wishlist backend logic
 function getAuthToken() {
@@ -364,16 +365,18 @@ export default function Home() {
         />
         {/* Wishlist Promo Banner */}
         <PromoBanner categories={categories} catLoading={catLoading} />
+        {/* Video Section - Baby Care Tips & Vlogs */}
+        <VideoSection />
         {/* Email Signup Banner */}
         <EmailSignupBanner />
       </div>
-      {/* WhatsApp Support Button (only visible after hero) */}
+      {/* WhatsApp Support Button (only visible after hero, hidden on mobile) */}
       {showWhatsappBtn && (
         <a
           href="https://wa.me/250785064255"
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center transition-colors duration-200"
+          className="hidden md:flex fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 items-center justify-center transition-colors duration-200"
           aria-label="Chat with support on WhatsApp"
         >
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">

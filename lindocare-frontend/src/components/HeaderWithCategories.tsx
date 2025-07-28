@@ -2,6 +2,11 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
 
+interface Category {
+  _id?: string;
+  name: string;
+}
+
 export default function HeaderWithCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,9 +27,9 @@ export default function HeaderWithCategories() {
     categories={categories}
     loading={loading}
     onCategoryClick={(cat) => {
-      if (typeof window !== 'undefined' && cat._id) {
-        localStorage.setItem('selectedCategoryId', cat._id);
-        window.location.href = '/all-products';
+      if (cat._id) {
+        // Navigate to all-products with category filtering
+        window.location.href = `/all-products?category=${encodeURIComponent(cat.name)}`;
       }
     }}
   />;

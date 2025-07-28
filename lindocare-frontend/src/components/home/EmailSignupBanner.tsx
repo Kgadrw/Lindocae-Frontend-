@@ -50,7 +50,7 @@ const EmailSignupBanner: React.FC = () => {
         
         <p className="text-sm text-gray-600">
           By clicking the button you agree to the{' '}
-          <a href="/privacy-policy" className="underline hover:text-blue-800 text-gray-700 font-medium">
+          <a href="/terms-conditions" className="underline hover:text-blue-800 text-gray-700 font-medium">
             Privacy Policy
           </a>{' '}
           and{' '}

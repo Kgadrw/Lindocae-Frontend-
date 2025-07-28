@@ -25,9 +25,17 @@ const CategoriesSection: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [iconToDelete, setIconToDelete] = useState<string | null>(null);
+  const [showDeleteIconModal, setShowDeleteIconModal] = useState(false);
 
   // Add state for products grouped by category
   const [productsByCategory, setProductsByCategory] = useState<Record<string, any[]>>({});
+
+  // Pagination state
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(categories.length / PAGE_SIZE);
+  const paginatedCategories = categories.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Fetch categories
   const fetchCategories = async () => {
@@ -262,11 +270,17 @@ const CategoriesSection: React.FC = () => {
 
   // Handle icon delete
   const handleIconDelete = async (iconId: string) => {
-    if (!window.confirm('Are you sure you want to delete this icon?')) return;
+    setIconToDelete(iconId);
+    setShowDeleteIconModal(true);
+  };
+  const confirmDeleteIcon = async () => {
+    if (!iconToDelete) return;
     setFormLoading(true);
     try {
-      await fetch(`${ICONS_URL}/deleteIcon/${iconId}`, { method: 'DELETE' });
+      await fetch(`${ICONS_URL}/deleteIcon/${iconToDelete}`, { method: 'DELETE' });
       fetchIcons();
+      setIconToDelete(null);
+      setShowDeleteIconModal(false);
     } catch {}
     setFormLoading(false);
   };
@@ -363,485 +377,483 @@ const CategoriesSection: React.FC = () => {
   });
 
   return (
-    <div className="w-full p-0 md:p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">Categories</h3>
-        <button
-          className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all"
-          onClick={openCreateModal}
-        >
-          + Create Category
-        </button>
-      </div>
-      {/* Categories List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full overflow-x-auto">
-        <table className="min-w-full text-sm text-left border-separate border-spacing-0">
-          <thead>
-            <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <th className="px-6 py-3 font-semibold">Category</th>
-              <th className="px-6 py-3 font-semibold">Description</th>
-              <th className="px-6 py-3 font-semibold">Products</th>
-              <th className="px-6 py-3 font-semibold">Created</th>
-              <th className="px-6 py-3 font-semibold text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="text-center py-8 text-gray-400">Loading...</td></tr>
-            ) : categories.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-8 text-gray-400">No categories found.</td></tr>
-            ) : categories.map((cat, index) => {
-              const categoryProducts = productsByCategory[cat._id] || [];
-              const isExpanded = expandedCategories.has(cat._id);
-              return (
-                <React.Fragment key={cat._id}>
-                  {/* Category Row */}
-                  <tr className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'} hover:bg-blue-100`}>
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex items-center gap-3">
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-6">
+        {/* Filter/Sort/Search Bar */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <input type="text" placeholder="Search category..." className="border rounded px-3 py-2 text-sm text-gray-700 flex-1 min-w-[180px]" />
+          <button className="ml-auto bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2" onClick={openCreateModal}>
+            + Create Category
+          </button>
+        </div>
+        {/* Table */}
+        <div className="overflow-x-auto rounded-xl border border-gray-100">
+          <table className="min-w-full text-sm text-left">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-3"><input type="checkbox" /></th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3">Products</th>
+                <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr><td colSpan={6} className="text-center py-8 text-gray-400">Loading...</td></tr>
+              ) : paginatedCategories.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-8 text-gray-400">No categories found.</td></tr>
+              ) : paginatedCategories.map((cat, index) => {
+                const categoryProducts = productsByCategory[cat._id] || [];
+                const isExpanded = expandedCategories.has(cat._id);
+                return (
+                  <React.Fragment key={cat._id}>
+                    {/* Category Row */}
+                    <tr className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'} hover:bg-blue-100`}>
+                      <td className="px-4 py-3"><input type="checkbox" /></td>
+                      <td className="px-4 py-3 flex items-center gap-3">
                         <button
                           onClick={() => toggleCategoryExpansion(cat._id)}
                           className="text-blue-600 hover:text-blue-800 transition-colors"
                         >
                           {isExpanded ? '▼' : '▶'}
                         </button>
-                        <img src={cat.image?.[0] || cat.image} alt={cat.name} className="w-16 h-10 object-cover rounded-lg border border-gray-200" />
+                        <img src={cat.image?.[0] || cat.image} alt={cat.name} className="w-12 h-8 object-cover rounded-lg border border-gray-200" />
                         <div>
                           <div className="font-semibold text-blue-700">{cat.name}</div>
                           <div className="text-xs text-gray-500">ID: {cat._id.slice(-8)}</div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 align-middle text-gray-700 max-w-xs">
-                      {cat.description}
-                    </td>
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">
-                          {categoryProducts.length} products
-                        </span>
-                        {categoryProducts.length > 0 && (
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            categoryProducts.length > 5 ? 'bg-green-100 text-green-800' : 
-                            categoryProducts.length > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {categoryProducts.length > 5 ? 'High' : categoryProducts.length > 0 ? 'Medium' : 'Low'}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 align-middle text-gray-500">
-                      {new Date(cat.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 align-middle text-center">
-                      <div className="flex gap-2 items-center justify-center">
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{cat.description}</td>
+                      <td className="px-4 py-3 text-gray-700">{categoryProducts.length}</td>
+                      <td className="px-4 py-3 text-gray-500">{cat.createdAt ? new Date(cat.createdAt).toLocaleDateString() : ''}</td>
+                      <td className="px-4 py-3 text-center">
                         <button
                           className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-1"
                           onClick={() => openEditModal(cat)}
                         >
-                          <span role="img" aria-label="Edit">✏️</span> Edit
+                          Edit
                         </button>
-                        <button
-                          className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
-                          onClick={() => handleDelete(cat._id)}
-                          disabled={formLoading}
-                        >
-                          <span role="img" aria-label="Delete">🗑️</span> Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {/* Products under this category - only show if expanded */}
-                  {isExpanded && (
-                    <>
-                      {categoryProducts.length === 0 ? (
-                        <tr className={`transition-colors ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                          <td colSpan={5} className="px-6 py-4 align-middle">
-                            <div className="pl-8 text-sm text-gray-400 italic flex items-center gap-2">
-                              <span>📦</span> No products in this category
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        categoryProducts.map((product, productIndex) => (
-                          <tr key={`${cat._id}-${product._id}`} className={`transition-colors ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}>
-                            <td className="px-6 py-3 align-middle">
-                              <div className="flex items-center pl-8">
-                                <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
-                                <img 
-                                  src={product.image?.[0] || product.image || '/lindo.png'} 
-                                  alt={product.name} 
-                                  className="w-12 h-8 object-cover rounded border border-gray-200 mr-3" 
-                                />
-                                <div>
-                                  <div className="text-sm text-gray-700 font-medium">{product.name}</div>
-                                  <div className="text-xs text-gray-500">ID: {product._id?.slice(-8)}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 align-middle">
-                              <div className="text-sm text-gray-600 max-w-xs truncate">
-                                {product.description || 'No description'}
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 align-middle">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-green-600">
-                                  ${product.price?.toFixed(2) || '0.00'}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {product.quantity || 0} in stock
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 align-middle text-gray-500">
-                              <div className="text-xs">
-                                {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : ''}
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 align-middle text-center">
-                              <div className="flex gap-1 items-center justify-center">
-                                <button
-                                  onClick={() => openEditProductModal(product)}
-                                  className="bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 transition-colors"
-                                  title="Edit Product"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteProduct(product._id, cat._id)}
-                                  className="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 transition-colors"
-                                  title="Delete Product"
-                                >
-                                  🗑️
-                                </button>
+                      </td>
+                    </tr>
+                    {/* Expanded: Icons and Products (unchanged) */}
+                    {isExpanded && (
+                      <>
+                        {/* Icons Row for this category */}
+                        {iconsByCategory[cat._id] && iconsByCategory[cat._id].length > 0 && (
+                          <tr className={`transition-colors ${index % 2 === 0 ? 'bg-purple-50' : 'bg-white'}`}>
+                            <td colSpan={6} className="px-6 py-3 align-middle">
+                              <div className="flex flex-wrap gap-4 items-center pl-8">
+                                {iconsByCategory[cat._id].map((icon, iconIndex) => (
+                                  <div key={icon._id} className="flex flex-col items-center">
+                                    <img src={icon.image?.[0] || icon.image || '/lindo.png'} alt={icon.title} className="w-12 h-12 object-cover rounded border border-gray-200 mb-1" />
+                                    <div className="text-xs text-purple-700 font-medium text-center mb-1">{icon.title}</div>
+                                    <div className="flex gap-1">
+                                      <button
+                                        className="bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 text-xs font-semibold rounded shadow hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-1"
+                                        onClick={() => openIconModal(icon.categoryId?._id || icon.categoryId, icon)}
+                                      >
+                                        <span role="img" aria-label="Edit">✏️</span>
+                                      </button>
+                                      <button
+                                        className="bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 text-xs font-semibold rounded shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
+                                        onClick={() => handleIconDelete(icon._id)}
+                                        disabled={formLoading}
+                                      >
+                                        <span role="img" aria-label="Delete">🗑️</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {/* Icons Table */}
-      <div className="mt-10">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-semibold text-gray-900">Icons</h4>
-          <button
-            className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all"
-            onClick={() => openIconModal('')}
-          >
-            + Add Icon
-          </button>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full overflow-x-auto">
-          <table className="min-w-full text-sm text-left border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                <th className="px-6 py-3 font-semibold">Image</th>
-                <th className="px-6 py-3 font-semibold">Title</th>
-                <th className="px-6 py-3 font-semibold">Category</th>
-                <th className="px-6 py-3 font-semibold">Created</th>
-                <th className="px-6 py-3 font-semibold text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {icons.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-8 text-gray-400">No icons found.</td></tr>
-              ) : icons.map((icon, index) => (
-                <tr key={icon._id} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-purple-50'}`}>
-                  <td className="px-6 py-4 align-middle">
-                    <img src={icon.image?.[0] || icon.image} alt={icon.title} className="w-10 h-10 object-cover rounded-lg border border-gray-200" />
-                  </td>
-                  <td className="px-6 py-4 align-middle font-semibold text-gray-900">{icon.title}</td>
-                  <td className="px-6 py-4 align-middle text-gray-700">{icon.categoryId?.name || (categories.find(c => c._id === icon.categoryId)?.name || '')}</td>
-                  <td className="px-6 py-4 align-middle text-gray-500">{icon.createdAt ? new Date(icon.createdAt).toLocaleDateString() : ''}</td>
-                  <td className="px-6 py-4 align-middle text-center flex gap-2 items-center justify-center">
-                    <button
-                      className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-1"
-                      onClick={() => openIconModal(icon.categoryId?._id || icon.categoryId, icon)}
-                    >
-                      <span role="img" aria-label="Edit">✏️</span> Edit
-                    </button>
-                    <button
-                      className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
-                      onClick={() => handleIconDelete(icon._id)}
-                      disabled={formLoading}
-                    >
-                      <span role="img" aria-label="Delete">🗑️</span> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                        )}
+                        {/* Products */}
+                        {categoryProducts.length === 0 ? (
+                          <tr className={`transition-colors ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                            <td colSpan={6} className="px-6 py-4 align-middle">
+                              <div className="pl-8 text-sm text-gray-400 italic flex items-center gap-2">
+                                <span>📦</span> No products in this category
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          categoryProducts.map((product, productIndex) => (
+                            <tr key={`${cat._id}-${product._id}`} className={`transition-colors ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}>
+                              <td className="px-6 py-3 align-middle"></td>
+                              <td className="px-6 py-3 align-middle" colSpan={2}>
+                                <div className="flex items-center pl-8">
+                                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                                  <img 
+                                    src={product.image?.[0] || product.image || '/lindo.png'} 
+                                    alt={product.name} 
+                                    className="w-12 h-8 object-cover rounded border border-gray-200 mr-3" 
+                                  />
+                                  <div>
+                                    <div className="text-sm text-gray-700 font-medium">{product.name}</div>
+                                    <div className="text-xs text-gray-500">ID: {product._id?.slice(-8)}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-3 align-middle text-gray-600 max-w-xs truncate">
+                                {product.description || 'No description'}
+                              </td>
+                              <td className="px-6 py-3 align-middle">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold text-green-600">
+                                    ${product.price?.toFixed(2) || '0.00'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {product.quantity || 0} in stock
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-3 align-middle text-gray-500">
+                                <div className="text-xs">
+                                  {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : ''}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      </div>
-      {/* Create/Edit Category Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white p-6 shadow-md w-full max-w-md relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-              onClick={() => setShowModal(false)}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h4 className="text-lg font-semibold mb-4">{editCategory ? 'Edit Category' : 'Create Category'}</h4>
-            <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Name</label>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Electronics"
-                  required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Description</label>
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Products related to electronic devices."
-                  required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400 resize-y"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Image</label>
-                <div
-                  className={`border-2 border-dashed px-2 py-2 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 ${form.image ? 'border-blue-700' : 'border-gray-300'}`}
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ borderRadius: 0 }}
-                >
-                  <input
-                    ref={fileInputRef}
-                    name="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFormChange}
-                    className="hidden"
-                  />
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
-                  <span className="text-gray-500 text-xs">Drop image or click to upload</span>
-                  {form.image && (
-                    <img src={URL.createObjectURL(form.image)} alt="preview" className="mt-1 w-16 h-10 object-cover" />
-                  )}
-                  {/* Show current image if editing and no new image selected */}
-                  {!form.image && editCategory && editCategory.image?.[0] && (
-                    <img src={editCategory.image[0]} alt="current" className="mt-1 w-16 h-10 object-cover" />
-                  )}
-                </div>
-              </div>
-              {formError && <div className="text-red-600 text-xs font-semibold mt-1">{formError}</div>}
-              {successMessage && (
-                <div className="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded relative" role="alert">
-                  <strong className="font-bold">Success!</strong>
-                  <span className="block sm:inline"> {successMessage}</span>
-                  <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                    <button onClick={() => setSuccessMessage('')} className="text-green-800 hover:text-green-900">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </span>
-                </div>
-              )}
+        {/* Pagination */}
+        <div className="flex justify-between items-center mt-6">
+          <div className="text-sm text-gray-500">Showing 1 to {paginatedCategories.length} of {categories.length} categories</div>
+          <div className="flex gap-1">
+            <button className="w-8 h-8 rounded bg-gray-200 text-gray-700 font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>&lt;</button>
+            {Array.from({ length: totalPages }, (_, i) => (
               <button
-                type="submit"
-                className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2"
-                disabled={formLoading}
+                key={i + 1}
+                className={`w-8 h-8 rounded font-bold ${currentPage === i + 1 ? 'bg-blue-700 text-white' : 'bg-gray-200 text-gray-700'}`}
+                onClick={() => setCurrentPage(i + 1)}
               >
-                {formLoading ? (editCategory ? 'Saving...' : 'Creating...') : (editCategory ? 'Save Changes' : 'Create Category')}
+                {i + 1}
               </button>
-            </form>
+            ))}
+            <button className="w-8 h-8 rounded bg-gray-200 text-gray-700 font-bold" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>&gt;</button>
           </div>
         </div>
-      )}
-      {/* Create Icon Modal */}
-      {showIconModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white p-6 shadow-md w-full max-w-md relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-              onClick={() => setShowIconModal(false)}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h4 className="text-lg font-semibold mb-4">{editIcon ? 'Edit Icon' : 'Add Icon'}</h4>
-            <form onSubmit={handleIconFormSubmit} className="flex flex-col gap-3">
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Title</label>
-                <input
-                  name="title"
-                  value={iconForm.title}
-                  onChange={handleIconFormChange}
-                  placeholder="e.g. Diapers"
-                  required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Image</label>
-                <div
-                  className={`border-2 border-dashed px-2 py-2 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 ${iconForm.image ? 'border-blue-700' : 'border-gray-300'}`}
-                  onClick={() => iconFileInputRef.current?.click()}
-                  style={{ borderRadius: 0 }}
-                >
-                  <input
-                    ref={iconFileInputRef}
-                    name="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleIconFormChange}
-                    className="hidden"
-                  />
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
-                  <span className="text-gray-500 text-xs">Drop image or click to upload</span>
-                  {iconForm.image && (
-                    <img src={URL.createObjectURL(iconForm.image)} alt="preview" className="mt-1 w-16 h-10 object-cover" />
-                  )}
-                  {/* Show current image if editing and no new image selected */}
-                  {!iconForm.image && editIcon && editIcon.image?.[0] && (
-                    <img src={editIcon.image[0]} alt="current" className="mt-1 w-16 h-10 object-cover" />
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Category</label>
-                <select
-                  name="categoryId"
-                  value={iconForm.categoryId}
-                  onChange={handleIconFormChange}
-                  required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 bg-white"
-                >
-                  <option value="" disabled>Select category</option>
-                  {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              {iconFormError && <div className="text-red-600 text-xs font-semibold mt-1">{iconFormError}</div>}
-              {successMessage && (
-                <div className="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded relative" role="alert">
-                  <strong className="font-bold">Success!</strong>
-                  <span className="block sm:inline"> {successMessage}</span>
-                  <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                    <button onClick={() => setSuccessMessage('')} className="text-green-800 hover:text-green-900">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </span>
-                </div>
-              )}
+        {/* Modals (unchanged) */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white p-6 shadow-md w-full max-w-md relative">
               <button
-                type="submit"
-                className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2"
-                disabled={formLoading}
-              >
-                {formLoading ? 'Saving...' : (editIcon ? 'Save Changes' : 'Add Icon')}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-      {/* Product Edit Modal */}
-      {showProductModal && editingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
-              <button
-                onClick={() => {
-                  setShowProductModal(false);
-                  setEditingProduct(null);
-                }}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold focus:outline-none"
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                onClick={() => setShowModal(false)}
+                aria-label="Close"
               >
                 ×
               </button>
-            </div>
-            <form onSubmit={handleProductFormSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                <input
-                  type="text"
-                  value={editingProduct.name || ''}
-                  onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={editingProduct.description || ''}
-                  onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingProduct.price || 0}
-                  onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={editingProduct.categoryId?._id || editingProduct.categoryId || ''}
-                  onChange={(e) => setEditingProduct({...editingProduct, categoryId: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-3 pt-4">
+              <h4 className="text-lg font-semibold mb-4">{editCategory ? 'Edit Category' : 'Create Category'}</h4>
+              <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Name</label>
+                  <input
+                    name="name"
+                    value={form.name}
+                    onChange={handleFormChange}
+                    placeholder="e.g. Electronics"
+                    required
+                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Description</label>
+                  <textarea
+                    name="description"
+                    value={form.description}
+                    onChange={handleFormChange}
+                    placeholder="e.g. Products related to electronic devices."
+                    required
+                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400 resize-y"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Image</label>
+                  <div
+                    className={`border-2 border-dashed px-2 py-2 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 ${form.image ? 'border-blue-700' : 'border-gray-300'}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ borderRadius: 0 }}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      name="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFormChange}
+                      className="hidden"
+                    />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
+                    <span className="text-gray-500 text-xs">Drop image or click to upload</span>
+                    {form.image && (
+                      <img src={URL.createObjectURL(form.image)} alt="preview" className="mt-1 w-16 h-10 object-cover" />
+                    )}
+                    {/* Show current image if editing and no new image selected */}
+                    {!form.image && editCategory && editCategory.image?.[0] && (
+                      <img src={editCategory.image[0]} alt="current" className="mt-1 w-16 h-10 object-cover" />
+                    )}
+                  </div>
+                </div>
+                {formError && <div className="text-red-600 text-xs font-semibold mt-1">{formError}</div>}
+                {successMessage && (
+                  <div className="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">Success!</strong>
+                    <span className="block sm:inline"> {successMessage}</span>
+                    <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+                      <button onClick={() => setSuccessMessage('')} className="text-green-800 hover:text-green-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
+                  {editCategory && (
+                    <>
+                      <button
+                        type="button"
+                        className="bg-purple-600 text-white px-3 py-2 text-xs font-semibold rounded shadow hover:bg-purple-700 transition-all"
+                        onClick={() => { openIconModal(editCategory._id); setShowModal(false); }}
+                      >
+                        + Add Icon to this Category
+                      </button>
+                      <button
+                        type="button"
+                        className="bg-blue-600 text-white px-3 py-2 text-xs font-semibold rounded shadow hover:bg-blue-700 transition-all"
+                        onClick={() => { setEditingProduct({ categoryId: editCategory._id }); setShowProductModal(true); setShowModal(false); }}
+                      >
+                        + Add Product to this Category
+                      </button>
+                    </>
+                  )}
+                </div>
                 <button
                   type="submit"
+                  className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2"
                   disabled={formLoading}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {formLoading ? 'Updating...' : 'Update Product'}
+                  {formLoading ? (editCategory ? 'Saving...' : 'Creating...') : (editCategory ? 'Save Changes' : 'Create Category')}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Create Icon Modal */}
+        {showIconModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white p-6 shadow-md w-full max-w-md relative">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                onClick={() => setShowIconModal(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+              <h4 className="text-lg font-semibold mb-4">{editIcon ? 'Edit Icon' : 'Add Icon'}</h4>
+              <form onSubmit={handleIconFormSubmit} className="flex flex-col gap-3">
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Title</label>
+                  <input
+                    name="title"
+                    value={iconForm.title}
+                    onChange={handleIconFormChange}
+                    placeholder="e.g. Diapers"
+                    required
+                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Image</label>
+                  <div
+                    className={`border-2 border-dashed px-2 py-2 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 ${iconForm.image ? 'border-blue-700' : 'border-gray-300'}`}
+                    onClick={() => iconFileInputRef.current?.click()}
+                    style={{ borderRadius: 0 }}
+                  >
+                    <input
+                      ref={iconFileInputRef}
+                      name="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleIconFormChange}
+                      className="hidden"
+                    />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
+                    <span className="text-gray-500 text-xs">Drop image or click to upload</span>
+                    {iconForm.image && (
+                      <img src={URL.createObjectURL(iconForm.image)} alt="preview" className="mt-1 w-16 h-10 object-cover" />
+                    )}
+                    {/* Show current image if editing and no new image selected */}
+                    {!iconForm.image && editIcon && editIcon.image?.[0] && (
+                      <img src={editIcon.image[0]} alt="current" className="mt-1 w-16 h-10 object-cover" />
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Category</label>
+                  <select
+                    name="categoryId"
+                    value={iconForm.categoryId}
+                    onChange={handleIconFormChange}
+                    required
+                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 bg-white"
+                  >
+                    <option value="" disabled>Select category</option>
+                    {categories.map(cat => (
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {iconFormError && <div className="text-red-600 text-xs font-semibold mt-1">{iconFormError}</div>}
+                {successMessage && (
+                  <div className="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">Success!</strong>
+                    <span className="block sm:inline"> {successMessage}</span>
+                    <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+                      <button onClick={() => setSuccessMessage('')} className="text-green-800 hover:text-green-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2"
+                  disabled={formLoading}
+                >
+                  {formLoading ? 'Saving...' : (editIcon ? 'Save Changes' : 'Add Icon')}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Delete Icon Modal */}
+        {showDeleteIconModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white p-6 shadow-md w-full max-w-sm relative rounded">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                onClick={() => { setShowDeleteIconModal(false); setIconToDelete(null); }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+              <h4 className="text-lg font-semibold mb-4 text-red-700">Delete Icon</h4>
+              <p className="mb-4 text-gray-700">Are you sure you want to delete this icon? This action cannot be undone.</p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300"
+                  onClick={() => { setShowDeleteIconModal(false); setIconToDelete(null); }}
+                >
+                  Cancel
                 </button>
                 <button
-                  type="button"
+                  className="px-4 py-2 rounded bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60"
+                  onClick={confirmDeleteIcon}
+                  disabled={formLoading}
+                >
+                  {formLoading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Product Edit Modal */}
+        {showProductModal && editingProduct && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
+                <button
                   onClick={() => {
                     setShowProductModal(false);
                     setEditingProduct(null);
                   }}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold focus:outline-none"
                 >
-                  Cancel
+                  ×
                 </button>
               </div>
-            </form>
+              <form onSubmit={handleProductFormSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                  <input
+                    type="text"
+                    value={editingProduct.name || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={editingProduct.description || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingProduct.price || 0}
+                    onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={editingProduct.categoryId?._id || editingProduct.categoryId || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, categoryId: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {formLoading ? 'Updating...' : 'Update Product'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProductModal(false);
+                      setEditingProduct(null);
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

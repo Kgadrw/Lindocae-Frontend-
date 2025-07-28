@@ -51,14 +51,8 @@ const CategoryLandingPage = () => {
               className="group bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer flex flex-col h-[320px] border border-black"
             >
                 <Link
-                  href="/all-products"
+                  href={`/all-products?category=${encodeURIComponent(cat.name)}`}
                   className="block flex-1"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('selectedCategoryId', cat._id);
-                      localStorage.setItem('selectedCategoryName', cat.name);
-                    }
-                  }}
                 >
                 <div className="w-full h-40 overflow-hidden rounded-t-2xl border-b border-black">
                   <Image
