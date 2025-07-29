@@ -13,7 +13,7 @@ function getAuthToken() {
 }
 
 interface Product {
-  id: number;
+  id: string | number;
   name: string;
   price: number;
   image: string;
@@ -21,7 +21,8 @@ interface Product {
 }
 
 // Helper to format RWF with thousands separator
-function formatRWF(amount: number) {
+function formatRWF(amount: number | undefined | null) {
+  if (amount === undefined || amount === null) return '0';
   return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
@@ -70,14 +71,28 @@ const CheckoutPage = () => {
       }
       const cartRaw = localStorage.getItem(`cart:${email}`);
       try {
-        setCartItems(cartRaw ? JSON.parse(cartRaw) : []);
+        const parsedCart = cartRaw ? JSON.parse(cartRaw) : [];
+        // Validate and clean cart items
+        const validCartItems = Array.isArray(parsedCart) ? parsedCart.filter((item: any) => 
+          item && typeof item === 'object' && 
+          (item.id || item._id) && 
+          item.name && 
+          typeof item.price === 'number'
+        ).map((item: any) => ({
+          id: item.id || item._id,
+          name: item.name || 'Product',
+          price: item.price || 0,
+          image: item.image || '/lindo.png',
+          quantity: item.quantity || 1,
+        })) : [];
+        setCartItems(validCartItems);
       } catch {
         setCartItems([]);
       }
     }
   }, []);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,15 +193,17 @@ const CheckoutPage = () => {
                 {cartItems.map((item, idx) => (
                   <div key={item.id || idx} className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0">
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      {item.image && (
+                      {item.image && typeof item.image === 'string' && item.image.trim().length > 0 ? (
                         <img src={item.image} alt={item.name} className="object-cover w-full h-full" />
+                      ) : (
+                        <img src="/lindo.png" alt="No image" className="object-cover w-full h-full opacity-60" />
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="font-medium text-black text-base">{item.name}</div>
                       <div className="text-xs text-gray-500">Qty: {item.quantity || 1}</div>
                     </div>
-                    <div className="font-bold text-black text-base">{formatRWF(item.price)} RWF</div>
+                    <div className="font-bold text-black text-base">{formatRWF(item.price || 0)} RWF</div>
                   </div>
                 ))}
               </div>

@@ -38,7 +38,8 @@ async function fetchUserCartFromServer(token: string) {
 }
 
 // Helper to format RWF with thousands separator
-function formatRWF(amount: number) {
+function formatRWF(amount: number | undefined | null) {
+  if (amount === undefined || amount === null) return '0';
   return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
@@ -100,7 +101,21 @@ export default function CartPage() {
         }
         const cartRaw = localStorage.getItem(`cart:${email}`);
         try {
-          setCartItems(cartRaw ? JSON.parse(cartRaw) : []);
+          const parsedCart = cartRaw ? JSON.parse(cartRaw) : [];
+          // Validate and clean cart items
+          const validCartItems = Array.isArray(parsedCart) ? parsedCart.filter((item: any) => 
+            item && typeof item === 'object' && 
+            (item.id || item._id) && 
+            item.name && 
+            typeof item.price === 'number'
+          ).map((item: any) => ({
+            id: item.id || item._id,
+            name: item.name || 'Product',
+            price: item.price || 0,
+            image: item.image || '/lindo.png',
+            quantity: item.quantity || 1,
+          })) : [];
+          setCartItems(validCartItems);
         } catch {
           setCartItems([]);
         }
@@ -112,7 +127,7 @@ export default function CartPage() {
   }, []);
 
   // Calculate subtotal
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
   // Free shipping logic
   const freeShippingThreshold = 50;
@@ -237,7 +252,7 @@ export default function CartPage() {
                     <div className="text-xs text-gray-500">Color: {item.color} &nbsp; Size: {item.size}</div>
                   )}
                   <div className="flex items-center gap-2">
-                    <span className="text-black font-bold text-lg">{formatRWF(item.price)} RWF</span>
+                    <span className="text-black font-bold text-lg">{formatRWF(item.price || 0)} RWF</span>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 text-xs mt-1 w-full">
                     {/* Quantity controls */}
