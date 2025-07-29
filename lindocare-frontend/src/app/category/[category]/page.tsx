@@ -101,9 +101,12 @@ const CategoryPage = () => {
         const res = await fetch(`https://lindo-project.onrender.com/product/getAllProduct`);
         const data: { products: Product[] } = await res.json();
         let prods = data.products;
-        // Filter products by categoryId === category._id
+        // Filter products by category name or other category-related property
         if (category) {
-          prods = prods.filter((p: Product) => p.categoryId === category._id);
+          prods = prods.filter((p: Product) => {
+            // Check if product has category information in tags or other properties
+            return p.tags && p.tags.includes(category.name);
+          });
         }
         setProducts(prods);
       } catch {

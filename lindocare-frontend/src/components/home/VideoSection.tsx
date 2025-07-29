@@ -148,7 +148,7 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
       isMounted = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [rowWidth, videoList, isInView, isHovered, mounted]);
+  }, [rowWidth, videoList, isInView, isHovered, mounted, translateX]);
 
   const handleViewMore = () => {
     setLoading(true);

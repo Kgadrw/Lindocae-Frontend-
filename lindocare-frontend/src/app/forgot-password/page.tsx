@@ -1,11 +1,11 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Image from 'next/image';
 import { ArrowLeft, Mail, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const ForgotPasswordPage: React.FC = () => {
+const ForgotPasswordContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -231,6 +231,14 @@ const ForgotPasswordPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ForgotPasswordPage: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ForgotPasswordContent />
+    </Suspense>
   );
 };
 

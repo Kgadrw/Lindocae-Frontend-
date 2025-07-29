@@ -23,14 +23,6 @@ interface NewArrivalsSectionProps {
   wishlist: string[];
   toggleWishlist: (id: string) => void;
   handleAddToCart: (product: Product) => void;
-  priceMin: string;
-  setPriceMin: (v: string) => void;
-  priceMax: string;
-  setPriceMax: (v: string) => void;
-  sort: string;
-  setSort: (v: string) => void;
-  sortOptions: { value: string; label: string }[];
-  handleClearAll: () => void;
   iconsRow?: ReactNode;
 }
 
@@ -67,14 +59,6 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
   wishlist,
   toggleWishlist,
   handleAddToCart,
-  priceMin,
-  setPriceMin,
-  priceMax,
-  setPriceMax,
-  sort,
-  setSort,
-  sortOptions,
-  handleClearAll,
   iconsRow,
 }) => {
   const [page, setPage] = useState(0);

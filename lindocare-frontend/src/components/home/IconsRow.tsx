@@ -154,9 +154,8 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
                       try {
                         const res = await fetch(`https://lindo-project.onrender.com/icons/getCategoryByIconId/${icon._id}`);
                         if (res.ok) {
-                          const data = await res.json();
-                          const catId = data?._id || data?.category?._id;
-                          const catName = data?.name || data?.category?.name;
+                                                  const data = await res.json();
+                        const catName = data?.name || data?.category?.name;
                           if (catName) {
                             // Navigate to all-products with category filtering using URL parameters
                             window.location.href = `/all-products?category=${encodeURIComponent(catName)}`;

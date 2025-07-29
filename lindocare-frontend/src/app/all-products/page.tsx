@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Heart } from "lucide-react";
 import Image from "next/image";
 import IconsRow from '../../components/home/IconsRow'; // using the provided sliding/animated version
@@ -72,7 +72,7 @@ const ProductSkeleton = () => (
   </div>
 );
 
-export default function AllProductsPage() {
+function AllProductsContent() {
   const searchParams = useSearchParams();
   const categoryQuery = searchParams.get('category');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -512,5 +512,13 @@ export default function AllProductsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AllProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AllProductsContent />
+    </Suspense>
   );
 } 

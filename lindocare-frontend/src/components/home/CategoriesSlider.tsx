@@ -92,7 +92,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
       isMounted = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [rowWidth, categories, isInView, isHovered]);
+  }, [rowWidth, categories, isInView, isHovered, translateX]);
 
   return (
     <section ref={containerRef} className="relative w-full mb-8 p-0">

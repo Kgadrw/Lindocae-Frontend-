@@ -4,6 +4,25 @@ import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
 import Image from 'next/image';
 
+interface Product {
+  _id?: string;
+  id?: string | number;
+  name: string;
+  price: number;
+  oldPrice?: number;
+  image?: string[] | string;
+  rating?: number;
+  reviews?: number;
+  tags?: string[];
+  delivery?: string[];
+  categoryId?: string;
+}
+
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
 // Template products (should match those in category page)
 const productsData = [
   {
@@ -110,7 +129,7 @@ function addToCart(product: Product) {
   
   // Add product to cart (as a separate line item)
   cart.push({
-    ...product,
+    product,
     quantity: 1
   });
   
@@ -196,7 +215,7 @@ const WishlistPage = () => {
             setLoading(false);
             return;
           }
-          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
+          setWishlist((data.products || []).map((p: any) => String(p._id || p.id)));
           setWishlistProducts(data.products || []);
         } catch (e: unknown) {
           setError('Network error. Please try again.');
@@ -224,7 +243,6 @@ const WishlistPage = () => {
       setLoading(false);
     }
     fetchWishlist();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allProducts]);
 
   // Updated toggleWishlist for guests: store full product object
@@ -256,7 +274,7 @@ const WishlistPage = () => {
           },
         });
         const wishlistData = await wishlistRes.json();
-        setWishlist((wishlistData.products || []).map((p: Product) => p._id || p.id));
+        setWishlist((wishlistData.products || []).map((p: any) => p._id || p.id));
         setWishlistProducts(wishlistData.products || []);
       } catch (err: unknown) {
         alert('Network error. Please try again.');
