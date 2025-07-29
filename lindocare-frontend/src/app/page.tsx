@@ -287,7 +287,7 @@ export default function Home() {
         let cart = [];
         try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
         cart.push({
-          id: String(product.id),
+          id: String(product.id || product._id),
           name: product.name,
           price: product.price,
           image: imageUrl,
@@ -311,7 +311,7 @@ export default function Home() {
       let cart = [];
       try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
       cart.push({
-        id: String(product.id),
+        id: String(product.id || product._id),
         name: product.name,
         price: product.price,
         image: imageUrl,
@@ -353,14 +353,6 @@ export default function Home() {
           wishlist={wishlist}
           toggleWishlist={toggleWishlist}
           handleAddToCart={handleAddToCart}
-          priceMin={priceMin}
-          setPriceMin={setPriceMin}
-          priceMax={priceMax}
-          setPriceMax={setPriceMax}
-          sort={sort}
-          setSort={setSort}
-          sortOptions={sortOptions}
-          handleClearAll={handleClearAll}
           iconsRow={<IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />}
         />
         {/* Wishlist Promo Banner */}

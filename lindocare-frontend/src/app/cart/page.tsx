@@ -6,7 +6,7 @@ import { getCurrentUserEmail } from '../../components/Header';
 import { useRouter } from 'next/navigation';
 
 interface Product {
-  id: number;
+  id: string | number;
   name: string;
   price: number;
   image: string;
@@ -64,20 +64,20 @@ export default function CartPage() {
             // Convert server cart items to local Product[] format
             const cartItems = items.map((item: unknown) => {
               const cartItem = item as {
-                productId: number;
-                name: string;
-                price: number;
-                image: string;
-                quantity: number;
-                category?: number; // Ensure category is included
+                productId: string | number;
+                name?: string;
+                price?: number;
+                image?: string;
+                quantity?: number;
+                category?: number;
               };
               return {
                 id: String(cartItem.productId),
-                name: cartItem.name || '', // Optionally fetch product name if not present
+                name: cartItem.name || 'Product',
                 price: cartItem.price || 0,
-                image: cartItem.image || '/lindo.png', // Optionally fetch product image if not present
+                image: cartItem.image || '/lindo.png',
                 quantity: cartItem.quantity || 1,
-                category: cartItem.category, // Ensure category is included
+                category: cartItem.category,
               };
             });
             setCartItems(cartItems);
@@ -120,7 +120,7 @@ export default function CartPage() {
   const progress = Math.min(1, subtotal / freeShippingThreshold);
 
   // Remove from cart handler
-  const handleRemove = (id: number) => {
+  const handleRemove = (id: string | number) => {
     if (!userEmail) return;
     const cartKey = `cart:${userEmail}`;
     const cartRaw = localStorage.getItem(cartKey);
@@ -130,14 +130,14 @@ export default function CartPage() {
     } catch {
       cart = [];
     }
-    const updated = cart.filter((item: Product) => item.id !== id);
+    const updated = cart.filter((item: Product) => String(item.id) !== String(id));
     localStorage.setItem(cartKey, JSON.stringify(updated));
     setCartItems(updated);
     window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
   };
 
   // Update quantity handler
-  const handleQuantityChange = (id: number, delta: number) => {
+  const handleQuantityChange = (id: string | number, delta: number) => {
     if (!userEmail) return;
     const cartKey = `cart:${userEmail}`;
     const cartRaw = localStorage.getItem(cartKey);
@@ -147,7 +147,7 @@ export default function CartPage() {
     } catch {
       cart = [];
     }
-    const idx = cart.findIndex((item: Product) => item.id === id);
+    const idx = cart.findIndex((item: Product) => String(item.id) === String(id));
     if (idx > -1) {
       cart[idx].quantity = Math.max(1, (cart[idx].quantity || 1) + delta);
       if (cart[idx].quantity === 0) {
@@ -168,7 +168,7 @@ export default function CartPage() {
       const token = getAuthToken();
       // Prepare items for API
       const items = cartItems.map(item => ({
-        productId: item.id,
+        productId: String(item.id),
         quantity: item.quantity || 1,
         price: item.price,
       }));
@@ -224,10 +224,9 @@ export default function CartPage() {
             cartItems.map((item, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  {typeof item.image === 'string' && item.image.trim().length > 0 ? (
+                  {item.image && typeof item.image === 'string' && item.image.trim().length > 0 ? (
                     <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
                   ) : (
-                    (() => { console.warn('Cart item missing image:', item); return null; })() ||
                     <Image src="/lindo.png" alt="No image" width={96} height={96} className="object-cover w-full h-full opacity-60" style={{ width: 'auto', height: 'auto' }} />
                   )}
                 </div>
