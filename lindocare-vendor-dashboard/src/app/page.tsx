@@ -14,13 +14,13 @@ import LoginForm from '../components/LoginForm';
 
 interface User {
   _id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  role: string;
+  role?: string;
   createdAt: string;
   updatedAt: string;
-  tokens: {
+  tokens?: {
     accessToken: string;
   };
 }

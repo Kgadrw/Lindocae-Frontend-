@@ -47,7 +47,7 @@ const BannerSection: React.FC = () => {
   }, [showModal]);
 
   // Handle form input
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, files } = e.target as HTMLInputElement;
     if (name === 'image' && files) {
       setForm(f => ({ ...f, image: files[0] }));

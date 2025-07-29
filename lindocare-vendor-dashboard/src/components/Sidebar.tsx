@@ -9,13 +9,13 @@ interface SidebarSection {
 
 interface User {
   _id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  role: string;
+  role?: string;
   createdAt: string;
   updatedAt: string;
-  tokens: {
+  tokens?: {
     accessToken: string;
   };
 }
@@ -34,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, hand
       <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
         <User className="h-8 w-8 text-white" />
       </div>
-      <div className="mt-2 text-sm text-blue-700 font-semibold">{user ? `${user.firstName} ${user.lastName}` : 'Admin'}</div>
+      <div className="mt-2 text-sm text-blue-700 font-semibold">{user ? `${user.firstName || 'User'} ${user.lastName || ''}` : 'Admin'}</div>
       <div className="text-xs text-gray-500">{user?.email || 'admin@lindo.com'}</div>
     </div>
     <nav className="flex flex-col gap-2">
