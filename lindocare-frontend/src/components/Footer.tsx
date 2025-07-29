@@ -75,7 +75,7 @@ const Footer = () => {
       </div>
       <div className="text-center text-xs text-gray-700 mt-8 font-normal">
         © 2025 Lindocare. All rights reserved.<br />
-        <Link href="/terms-conditions" className="hover:underline">Privacy Policy</Link> | <Link href="/terms-conditions" className="hover:underline">Terms of Use</Link>
+        <Link href="/terms-of-use" className="hover:underline">Privacy Policy</Link> | <Link href="/terms-of-use" className="hover:underline">Terms of Use</Link>
       </div>
     </footer>
   );
