@@ -23,9 +23,9 @@ const CategoriesSliderSkeleton = () => (
       <div className="flex flex-row gap-4 pb-2 w-max">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex flex-col items-center">
-            <div className="bg-gray-200 rounded-xl w-[90vw] max-w-xs md:w-80 h-[280px]" />
-            <div className="flex flex-col items-start mt-3 w-full max-w-xs md:w-80">
-              <div className="bg-gray-200 h-5 w-1/2 mb-1 rounded" />
+            <div className="bg-gray-200 rounded-xl w-[90vw] max-w-[200px] h-[200px]" />
+            <div className="flex flex-col items-center mt-3 w-full max-w-[200px] text-center">
+              <div className="bg-gray-200 h-4 w-1/2 mb-1 rounded" />
               <div className="bg-gray-200 h-3 w-2/3 rounded" />
             </div>
           </div>
@@ -134,7 +134,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                 >
                   <Link
                     href="/all-products"
-                    className="bg-gray-50 border border-gray-200 hover:border-gray-400 transition flex flex-col h-[280px] overflow-hidden flex-shrink-0  cursor-pointer pointer-events-auto w-[90vw] max-w-xs md:w-80"
+                    className="bg-gray-50 border border-gray-200 hover:border-gray-400 transition flex flex-col h-[200px] w-[200px] overflow-hidden flex-shrink-0 cursor-pointer pointer-events-auto rounded-xl relative group"
                     onClick={e => {
                       if (typeof window !== 'undefined' && cat._id) {
                         e.preventDefault();
@@ -146,7 +146,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                     onMouseLeave={() => setIsHovered(false)}
                     tabIndex={0}
                   >
-                    <div className="relative w-full h-full overflow-hidden">
+                    <div className="relative w-full h-full overflow-hidden rounded-xl">
                       {image ? (
                         <Image
                           src={image}
@@ -154,15 +154,16 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                           fill
                           sizes="(max-width: 768px) 100vw, 33vw"
                           style={{ objectFit: 'cover', objectPosition: 'center' }}
+                          className="rounded-xl"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-4xl">🖼️</div>
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-4xl rounded-xl">🖼️</div>
                       )}
                     </div>
                   </Link>
-                  <div className="flex flex-col items-start mt-3 w-full max-w-xs md:w-80">
-                    <span className="font-bold text-blue-700 text-base mb-1 text-left">{cat.name}</span>
-                    <span className="text-xs text-blue-700 text-left line-clamp-2">{cat.description}</span>
+                  <div className="flex flex-col items-center mt-3 w-full max-w-[200px] text-center">
+                    <span className="font-bold text-blue-700 text-sm mb-1">{cat.name}</span>
+                    <span className="text-xs text-gray-600 line-clamp-2">{cat.description}</span>
                   </div>
                 </div>
               );

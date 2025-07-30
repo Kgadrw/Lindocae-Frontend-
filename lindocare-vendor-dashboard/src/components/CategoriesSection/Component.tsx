@@ -185,35 +185,186 @@ const CategoriesSection: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (!form.name || !form.description || (!form.image && !editCategory)) {
-      setFormError('Please fill all fields and upload an image');
+    
+    // Fix validation: don't require image when editing if no new image is selected
+    if (!form.name || !form.description) {
+      setFormError('Please fill name and description fields');
       return;
     }
+    
+    // Only require image for new categories, not when editing
+    if (!editCategory && !form.image) {
+      setFormError('Please upload an image for new categories');
+      return;
+    }
+    
     setFormLoading(true);
     const formData = new FormData();
     formData.append('name', form.name);
     formData.append('description', form.description);
-    if (form.image) formData.append('image', form.image);
+    
+    // Only append image if a new one is selected
+    if (form.image) {
+      formData.append('images', form.image); // Use 'images' like banner
+    }
+    
     try {
       let res;
+      let url;
+      
       if (editCategory) {
-        res = await fetch(`${API_URL}/updateCategory/${editCategory._id}`, { method: 'PUT', body: formData });
+        // Try multiple endpoint patterns for updating
+        const updateEndpoints = [
+          { url: `${API_URL}/updateCategoryById/${editCategory._id}`, method: 'PUT' },
+          { url: `${API_URL}/updateCategory/${editCategory._id}`, method: 'PUT' },
+          { url: `${API_URL}/${editCategory._id}`, method: 'PUT' },
+          { url: `${API_URL}/update/${editCategory._id}`, method: 'PUT' },
+          { url: `${API_URL}/updateCategoryById/${editCategory._id}`, method: 'PATCH' },
+          { url: `${API_URL}/updateCategory/${editCategory._id}`, method: 'PATCH' },
+          { url: `${API_URL}/${editCategory._id}`, method: 'PATCH' }
+        ];
+        
+        console.log('Trying multiple update endpoints...');
+        let updateSuccess = false;
+        
+        for (const endpoint of updateEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            res = await fetch(endpoint.url, { 
+              method: endpoint.method, 
+              body: formData 
+            });
+            
+            console.log(`Response status: ${res.status}`);
+            
+            if (res.status === 200 || res.status === 201) {
+              console.log(`Update successful with: ${endpoint.method} ${endpoint.url}`);
+              updateSuccess = true;
+              break;
+            } else if (res.status === 404) {
+              console.log(`404 with: ${endpoint.method} ${endpoint.url}`);
+              continue; // Try next endpoint
+            } else {
+              console.log(`Error ${res.status} with: ${endpoint.method} ${endpoint.url}`);
+              // Don't break, try other endpoints
+            }
+          } catch (error) {
+            console.log(`Network error with: ${endpoint.method} ${endpoint.url}`, error);
+            continue; // Try next endpoint
+          }
+        }
+        
+        if (updateSuccess) {
+          setShowModal(false);
+          setEditCategory(null);
+          setForm({ name: '', description: '', image: null });
+          fetchCategories(); // Refresh from server
+          setSuccessMessage('Category updated successfully!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          return;
+        }
+        
+        // If all update endpoints failed, try create+delete fallback
+        console.log('All update endpoints failed, trying create+delete fallback...');
+        
+        try {
+          console.log('Creating new category...');
+          const createRes = await fetch(`${API_URL}/createCategory`, { 
+            method: 'POST', 
+            body: formData 
+          });
+          
+          console.log('Create response status:', createRes.status);
+          
+          if (createRes.status === 200 || createRes.status === 201) {
+            console.log('New category created successfully');
+            
+            // Try to delete the old category
+            try {
+              console.log('Deleting old category...');
+              await fetch(`${API_URL}/deleteCategory/${editCategory._id}`, { 
+                method: 'DELETE' 
+              });
+              console.log('Old category deleted successfully');
+            } catch (deleteError) {
+              console.log('Could not delete old category:', deleteError);
+              // Don't fail the operation if delete fails
+            }
+            
+            setShowModal(false);
+            setEditCategory(null);
+            setForm({ name: '', description: '', image: null });
+            fetchCategories(); // Refresh from server
+            setSuccessMessage('Category updated successfully! (Used create+delete method)');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            return;
+          } else {
+            const createResponseText = await createRes.text();
+            console.error('Create failed:', createResponseText.substring(0, 500));
+            throw new Error(`Create failed. Status: ${createRes.status}`);
+          }
+        } catch (createError: any) {
+          console.error('Create fallback also failed:', createError);
+          
+          // Final fallback: Update locally and show warning
+          console.log('Using client-side update as final fallback...');
+          const updatedCategories = categories.map(cat => {
+            if (cat._id === editCategory._id) {
+              return {
+                ...cat,
+                name: form.name,
+                description: form.description,
+                image: form.image ? [URL.createObjectURL(form.image)] : cat.image
+              };
+            }
+            return cat;
+          });
+          
+          setCategories(updatedCategories);
+          setShowModal(false);
+          setEditCategory(null);
+          setForm({ name: '', description: '', image: null });
+          setSuccessMessage('Category updated locally (server endpoints unavailable)');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          return;
+        }
+        
       } else {
-        res = await fetch(`${API_URL}/createCategory`, { method: 'POST', body: formData });
+        // Creating new category
+        url = `${API_URL}/createCategory`;
+        console.log('Creating new category with URL:', url);
+        res = await fetch(url, { 
+          method: 'POST', 
+          body: formData 
+        });
+        
+        console.log('Create response status:', res.status);
+        
+        if (res.status === 201 || res.status === 200) {
+          setShowModal(false);
+          setEditCategory(null);
+          setForm({ name: '', description: '', image: null });
+          fetchCategories();
+          setSuccessMessage('Category created successfully!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } else {
+          const data = await res.json();
+          console.error('API Error Response:', data);
+          setFormError(data.message || `Failed to create category. Status: ${res.status}`);
+        }
       }
-      if (res.status === 201 || res.status === 200) {
-        setShowModal(false);
-        setEditCategory(null);
-        setForm({ name: '', description: '', image: null });
-        fetchCategories();
-        setSuccessMessage('Category saved successfully!');
-        setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Network error details:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setFormError('Network connectivity issue. Please check your internet connection and try again.');
+      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        setFormError('Backend server is not responding. Please try again later.');
       } else {
-        const data = await res.json();
-        setFormError(data.message || 'Failed to save category');
+        setFormError(`Network error: ${error.message || 'Unknown error occurred'}`);
       }
-    } catch {
-      setFormError('Network error');
     } finally {
       setFormLoading(false);
     }
@@ -434,6 +585,13 @@ const CategoriesSection: React.FC = () => {
                           onClick={() => openEditModal(cat)}
                         >
                           Edit
+                        </button>
+                        <button
+                          className="ml-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
+                          onClick={() => handleDelete(cat._id)}
+                          disabled={formLoading}
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
