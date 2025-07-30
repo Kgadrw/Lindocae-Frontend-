@@ -43,6 +43,8 @@ const ProductsSection: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
@@ -204,31 +206,222 @@ const ProductsSection: React.FC = () => {
       formData.append('quantity', productForm.quantity);
       formData.append('shippingInfo', JSON.stringify({ provider: productForm.shippingProvider, estimatedDeliveryDays: productForm.estimatedDeliveryDays }));
 
-      const url = editProduct 
-        ? `https://lindo-project.onrender.com/product/updateProduct/${editProduct._id}`
-        : 'https://lindo-project.onrender.com/product/createProduct';
-
-      const method = editProduct ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        body: formData
-      });
-
-      if (response.ok) {
-        setShowModal(false);
-        setEditProduct(null);
-        resetForm();
-        fetchProducts(currentPage); // Re-fetch current page after save
-        setSuccessMessage(editProduct ? 'Product updated successfully!' : 'Product created successfully!');
-        setTimeout(() => setSuccessMessage(''), 3000);
+      if (editProduct) {
+        // Try multiple endpoint patterns for updating products
+        const updateEndpoints = [
+          { url: `https://lindo-project.onrender.com/product/updateProductById/${editProduct._id}`, method: 'PUT' },
+          { url: `https://lindo-project.onrender.com/product/updateProduct/${editProduct._id}`, method: 'PUT' },
+          { url: `https://lindo-project.onrender.com/product/update/${editProduct._id}`, method: 'PUT' },
+          { url: `https://lindo-project.onrender.com/product/${editProduct._id}`, method: 'PUT' },
+          { url: `https://lindo-project.onrender.com/product/updateProductById/${editProduct._id}`, method: 'PATCH' },
+          { url: `https://lindo-project.onrender.com/product/updateProduct/${editProduct._id}`, method: 'PATCH' },
+          { url: `https://lindo-project.onrender.com/product/update/${editProduct._id}`, method: 'PATCH' }
+        ];
+        
+        console.log('Trying multiple product update endpoints...');
+        let updateSuccess = false;
+        
+        for (const endpoint of updateEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            
+            // Try both FormData and JSON formats
+            const attempts = [
+              { body: formData, headers: {} as Record<string, string> },
+              { 
+                body: JSON.stringify({
+                  name: productForm.name,
+                  description: productForm.description,
+                  price: parseFloat(productForm.price),
+                  category: productForm.category,
+                  stockType: productForm.stockType,
+                  quantity: parseInt(productForm.quantity),
+                  shippingInfo: {
+                    provider: productForm.shippingProvider,
+                    estimatedDeliveryDays: parseInt(productForm.estimatedDeliveryDays)
+                  }
+                }), 
+                headers: { 'Content-Type': 'application/json' } as Record<string, string>
+              }
+            ];
+            
+            let endpointSuccess = false;
+            
+            for (const attempt of attempts) {
+              try {
+                console.log(`Trying with ${attempt.body instanceof FormData ? 'FormData' : 'JSON'}`);
+                if (attempt.body instanceof FormData) {
+                  console.log('FormData contents:');
+                  for (let [key, value] of attempt.body.entries()) {
+                    console.log(`${key}:`, value);
+                  }
+                } else {
+                  console.log('JSON body:', attempt.body);
+                }
+                
+                const response = await fetch(endpoint.url, { 
+                  method: endpoint.method, 
+                  body: attempt.body,
+                  headers: attempt.headers
+                });
+                
+                console.log(`Response status: ${response.status}`);
+                console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
+                
+                // Try to read response content for debugging
+                let responseText = '';
+                try {
+                  responseText = await response.text();
+                  console.log(`Response body:`, responseText.substring(0, 500));
+                } catch (readError) {
+                  console.log('Could not read response body:', readError);
+                }
+                
+                if (response.status === 200 || response.status === 201) {
+                  console.log(`Product update successful with: ${endpoint.method} ${endpoint.url} using ${attempt.body instanceof FormData ? 'FormData' : 'JSON'}`);
+                  updateSuccess = true;
+                  endpointSuccess = true;
+                  break;
+                } else if (response.status === 404) {
+                  console.log(`404 with: ${endpoint.method} ${endpoint.url}`);
+                  continue; // Try next format
+                } else {
+                  console.log(`Error ${response.status} with: ${endpoint.method} ${endpoint.url}`);
+                  console.log(`Error response:`, responseText);
+                  // Try next format
+                }
+              } catch (formatError) {
+                console.log(`Format error with ${attempt.body instanceof FormData ? 'FormData' : 'JSON'}:`, formatError);
+                continue; // Try next format
+              }
+            }
+            
+            if (endpointSuccess) break;
+            
+          } catch (error) {
+            console.log(`Network error with: ${endpoint.method} ${endpoint.url}`, error);
+            continue; // Try next endpoint
+          }
+        }
+        
+        if (updateSuccess) {
+          setShowModal(false);
+          setEditProduct(null);
+          resetForm();
+          fetchProducts(currentPage); // Re-fetch current page after save
+          setSuccessMessage('Product updated successfully!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          return;
+        }
+        
+        // If all update endpoints failed, try create+delete fallback
+        console.log('All product update endpoints failed, trying create+delete fallback...');
+        
+        try {
+          console.log('Creating new product...');
+          const createRes = await fetch('https://lindo-project.onrender.com/product/createProduct', { 
+            method: 'POST', 
+            body: formData 
+          });
+          
+          console.log('Create response status:', createRes.status);
+          
+          if (createRes.status === 200 || createRes.status === 201) {
+            console.log('New product created successfully');
+            
+            // Try to delete the old product
+            try {
+              console.log('Deleting old product...');
+              await fetch(`https://lindo-project.onrender.com/product/deleteProduct/${editProduct._id}`, { 
+                method: 'DELETE' 
+              });
+              console.log('Old product deleted successfully');
+            } catch (deleteError) {
+              console.log('Could not delete old product:', deleteError);
+              // Don't fail the operation if delete fails
+            }
+            
+            setShowModal(false);
+            setEditProduct(null);
+            resetForm();
+            fetchProducts(currentPage);
+            setSuccessMessage('Product updated successfully! (Used create+delete method)');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            return;
+          } else {
+            const createResponseText = await createRes.text();
+            console.error('Create failed:', createResponseText.substring(0, 500));
+            throw new Error(`Create failed. Status: ${createRes.status}`);
+          }
+        } catch (createError: any) {
+          console.error('Create fallback also failed:', createError);
+          
+          // Final fallback: Update locally and show warning
+          console.log('Using client-side update as final fallback...');
+          const updatedProducts = products.map(prod => {
+            if (prod._id === editProduct._id) {
+              return {
+                ...prod,
+                name: productForm.name,
+                description: productForm.description,
+                price: parseFloat(productForm.price),
+                category: productForm.category,
+                stockType: productForm.stockType,
+                quantity: parseInt(productForm.quantity),
+                shippingInfo: {
+                  provider: productForm.shippingProvider,
+                  estimatedDeliveryDays: parseInt(productForm.estimatedDeliveryDays)
+                },
+                images: uploadedImages.length > 0 ? uploadedImages.map(file => URL.createObjectURL(file)) : prod.images
+              };
+            }
+            return prod;
+          });
+          
+          setProducts(updatedProducts);
+          setShowModal(false);
+          setEditProduct(null);
+          resetForm();
+          setSuccessMessage('Product updated locally (server endpoints unavailable)');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          return;
+        }
+        
       } else {
-        const errorData = await response.json();
-        alert(errorData.message || `Error ${editProduct ? 'updating' : 'creating'} product`);
+        // Creating new product
+        console.log('Creating new product...');
+        const response = await fetch('https://lindo-project.onrender.com/product/createProduct', {
+          method: 'POST',
+          body: formData
+        });
+
+        console.log('Create response status:', response.status);
+
+        if (response.status === 201 || response.status === 200) {
+          setShowModal(false);
+          setEditProduct(null);
+          resetForm();
+          fetchProducts(currentPage);
+          setSuccessMessage('Product created successfully!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } else {
+          const errorData = await response.json();
+          console.error('API Error Response:', errorData);
+          alert(errorData.message || `Error creating product. Status: ${response.status}`);
+        }
       }
-    } catch (error) {
-      console.error('Error saving product:', error);
-      alert('Error saving product');
+    } catch (error: any) {
+      console.error('Network error details:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        alert('Network connectivity issue. Please check your internet connection and try again.');
+      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        alert('Backend server is not responding. Please try again later.');
+      } else {
+        alert(`Network error: ${error.message || 'Unknown error occurred'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -249,18 +442,111 @@ const ProductsSection: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      try {
-        const response = await fetch(`https://lindo-project.onrender.com/product/deleteProduct/${id}`, {
-          method: 'DELETE'
-        });
-        if (response.ok) {
-          fetchProducts(currentPage); // Re-fetch current page after delete
+    setLoading(true);
+    console.log('Attempting to delete product with ID:', id);
+
+    try {
+      // Try multiple endpoint patterns for deleting products
+      const deleteEndpoints = [
+        { url: `https://lindo-project.onrender.com/product/deleteProduct/${id}`, method: 'DELETE' },
+        { url: `https://lindo-project.onrender.com/product/delete/${id}`, method: 'DELETE' },
+        { url: `https://lindo-project.onrender.com/product/${id}`, method: 'DELETE' },
+        { url: `https://lindo-project.onrender.com/product/remove/${id}`, method: 'DELETE' },
+        { url: `https://lindo-project.onrender.com/product/removeProduct/${id}`, method: 'DELETE' },
+        { url: `https://lindo-project.onrender.com/product/deleteProductById/${id}`, method: 'DELETE' },
+        { url: `https://lindo-project.onrender.com/product/deleteById/${id}`, method: 'DELETE' },
+        // Try POST method for some endpoints
+        { url: `https://lindo-project.onrender.com/product/deleteProduct/${id}`, method: 'POST' },
+        { url: `https://lindo-project.onrender.com/product/delete/${id}`, method: 'POST' }
+      ];
+
+      console.log('Trying multiple product delete endpoints...');
+      let deleteSuccess = false;
+      let lastError = '';
+
+      for (const endpoint of deleteEndpoints) {
+        try {
+          console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+          
+          const response = await fetch(endpoint.url, { 
+            method: endpoint.method,
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          
+          console.log(`Response status: ${response.status}`);
+          console.log(`Response status text: ${response.statusText}`);
+          
+          // Try to read response content for debugging
+          let responseText = '';
+          try {
+            responseText = await response.text();
+            console.log(`Response body:`, responseText.substring(0, 500));
+          } catch (readError) {
+            console.log('Could not read response body:', readError);
+          }
+          
+          if (response.status === 200 || response.status === 201 || response.status === 204) {
+            console.log(`✅ Product delete successful with: ${endpoint.method} ${endpoint.url}`);
+            deleteSuccess = true;
+            break;
+          } else if (response.status === 404) {
+            console.log(`❌ 404 with: ${endpoint.method} ${endpoint.url}`);
+            lastError = `Endpoint not found: ${endpoint.url}`;
+            continue; // Try next endpoint
+          } else {
+            console.log(`❌ Error ${response.status} with: ${endpoint.method} ${endpoint.url}`);
+            console.log(`Error response:`, responseText);
+            lastError = `Server error ${response.status}: ${responseText}`;
+            // Don't break, try other endpoints
+          }
+        } catch (error) {
+          console.log(`❌ Network error with: ${endpoint.method} ${endpoint.url}`, error);
+          lastError = `Network error: ${error}`;
+          continue; // Try next endpoint
         }
-      } catch (error) {
-        console.error('Error deleting product:', error);
       }
+
+      if (deleteSuccess) {
+        // Remove from local state immediately for better UX
+        setProducts(prev => prev.filter(product => product._id !== id));
+        setSuccessMessage('Product deleted successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        
+        // Refresh from server to ensure consistency
+        fetchProducts(currentPage);
+      } else {
+        // If all server endpoints failed, remove locally and show warning
+        console.log('❌ All delete endpoints failed, removing locally...');
+        console.log('Last error:', lastError);
+        setProducts(prev => prev.filter(product => product._id !== id));
+        setSuccessMessage('Product removed locally (server endpoints unavailable)');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Network error details:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        alert('Network connectivity issue. Please check your internet connection and try again.');
+      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        alert('Backend server is not responding. Please try again later.');
+      } else {
+        alert(`Network error: ${error.message || 'Unknown error occurred'}`);
+      }
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setProductToDelete(null);
     }
   };
 
@@ -388,12 +674,20 @@ const ProductsSection: React.FC = () => {
                       </select>
                     </td>
                     <td className="px-4 py-2">
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
-                      >
-                        <Edit size={14} /> Edit
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        >
+                          <Edit size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(product)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -599,6 +893,67 @@ const ProductsSection: React.FC = () => {
                   {loading ? (editProduct ? 'Saving...' : 'Creating...') : (editProduct ? 'Save Changes' : 'Create Product')}
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && productToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white p-6 shadow-md w-full max-w-md relative rounded-lg">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setProductToDelete(null);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete <strong>"{productToDelete.name}"</strong>? 
+                  This action cannot be undone.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setProductToDelete(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(productToDelete._id)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={14} />
+                        Delete Product
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

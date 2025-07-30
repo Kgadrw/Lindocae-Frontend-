@@ -27,6 +27,8 @@ const CategoriesSection: React.FC = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [iconToDelete, setIconToDelete] = useState<string | null>(null);
   const [showDeleteIconModal, setShowDeleteIconModal] = useState(false);
+  const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<any | null>(null);
 
   // Add state for products grouped by category
   const [productsByCategory, setProductsByCategory] = useState<Record<string, any[]>>({});
@@ -43,7 +45,18 @@ const CategoriesSection: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/getAllCategories`);
       const data = await res.json();
-      setCategories(data.categories || []);
+      const allCategories = data.categories || data || [];
+      
+      // Filter out deleted categories from server response
+      const activeCategories = allCategories.filter((cat: any) => {
+        // Only show categories that are not marked as deleted
+        return !cat.isDeleted && cat.isActive !== false;
+      });
+      
+      console.log('Fetched categories:', allCategories.length);
+      console.log('Active categories (not deleted):', activeCategories.length);
+      
+      setCategories(activeCategories);
     } catch {
       setCategories([]);
     } finally {
@@ -65,67 +78,45 @@ const CategoriesSection: React.FC = () => {
   // Fetch products
   const fetchProducts = async () => {
     try {
-      // First fetch all categories
-      const categoriesRes = await fetch(`${API_URL}/getAllCategories`);
-      const categoriesData = await categoriesRes.json();
-      const allCategories = categoriesData.categories || [];
+      // First, try to get all products and then filter by category
+      const allProductsRes = await fetch(`${PRODUCTS_URL}/getAllProduct`);
+      if (!allProductsRes.ok) {
+        console.error('Failed to fetch all products');
+        setProductsByCategory({});
+        return;
+      }
       
-      // Fetch products for each category
+      const allProductsData = await allProductsRes.json();
+      const allProducts = Array.isArray(allProductsData) ? allProductsData : allProductsData.products || [];
+      
+      console.log('Fetched all products:', allProducts.length);
+      
+      // Group products by category
       const productsByCategory: Record<string, any[]> = {};
       
-      await Promise.all(
-        allCategories.map(async (category: any) => {
-          try {
-            // Fetch products for this specific category
-            const productsRes = await fetch(`${PRODUCTS_URL}/getProductsByCategory/${category._id}`);
-            if (productsRes.ok) {
-              const productsData = await productsRes.json();
-              const categoryProducts = Array.isArray(productsData) ? productsData : productsData.products || [];
-              
-              // Fetch detailed information for each product in this category
-              const detailedProducts = await Promise.all(
-                categoryProducts.map(async (product: any) => {
-                  try {
-                    const detailRes = await fetch(`${PRODUCTS_URL}/getProductById/${product._id || product.id}`);
-                    if (detailRes.ok) {
-                      const detailData = await detailRes.json();
-                      return detailData.product || detailData;
-                    }
-                    return product; // Fallback to original product data if detail fetch fails
-                  } catch (error) {
-                    console.error(`Error fetching product details for ${product._id}:`, error);
-                    return product; // Fallback to original product data
-                  }
-                })
-              );
-              
-              productsByCategory[category._id] = detailedProducts;
-            } else {
-              productsByCategory[category._id] = [];
-            }
-          } catch (error) {
-            console.error(`Error fetching products for category ${category._id}:`, error);
-            productsByCategory[category._id] = [];
+      allProducts.forEach((product: any) => {
+        const categoryId = product.categoryId || product.category?._id || product.category;
+        if (categoryId) {
+          if (!productsByCategory[categoryId]) {
+            productsByCategory[categoryId] = [];
           }
-        })
-      );
+          productsByCategory[categoryId].push(product);
+        }
+      });
       
-      // Convert to flat array for the products state (for backward compatibility)
-      const allProducts = Object.values(productsByCategory).flat();
-      setProducts(allProducts);
-      
-      // Store the grouped products for use in the component
+      console.log('Products grouped by category:', Object.keys(productsByCategory).length);
       setProductsByCategory(productsByCategory);
+      
     } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts([]);
+      setProductsByCategory({});
     }
   };
 
-  useEffect(() => { 
-    fetchCategories(); 
-    fetchIcons(); 
-    fetchProducts(); 
+  useEffect(() => {
+    fetchCategories();
+    fetchIcons();
+    fetchProducts();
   }, []);
 
   // Handle form input
@@ -205,7 +196,7 @@ const CategoriesSection: React.FC = () => {
     
     // Only append image if a new one is selected
     if (form.image) {
-      formData.append('images', form.image); // Use 'images' like banner
+      formData.append('image', form.image); // Use 'image' (singular) as per API schema
     }
     
     try {
@@ -213,48 +204,24 @@ const CategoriesSection: React.FC = () => {
       let url;
       
       if (editCategory) {
-        // Try multiple endpoint patterns for updating
-        const updateEndpoints = [
-          { url: `${API_URL}/updateCategoryById/${editCategory._id}`, method: 'PUT' },
-          { url: `${API_URL}/updateCategory/${editCategory._id}`, method: 'PUT' },
-          { url: `${API_URL}/${editCategory._id}`, method: 'PUT' },
-          { url: `${API_URL}/update/${editCategory._id}`, method: 'PUT' },
-          { url: `${API_URL}/updateCategoryById/${editCategory._id}`, method: 'PATCH' },
-          { url: `${API_URL}/updateCategory/${editCategory._id}`, method: 'PATCH' },
-          { url: `${API_URL}/${editCategory._id}`, method: 'PATCH' }
-        ];
+        // Use the correct update endpoint with multipart/form-data
+        const updateUrl = `${API_URL}/updateCategoryById/${editCategory._id}`;
         
-        console.log('Trying multiple update endpoints...');
-        let updateSuccess = false;
-        
-        for (const endpoint of updateEndpoints) {
-          try {
-            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-            res = await fetch(endpoint.url, { 
-              method: endpoint.method, 
-              body: formData 
-            });
-            
-            console.log(`Response status: ${res.status}`);
-            
-            if (res.status === 200 || res.status === 201) {
-              console.log(`Update successful with: ${endpoint.method} ${endpoint.url}`);
-              updateSuccess = true;
-              break;
-            } else if (res.status === 404) {
-              console.log(`404 with: ${endpoint.method} ${endpoint.url}`);
-              continue; // Try next endpoint
-            } else {
-              console.log(`Error ${res.status} with: ${endpoint.method} ${endpoint.url}`);
-              // Don't break, try other endpoints
-            }
-          } catch (error) {
-            console.log(`Network error with: ${endpoint.method} ${endpoint.url}`, error);
-            continue; // Try next endpoint
-          }
+        console.log('Updating category with URL:', updateUrl);
+        console.log('FormData contents:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}:`, value);
         }
         
-        if (updateSuccess) {
+        res = await fetch(updateUrl, { 
+          method: 'PUT', 
+          body: formData 
+        });
+        
+        console.log(`Response status: ${res.status}`);
+        
+        if (res.status === 200 || res.status === 201) {
+          console.log(`Update successful with: PUT ${updateUrl}`);
           setShowModal(false);
           setEditCategory(null);
           setForm({ name: '', description: '', image: null });
@@ -262,77 +229,22 @@ const CategoriesSection: React.FC = () => {
           setSuccessMessage('Category updated successfully!');
           setTimeout(() => setSuccessMessage(''), 3000);
           return;
-        }
-        
-        // If all update endpoints failed, try create+delete fallback
-        console.log('All update endpoints failed, trying create+delete fallback...');
-        
-        try {
-          console.log('Creating new category...');
-          const createRes = await fetch(`${API_URL}/createCategory`, { 
-            method: 'POST', 
-            body: formData 
-          });
-          
-          console.log('Create response status:', createRes.status);
-          
-          if (createRes.status === 200 || createRes.status === 201) {
-            console.log('New category created successfully');
-            
-            // Try to delete the old category
-            try {
-              console.log('Deleting old category...');
-              await fetch(`${API_URL}/deleteCategory/${editCategory._id}`, { 
-                method: 'DELETE' 
-              });
-              console.log('Old category deleted successfully');
-            } catch (deleteError) {
-              console.log('Could not delete old category:', deleteError);
-              // Don't fail the operation if delete fails
-            }
-            
-            setShowModal(false);
-            setEditCategory(null);
-            setForm({ name: '', description: '', image: null });
-            fetchCategories(); // Refresh from server
-            setSuccessMessage('Category updated successfully! (Used create+delete method)');
-            setTimeout(() => setSuccessMessage(''), 3000);
-            return;
-          } else {
-            const createResponseText = await createRes.text();
-            console.error('Create failed:', createResponseText.substring(0, 500));
-            throw new Error(`Create failed. Status: ${createRes.status}`);
-          }
-        } catch (createError: any) {
-          console.error('Create fallback also failed:', createError);
-          
-          // Final fallback: Update locally and show warning
-          console.log('Using client-side update as final fallback...');
-          const updatedCategories = categories.map(cat => {
-            if (cat._id === editCategory._id) {
-              return {
-                ...cat,
-                name: form.name,
-                description: form.description,
-                image: form.image ? [URL.createObjectURL(form.image)] : cat.image
-              };
-            }
-            return cat;
-          });
-          
-          setCategories(updatedCategories);
-          setShowModal(false);
-          setEditCategory(null);
-          setForm({ name: '', description: '', image: null });
-          setSuccessMessage('Category updated locally (server endpoints unavailable)');
-          setTimeout(() => setSuccessMessage(''), 3000);
+        } else {
+          const responseText = await res.text();
+          console.error('Update failed:', responseText.substring(0, 500));
+          setFormError(`Update failed. Status: ${res.status}. ${responseText}`);
           return;
         }
         
       } else {
-        // Creating new category
+        // Creating new category with multipart/form-data
         url = `${API_URL}/createCategory`;
         console.log('Creating new category with URL:', url);
+        console.log('FormData contents:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}:`, value);
+        }
+        
         res = await fetch(url, { 
           method: 'POST', 
           body: formData 
@@ -348,9 +260,9 @@ const CategoriesSection: React.FC = () => {
           setSuccessMessage('Category created successfully!');
           setTimeout(() => setSuccessMessage(''), 3000);
         } else {
-          const data = await res.json();
-          console.error('API Error Response:', data);
-          setFormError(data.message || `Failed to create category. Status: ${res.status}`);
+          const responseText = await res.text();
+          console.error('Create failed:', responseText);
+          setFormError(`Failed to create category. Status: ${res.status}. ${responseText}`);
         }
       }
     } catch (error: any) {
@@ -408,15 +320,93 @@ const CategoriesSection: React.FC = () => {
     }
   };
 
-  // Handle delete
-  const handleDelete = async (catId: string) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) return;
+  // Handle delete click - opens modal
+  const handleDeleteClick = (category: any) => {
+    setCategoryToDelete(category);
+    setShowDeleteCategoryModal(true);
+  };
+
+  // Handle category delete with modal confirmation
+  const handleCategoryDelete = async (catId: string) => {
     setFormLoading(true);
+    console.log('=== HARD DELETE CATEGORY BY ID ===');
+    console.log('Category ID:', catId);
+    console.log('Category Name:', categoryToDelete?.name);
+
     try {
-      await fetch(`${API_URL}/deleteCategory/${catId}`, { method: 'DELETE' });
-      fetchCategories();
-    } catch {}
-    setFormLoading(false);
+      // Use the correct DELETE endpoint path
+      const deleteUrl = `${API_URL}/deleteCategory/${catId}`;
+      console.log('DELETE URL:', deleteUrl);
+      
+      console.log('Making DELETE request to remove category from server...');
+      const response = await fetch(deleteUrl, { 
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`Response Status: ${response.status}`);
+      console.log(`Response Status Text: ${response.statusText}`);
+      
+      const responseText = await response.text();
+      console.log(`Response Body:`, responseText);
+      
+      if (response.status === 200 || response.status === 201 || response.status === 204) {
+        console.log('✅ CATEGORY HARD DELETED FROM SERVER!');
+        
+        // Remove from local state
+        setCategories(prev => prev.filter(cat => cat._id !== catId));
+        setSuccessMessage('Category deleted successfully from server!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        
+        // Refresh categories from server to ensure consistency
+        fetchCategories();
+      } else {
+        console.log(`❌ Server delete failed with status: ${response.status}`);
+        console.log(`Error: ${responseText}`);
+        
+        // If DELETE fails, try the soft delete approach as fallback
+        console.log('Trying soft delete as fallback...');
+        const updateUrl = `${API_URL}/updateCategoryById/${catId}`;
+        
+        const formData = new FormData();
+        formData.append('name', categoryToDelete?.name || '');
+        formData.append('description', categoryToDelete?.description || '');
+        formData.append('isDeleted', 'true');
+        formData.append('deletedAt', new Date().toISOString());
+        formData.append('isActive', 'false');
+        
+        const fallbackResponse = await fetch(updateUrl, { 
+          method: 'PUT',
+          body: formData
+        });
+        
+        if (fallbackResponse.status === 200 || fallbackResponse.status === 201 || fallbackResponse.status === 204) {
+          console.log('✅ CATEGORY SOFT DELETED FROM SERVER!');
+          setCategories(prev => prev.filter(cat => cat._id !== catId));
+          setSuccessMessage('Category marked as deleted on server!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          fetchCategories();
+        } else {
+          console.log(`❌ Soft delete also failed with status: ${fallbackResponse.status}`);
+          setFormError(`Failed to delete category from server. Status: ${response.status}`);
+        }
+      }
+
+    } catch (error: any) {
+      console.error('❌ Network error:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      
+      setFormError('Network error. Please check your connection and try again.');
+    } finally {
+      console.log('=== END DELETE CATEGORY ===');
+      setFormLoading(false);
+      setShowDeleteCategoryModal(false);
+      setCategoryToDelete(null);
+    }
   };
 
   // Handle icon delete
@@ -457,9 +447,72 @@ const CategoriesSection: React.FC = () => {
   const handleDeleteProduct = async (productId: string, categoryId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     
+    console.log('Attempting to delete product with ID:', productId, 'from category:', categoryId);
+    
     try {
-      const res = await fetch(`${PRODUCTS_URL}/deleteProduct/${productId}`, { method: 'DELETE' });
-      if (res.ok) {
+      // Try multiple endpoint patterns for deleting products (same as ProductsSection)
+      const deleteEndpoints = [
+        { url: `${PRODUCTS_URL}/deleteProduct/${productId}`, method: 'DELETE' },
+        { url: `${PRODUCTS_URL}/delete/${productId}`, method: 'DELETE' },
+        { url: `${PRODUCTS_URL}/${productId}`, method: 'DELETE' },
+        { url: `${PRODUCTS_URL}/remove/${productId}`, method: 'DELETE' },
+        { url: `${PRODUCTS_URL}/removeProduct/${productId}`, method: 'DELETE' },
+        { url: `${PRODUCTS_URL}/deleteProductById/${productId}`, method: 'DELETE' },
+        { url: `${PRODUCTS_URL}/deleteById/${productId}`, method: 'DELETE' },
+        // Try POST method for some endpoints
+        { url: `${PRODUCTS_URL}/deleteProduct/${productId}`, method: 'POST' },
+        { url: `${PRODUCTS_URL}/delete/${productId}`, method: 'POST' }
+      ];
+
+      console.log('Trying multiple product delete endpoints...');
+      let deleteSuccess = false;
+      let lastError = '';
+
+      for (const endpoint of deleteEndpoints) {
+        try {
+          console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+          
+          const response = await fetch(endpoint.url, { 
+            method: endpoint.method,
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          
+          console.log(`Response status: ${response.status}`);
+          console.log(`Response status text: ${response.statusText}`);
+          
+          // Try to read response content for debugging
+          let responseText = '';
+          try {
+            responseText = await response.text();
+            console.log(`Response body:`, responseText.substring(0, 500));
+          } catch (readError) {
+            console.log('Could not read response body:', readError);
+          }
+          
+          if (response.status === 200 || response.status === 201 || response.status === 204) {
+            console.log(`✅ Product delete successful with: ${endpoint.method} ${endpoint.url}`);
+            deleteSuccess = true;
+            break;
+          } else if (response.status === 404) {
+            console.log(`❌ 404 with: ${endpoint.method} ${endpoint.url}`);
+            lastError = `Endpoint not found: ${endpoint.url}`;
+            continue; // Try next endpoint
+          } else {
+            console.log(`❌ Error ${response.status} with: ${endpoint.method} ${endpoint.url}`);
+            console.log(`Error response:`, responseText);
+            lastError = `Server error ${response.status}: ${responseText}`;
+            // Don't break, try other endpoints
+          }
+        } catch (error) {
+          console.log(`❌ Network error with: ${endpoint.method} ${endpoint.url}`, error);
+          lastError = `Network error: ${error}`;
+          continue; // Try next endpoint
+        }
+      }
+
+      if (deleteSuccess) {
         // Remove product from the category
         const updatedProducts = productsByCategory[categoryId].filter(p => p._id !== productId);
         setProductsByCategory(prev => ({
@@ -468,9 +521,21 @@ const CategoriesSection: React.FC = () => {
         }));
         setSuccessMessage('Product deleted successfully!');
         setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        // If all server endpoints failed, remove locally and show warning
+        console.log('❌ All delete endpoints failed, removing locally...');
+        console.log('Last error:', lastError);
+        const updatedProducts = productsByCategory[categoryId].filter(p => p._id !== productId);
+        setProductsByCategory(prev => ({
+          ...prev,
+          [categoryId]: updatedProducts
+        }));
+        setSuccessMessage('Product removed locally (server endpoints unavailable)');
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error('❌ Error deleting product:', error);
+      setFormError('Failed to delete product. Please try again.');
     }
   };
 
@@ -588,7 +653,7 @@ const CategoriesSection: React.FC = () => {
                         </button>
                         <button
                           className="ml-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-1"
-                          onClick={() => handleDelete(cat._id)}
+                          onClick={() => handleDeleteClick(cat)}
                           disabled={formLoading}
                         >
                           Delete
@@ -921,6 +986,65 @@ const CategoriesSection: React.FC = () => {
                 >
                   {formLoading ? 'Deleting...' : 'Delete'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Category Modal */}
+        {showDeleteCategoryModal && categoryToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white p-6 shadow-md w-full max-w-md relative rounded-lg">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                onClick={() => { setShowDeleteCategoryModal(false); setCategoryToDelete(null); }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Category</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete <strong>"{categoryToDelete.name}"</strong>? 
+                  This action cannot be undone and will also remove all associated products and icons.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => { setShowDeleteCategoryModal(false); setCategoryToDelete(null); }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    disabled={formLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCategoryDelete(categoryToDelete._id)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                    disabled={formLoading}
+                  >
+                    {formLoading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Category
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

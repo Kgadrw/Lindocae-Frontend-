@@ -335,35 +335,35 @@ const WishlistPage = () => {
               return (
                 <div key={item.id || item._id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col hover:shadow-xl transition-shadow">
                   <Link href={`/product/${item._id || item.id}`} className="flex-1 flex flex-col">
-                    <div className="relative mb-3">
-                      {image && image.trim() !== '' ? (
-                        <Image src={image} alt={item.name} width={300} height={160} className="w-full h-40 object-cover rounded-xl" />
-                      ) : (
-                        <div className="w-full h-40 flex items-center justify-center text-gray-300 text-3xl bg-gray-100 rounded-xl">?</div>
-                      )}
-                      <button
+                  <div className="relative mb-3">
+                    {image && image.trim() !== '' ? (
+                      <Image src={image} alt={item.name} width={300} height={160} className="w-full h-40 object-cover rounded-xl" />
+                    ) : (
+                      <div className="w-full h-40 flex items-center justify-center text-gray-300 text-3xl bg-gray-100 rounded-xl">?</div>
+                    )}
+                    <button
                         className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100 z-10"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           toggleWishlist(String(item.id || item._id), item);
                         }}
-                        aria-label="Remove from wishlist"
-                      >
-                        <Heart size={20} color="#F87171" fill="#F87171" />
-                      </button>
-                    </div>
-                    <div className="flex-1 flex flex-col">
-                      <div className="font-bold text-blue-900 mb-1">{item.name}</div>
-                      <div className="text-black font-bold text-lg mb-2">{item.price?.toFixed ? item.price.toFixed(2) : item.price} RWF</div>
+                      aria-label="Remove from wishlist"
+                    >
+                      <Heart size={20} color="#F87171" fill="#F87171" />
+                    </button>
+                  </div>
+                  <div className="flex-1 flex flex-col">
+                    <div className="font-bold text-blue-900 mb-1">{item.name}</div>
+                    <div className="text-black font-bold text-lg mb-2">{item.price?.toFixed ? item.price.toFixed(2) : item.price} RWF</div>
                     </div>
                   </Link>
-                  <button
-                    onClick={() => addToCart(item)}
+                    <button
+                      onClick={() => addToCart(item)}
                     className="mt-2 rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition"
-                  >
+                    >
                     Add to Cart
-                  </button>
+                    </button>
                 </div>
               );
             })}
