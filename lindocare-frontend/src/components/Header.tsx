@@ -366,16 +366,76 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   return (
     <header className="w-full bg-white shadow-md sticky top-0 z-50">
       {/* Top Promo Bar */}
-      {/* Mobile Search Bar (top, only on small screens) */}
-      <div className="block md:hidden px-2 pt-1 pb-2 bg-white sticky top-0 z-50">
-        {/* Location Display */}
-        <div className="flex items-center justify-center gap-2 text-black text-xs font-medium mb-2">
-          <div className="flex items-center gap-1">
-            <MapPin size={14} color="#000000" />
-            <span>Rwanda</span>
+      {/* Mobile Header with Hamburger Menu */}
+      <div className="block md:hidden px-4 py-0.5 bg-white border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <Image src="/lindo.png" alt="Lindo Logo" width={65} height={26} priority className="focus:outline-none" style={{ width: 'auto', height: 'auto' }} />
+          </Link>
+          
+          {/* Mobile Icons */}
+          <div className="flex items-center gap-1.5">
+            {/* Wishlist */}
+            <Link href="/wishlist">
+              <button className="relative p-1 hover:text-[#FFE600] transition-colors">
+                <Heart size={16} className="stroke-black" strokeWidth={2.5} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1 py-0.5 min-w-[14px] text-center border-2 border-white shadow">
+                    {wishlistCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+            
+            {/* Cart */}
+            <Link href="/cart">
+              <button className="relative p-1 hover:text-[#FFE600] transition-colors">
+                <ShoppingCart size={16} className="stroke-black" strokeWidth={2.5} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1 py-0.5 min-w-[14px] text-center border-2 border-white shadow">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+            
+            {/* User */}
+            {user ? (
+              <button
+                onClick={() => setDropdownOpen(v => !v)}
+                className="p-1 hover:text-[#FFE600] transition-colors"
+              >
+                <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold border border-gray-200">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              </button>
+            ) : (
+              <Link href="/login">
+                <button className="px-2 py-0.5 rounded-md bg-[#FFE600] text-[#2056A7] text-xs font-semibold hover:shadow transition">
+                  Sign In
+                </button>
+              </Link>
+            )}
+            
+            {/* Hamburger Menu */}
+            <button
+              onClick={() => setNavOpen(true)}
+              className="p-1 hover:text-[#FFE600] transition-colors"
+              aria-label="Open navigation menu"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
           </div>
-          <span>RWF</span>
         </div>
+      </div>
+      
+      {/* Mobile Search Bar */}
+      <div className="block md:hidden px-4 py-1 bg-white border-b border-gray-100">
         <div className="relative">
           <form onSubmit={handleSearch} autoComplete="off">
             <input
@@ -386,11 +446,11 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
               onBlur={handleBlur}
               ref={searchInputRef}
               placeholder="Find babycare essentials..."
-              className="w-full rounded-full border text-gray-900 border-[#FFE600] px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-[#FFE600] text-sm shadow placeholder:text-[#2056A7]"
+              className="w-full rounded-full border text-gray-900 border-[#FFE600] px-3 py-1 pr-8 focus:outline-none focus:ring-2 focus:ring-[#FFE600] text-sm shadow placeholder:text-[#2056A7]"
               onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
             />
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FFE600] text-white p-1 rounded-full cursor-pointer" aria-label="Search">
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 bg-[#FFE600] text-white p-0.5 rounded-full cursor-pointer" aria-label="Search">
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
           </form>
           {showSuggestions && (
@@ -728,104 +788,124 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       </div>
       {/* Mobile Nav Drawer */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 transition-opacity duration-200 ${navOpen ? 'block md:hidden' : 'hidden'}`} onClick={() => setNavOpen(false)} />
-      <nav className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-200 ${navOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden`}>
-        <button className="absolute top-4 right-4 p-2" onClick={() => setNavOpen(false)} aria-label="Close navigation">✕</button>
-        <div className="flex flex-col mt-12">
-          {loading ? (
-            <span className="text-gray-400 animate-pulse px-4 py-3">Loading categories...</span>
-          ) : (propCategories && propCategories.length > 0) ? propCategories.map(cat => (
-            <Link key={cat._id || cat.name} href={cat._id ? `/all-products?category=${encodeURIComponent(cat.name)}` : `/all-products`} className="block hover:text-gray-200 px-4 py-3 text-black text-base font-semibold border-b border-gray-100 last:border-b-0" onClick={() => setNavOpen(false)}>
-              {cat.name}
-            </Link>
-          )) : null}
+      <nav className={`fixed top-0 left-0 h-full w-80 bg-white shadow-lg z-50 transform transition-transform duration-200 ${navOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden`}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <Link href="/" onClick={() => setNavOpen(false)}>
+            <Image src="/lindo.png" alt="Lindo Logo" width={80} height={32} priority className="focus:outline-none" style={{ width: 'auto', height: 'auto' }} />
+          </Link>
+          <button className="p-2 hover:text-[#FFE600] transition-colors" onClick={() => setNavOpen(false)} aria-label="Close navigation">
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        <div className="flex flex-col h-full">
+          {/* User Section */}
+          <div className="p-4 border-b border-gray-100">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border border-gray-200">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">Welcome back, {user.name}</div>
+                  <button 
+                    onClick={() => { handleSignOut(); setNavOpen(false); }}
+                    className="text-red-600 text-sm hover:text-red-700"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Link href="/login" onClick={() => setNavOpen(false)}>
+                  <button className="px-4 py-2 rounded-md bg-[#FFE600] text-[#2056A7] text-sm font-semibold hover:shadow transition w-full">
+                    Sign In
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
+          
+          {/* Navigation Links */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4">
+              <div className="space-y-1">
+                <Link href="/" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
+                  <Home size={20} />
+                  <span>Home</span>
+                </Link>
+                
+                <Link href="/all-products" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
+                  <List size={20} />
+                  <span>All Products</span>
+                </Link>
+                
+                <Link href="/cart" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
+                  <ShoppingCart size={20} />
+                  <span>Cart</span>
+                  {cartCount > 0 && (
+                    <span className="ml-auto bg-yellow-400 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[20px] text-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+                
+                <Link href="/wishlist" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
+                  <Heart size={20} />
+                  <span>Wishlist</span>
+                  {wishlistCount > 0 && (
+                    <span className="ml-auto bg-yellow-400 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[20px] text-center">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+                
+                <Link href="/checkout" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
+                  <Lock size={20} />
+                  <span>Checkout</span>
+                </Link>
+              </div>
+            </div>
+            
+            {/* Categories Section */}
+            <div className="border-t border-gray-100">
+              <div className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Categories</h3>
+                {loading ? (
+                  <div className="space-y-2">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (propCategories && propCategories.length > 0) ? (
+                  <div className="space-y-1">
+                    {propCategories.map(cat => (
+                      <Link 
+                        key={cat._id || cat.name} 
+                        href={cat._id ? `/all-products?category=${encodeURIComponent(cat.name)}` : `/all-products`} 
+                        onClick={() => setNavOpen(false)}
+                        className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-sm">No categories available</div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </nav>
       {/* Bottom Navigation Bar for Mobile */}
-      <div className="fixed bottom-0 left-0 w-full bg-white shadow-t z-50 md:hidden flex justify-evenly items-center py-2 border-t border-gray-200 px-0.5">
-        <Link href="/">
-          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors">
-            <Home size={24} strokeWidth={2.5} />
-            <span className="text-xs">Home</span>
-          </button>
-        </Link>
-        <button onClick={() => setNavOpen(true)} className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors cursor-pointer">
-          <List size={24} strokeWidth={2.5} className="cursor-pointer" />
-          <span className="text-xs">Categories</span>
-        </button>
-        <Link href="/cart">
-          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors relative cursor-pointer">
-            <ShoppingCart size={24} strokeWidth={2.5} className="cursor-pointer" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
-                {cartCount}
-              </span>
-            )}
-            <span className="text-xs">Cart</span>
-          </button>
-        </Link>
-        <Link href="/checkout">
-          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] p-2 transition-colors cursor-pointer">
-            <Lock size={24} strokeWidth={2.5} className="cursor-pointer" />
-            <span className="text-xs">Checkout</span>
-          </button>
-        </Link>
-        <Link href="/wishlist">
-          <button className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors relative cursor-pointer">
-            <Heart size={24} strokeWidth={2.5} className="cursor-pointer" />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
-                {wishlistCount}
-              </span>
-            )}
-            <span className="text-xs">Wishlist</span>
-          </button>
-        </Link>
-          {user ? (
-          <button onClick={() => setDropdownOpen(v => !v)} className="flex flex-col items-center text-gray-700 hover:text-[#2056A7] focus:text-[#2056A7] p-2 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="text-xs">Account</span>
-          </button>
-          ) : (
-            <div className="flex flex-col items-center gap-0.5">
-              <Link href="/login">
-                <button className="px-2 py-0.5 rounded text-[#2056A7] text-[11px] font-semibold hover:text-[#FFE600] transition w-16">
-                  Create
-                </button>
-              </Link>
-              <Link href="/login">
-                <button className="px-2 py-0.5 rounded text-[#FFE600] text-[11px] font-semibold hover:text-[#2056A7] transition w-16">
-                  Sign In
-                </button>
-              </Link>
-            <span className="text-xs">Account</span>
-            </div>
-          )}
-        {/* User Dropdown/Tooltip Modal (mobile, absolute to bottom) */}
-        {dropdownOpen && user && (
-          <div ref={dropdownRef} className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-0 w-64 flex flex-col border border-gray-200 animate-fade-in md:hidden" style={{ minWidth: 200 }}>
-            <div className="flex flex-col items-start pt-4 pb-1 px-4 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200 mb-1">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="font-semibold text-gray-900 text-sm mb-1">Welcome back, {user.name}</span>
-              {/* Remove Sign Out button, keep only Logout below */}
-            </div>
-            <div className="flex flex-col gap-0.5 py-1 px-1">
-              <div className="border-t border-gray-100 my-1" />
-              <button onMouseDown={handleSignOut} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-red-50 text-red-600 text-xs font-medium w-full text-left">
-                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16,17 21,12 16,7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-                Logout
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* This section is removed as per the edit hint. */}
     </header>
   );
 };
