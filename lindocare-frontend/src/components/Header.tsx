@@ -4,6 +4,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ShoppingCart, Home, List, MapPin, Lock } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  fetchUserCart,
+  fetchUserWishlist,
+  getLocalCart,
+  getLocalWishlist,
+  isUserLoggedIn
+} from '../utils/serverStorage';
 
 // Move updateUser outside so it can be called from anywhere
 function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: string; avatar?: string }>>) {
@@ -26,35 +33,42 @@ function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: 
   }
 }
 
-
-
+// Updated function to fetch wishlist count from server
 async function fetchWishlistCountFromBackend() {
   if (typeof window === 'undefined') return 0;
-  const token = localStorage.getItem('token');
-  if (!token) return 0;
+  
   try {
-    // Use the correct endpoint for user wishlist
-    const userId = (() => {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.userId || payload.id || payload._id || payload.user || null;
-      } catch {
-        return null;
-      }
-    })();
-    if (!userId) return 0;
-    const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
-      headers: {
-        'accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    if (res.status === 401) return 0;
-    if (!res.ok) return 0;
-    const data = await res.json();
-    if (data && Array.isArray(data.products)) return data.products.length;
+    if (isUserLoggedIn()) {
+      // Logged in: fetch from server
+      const wishlist = await fetchUserWishlist();
+      return wishlist.length;
+    } else {
+      // Guest: use localStorage
+      const localWishlist = getLocalWishlist();
+      return localWishlist.length;
+    }
+  } catch (error) {
+    console.error('Error fetching wishlist count:', error);
     return 0;
-  } catch {
+  }
+}
+
+// Updated function to fetch cart count from server
+async function fetchCartCountFromBackend() {
+  if (typeof window === 'undefined') return 0;
+  
+  try {
+    if (isUserLoggedIn()) {
+      // Logged in: fetch from server
+      const cart = await fetchUserCart();
+      return cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    } else {
+      // Guest: use localStorage
+      const localCart = getLocalCart();
+      return localCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    }
+  } catch (error) {
+    console.error('Error fetching cart count:', error);
     return 0;
   }
 }
@@ -135,20 +149,10 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
 
   // Cart count effect
   useEffect(() => {
-    function updateCartCount() {
+    async function updateCartCount() {
       if (typeof window !== 'undefined') {
-        const email = localStorage.getItem('userEmail');
-        if (!email) {
-          setCartCount(0);
-          return;
-        }
-        const cartRaw = localStorage.getItem(`cart:${email}`);
-        try {
-          const cart = cartRaw ? JSON.parse(cartRaw) : [];
-          setCartCount(Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0);
-        } catch {
-          setCartCount(0);
-        }
+        const count = await fetchCartCountFromBackend();
+        setCartCount(count);
       }
     }
     updateCartCount();
@@ -159,20 +163,8 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   useEffect(() => {
     async function updateWishlistCount() {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const count = await fetchWishlistCountFromBackend();
-          setWishlistCount(count);
-          return;
-        }
-        const email = localStorage.getItem('userEmail');
-        const wishlistRaw = localStorage.getItem(email ? `wishlist_${email}` : 'wishlist');
-        try {
-          const wishlist = wishlistRaw ? JSON.parse(wishlistRaw) : [];
-          setWishlistCount(Array.isArray(wishlist) ? wishlist.length : 0);
-        } catch {
-          setWishlistCount(0);
-        }
+        const count = await fetchWishlistCountFromBackend();
+        setWishlistCount(count);
       }
     }
     updateWishlistCount();
@@ -206,22 +198,18 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   }, []);
 
   // Simulate user info after login/register
-  const handleLoginSuccess = (name: string, avatar?: string, email?: string) => {
+  const handleLoginSuccess = async (name: string, avatar?: string, email?: string) => {
     setUser({ name, avatar });
     if (email) localStorage.setItem('userEmail', email);
     if (email && name) localStorage.setItem(`userName:${email}`, name);
     if (email && avatar) localStorage.setItem(`userAvatar:${email}`, avatar);
-    // Update cart count after login
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        const cartRaw = localStorage.getItem(`cart:${email}`);
-        try {
-          const cart = cartRaw ? JSON.parse(cartRaw) : [];
-          setCartCount(Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0);
-        } catch {
-          setCartCount(0);
-        }
-      }
+    
+    // Update cart and wishlist counts after login
+    setTimeout(async () => {
+      const cartCount = await fetchCartCountFromBackend();
+      const wishlistCount = await fetchWishlistCountFromBackend();
+      setCartCount(cartCount);
+      setWishlistCount(wishlistCount);
     }, 100);
   };
 

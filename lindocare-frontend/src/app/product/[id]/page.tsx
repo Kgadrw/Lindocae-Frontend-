@@ -6,6 +6,15 @@ import Image from 'next/image';
 import { getCurrentUserEmail } from '../../../components/Header';
 import Link from 'next/link';
 import OfflineError from '../../../components/OfflineError';
+import {
+  addToCartServer,
+  toggleWishlistProduct,
+  fetchUserWishlist,
+  getLocalWishlist,
+  saveLocalWishlist,
+  isUserLoggedIn,
+  syncLocalWishlistToServer
+} from '../../../utils/serverStorage';
 
 // Helper to get auth token
 function getAuthToken() {
@@ -28,21 +37,6 @@ function getUserIdFromToken() {
 // Helper to format RWF with thousands separator
 function formatRWF(amount: number) {
   return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
-}
-
-// Utility: add to cart on server
-async function addToCartOnServer(token: string, productId: string, quantity: number) {
-  const res = await fetch('https://lindo-project.onrender.com/cart/addToCart', {
-    method: 'POST',
-    headers: {
-      'accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ productId, quantity }),
-  });
-  if (!res.ok) throw new Error('Failed to add to server cart');
-  return res.json();
 }
 
 interface Product {
@@ -151,68 +145,41 @@ export default function ProductDetailsPage() {
 
   // Toggle wishlist handler
   const toggleWishlist = async (id: string) => {
-    const token = getAuthToken();
-    const userId = getUserIdFromToken();
-    if (token && userId) {
-      try {
-        const res = await fetch('https://lindo-project.onrender.com/wishlist/toggleWishlistProduct', {
-          method: 'POST',
-          headers: {
-            'accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ productId: id }),
-        });
-        if (!res.ok) {
-          let data = {};
-          try { data = await res.json(); } catch {}
-          if (res.status === 401) {
-            // Clear auth and show login modal
-            localStorage.removeItem('token');
-            localStorage.removeItem('userEmail');
-            setToastMsg('Your session has expired. Please log in again to use the wishlist.');
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000);
-            setWishlist((prev) => prev.filter(pid => pid !== id));
-            return;
-          }
-          setToastMsg((data as any).message || 'Failed to update wishlist.');
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 1200);
-          return;
+    try {
+      if (isUserLoggedIn()) {
+        // Logged in: call server
+        await toggleWishlistProduct(id);
+        // Refetch wishlist from server
+        const serverWishlist = await fetchUserWishlist();
+        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+        setWishlist(wishlistIds);
+      } else {
+        // Guest: update localStorage
+        const localWishlist = getLocalWishlist();
+        const isInWishlist = localWishlist.includes(id);
+        
+        let updatedWishlist: string[];
+        if (isInWishlist) {
+          updatedWishlist = localWishlist.filter(itemId => itemId !== id);
+        } else {
+          updatedWishlist = [...localWishlist, id];
         }
-        // Refetch wishlist from backend
-        const wishlistRes = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
-          headers: {
-            'accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        const wishlistData = await wishlistRes.json();
-        setWishlist((wishlistData.products || []).map((p: any) => p._id || p.id));
-      } catch (err) {
-        setToastMsg('Network error. Please try again.');
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 1200);
+        
+        saveLocalWishlist(updatedWishlist);
+        setWishlist(updatedWishlist);
       }
-    } else {
-      // Guest: fallback to localStorage
-      const email = getCurrentUserEmail();
-      const key = email ? `wishlist_${email}` : 'wishlist';
-      setWishlist((prev) => {
-        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-        localStorage.setItem(key, JSON.stringify(updated));
-        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
-        return updated;
-      });
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+      setToastMsg('Failed to update wishlist. Please try again.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 1200);
     }
   };
 
   // Add to cart handler
   const handleAddToCart = async (product: Product) => {
     const email = getCurrentUserEmail();
-    const token = getAuthToken();
+    
     // Ensure image is always a string URL
     let imageUrl = '/lindo.png';
     if (Array.isArray(product.image) && product.image.length > 0) {
@@ -221,15 +188,37 @@ export default function ProductDetailsPage() {
       imageUrl = product.image;
     }
     
-    if (token) {
-      // Logged in: add to server cart
-      try {
-        await addToCartOnServer(token, product.id?.toString() || product._id, quantity);
-        // Optionally, update localStorage for instant UI
+    try {
+      if (isUserLoggedIn()) {
+        // Logged in: add to server cart
+        await addToCartServer({
+          productId: String(product.id || product._id),
+          name: product.name,
+          price: product.price,
+          image: imageUrl,
+          quantity: quantity,
+          category: typeof product.category === 'string' ? parseInt(product.category) : undefined,
+        });
+        setToastMsg(`${product.name} added to cart!`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      } else {
+        // Guest: add to localStorage
+        if (!email) {
+          setToastMsg('Please log in to add items to cart');
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 1200);
+          return;
+        }
+        
         const cartKey = `cart:${email}`;
         const cartRaw = localStorage.getItem(cartKey);
         let cart = [];
-        try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
+        try {
+          cart = cartRaw ? JSON.parse(cartRaw) : [];
+        } catch {
+          cart = [];
+        }
         
         // Check if product already exists in cart
         const existingIndex = cart.findIndex((item: any) => String(item.id || item._id) === String(product.id || product._id));
@@ -246,41 +235,14 @@ export default function ProductDetailsPage() {
         }
         
         localStorage.setItem(cartKey, JSON.stringify(cart));
-        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
-        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
+        window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
         setToastMsg(`${product.name} added to cart!`);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 1200);
-      } catch (err) {
-        setToastMsg('Failed to add to cart. Please try again.');
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 1200);
       }
-    } else {
-      // Guest: localStorage only
-      const cartKey = `cart:${email}`;
-      const cartRaw = localStorage.getItem(cartKey);
-      let cart = [];
-      try { cart = cartRaw ? JSON.parse(cartRaw) : []; } catch { cart = []; }
-      
-      // Check if product already exists in cart
-      const existingIndex = cart.findIndex((item: any) => String(item.id || item._id) === String(product.id || product._id));
-      if (existingIndex > -1) {
-        cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + quantity;
-      } else {
-        cart.push({
-          id: String(product.id || product._id),
-          name: product.name,
-          price: product.price,
-          image: imageUrl,
-          quantity: quantity,
-        });
-      }
-      
-      localStorage.setItem(cartKey, JSON.stringify(cart));
-      setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
-      setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
-      setToastMsg(`${product.name} added to cart!`);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setToastMsg('Failed to add to cart. Please try again.');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 1200);
     }
@@ -343,7 +305,7 @@ export default function ProductDetailsPage() {
             </div>
             <div>
               <span className="font-semibold">Category:</span>
-              <span className="ml-2">{typeof product.category === 'object' && product.category !== null ? product.category.name : product.category}</span>
+              <span className="ml-2">{typeof product.category === 'object' && product.category !== null ? product.category.name : String(product.category || 'N/A')}</span>
             </div>
           </div>
           <div className="text-2xl font-semibold text-gray-900 mb-2"> Price: <span className="text-2xl font-bold text-blue-900">{formatRWF(product.price)} RWF</span>

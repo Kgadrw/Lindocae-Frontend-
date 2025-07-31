@@ -6,6 +6,15 @@ import IconsRow from '../../components/home/IconsRow'; // using the provided sli
 import Link from 'next/link'; // Added for Next.js Link
 import { useSearchParams } from 'next/navigation';
 import OfflineError from '../../components/OfflineError';
+import {
+  addToCartServer,
+  toggleWishlistProduct,
+  fetchUserWishlist,
+  getLocalWishlist,
+  saveLocalWishlist,
+  isUserLoggedIn,
+  syncLocalWishlistToServer
+} from '../../utils/serverStorage';
 
 interface Category {
   _id: string;
@@ -52,7 +61,7 @@ function getUserIdFromToken() {
 }
 function getWishlistKey() {
   const email = getUserEmail();
-  return email ? `wishlist_${email}` : 'wishlist';
+  return email ? `wishlist:${email}` : 'wishlist:guest';
 }
 
 // Helper to format RWF with thousands separator
@@ -185,64 +194,43 @@ function AllProductsContent() {
       .finally(() => setLoading(false));
   }, [selectedCategoryId, categories.length]);
 
+  // Fetch wishlist
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    // Migration: convert old wishlist (array of IDs) to array of product objects
-    const key = getWishlistKey();
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        const arr = JSON.parse(saved);
-        if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] !== 'object') {
-          // It's an array of IDs, convert to array of product objects
-          const migrated = arr.map((id: string) => products.find(p => String(p.id || p._id) === String(id))).filter(Boolean);
-          localStorage.setItem(key, JSON.stringify(migrated));
-        }
-      } catch {}
-    }
-    // Fetch wishlist for both logged-in and guest users
     async function fetchWishlist() {
-      const token = getAuthToken();
-      const userId = getUserIdFromToken();
-      if (token && userId) {
-        try {
-          const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
-            headers: {
-              'accept': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (!res.ok) {
-            setWishlist([]);
-            return;
-          }
-          const data = await res.json();
-          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
-        } catch {
-          setWishlist([]);
+      try {
+        if (isUserLoggedIn()) {
+          // Logged in: fetch from server
+          const serverWishlist = await fetchUserWishlist();
+          const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+          setWishlist(wishlistIds);
+        } else {
+          // Guest: use localStorage
+          const localWishlist = getLocalWishlist();
+          setWishlist(localWishlist);
         }
-      } else {
-        // Guest: fallback to localStorage
-        const key = getWishlistKey();
-        const saved = localStorage.getItem(key);
-        let arr: string[] = [];
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed.length > 0 && typeof parsed[0] === 'object') {
-              arr = parsed.map((p: Product) => String(p.id));
-            } else {
-              arr = parsed.map((id: string) => String(id));
-            }
-          } catch {
-            arr = [];
-          }
-        }
-        setWishlist(arr);
+      } catch (err) {
+        console.error('Error fetching wishlist:', err);
+        setWishlist([]);
       }
     }
     fetchWishlist();
-  }, [products]);
+  }, []);
+
+  // Listen for login events to sync local wishlist to server
+  useEffect(() => {
+    const handleLogin = async () => {
+      if (isUserLoggedIn()) {
+        await syncLocalWishlistToServer();
+        // Reload wishlist after sync
+        const serverWishlist = await fetchUserWishlist();
+        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+        setWishlist(wishlistIds);
+      }
+    };
+
+    window.addEventListener('userLogin', handleLogin);
+    return () => window.removeEventListener('userLogin', handleLogin);
+  }, []);
 
   useEffect(() => {
     setIconsLoading(true);
@@ -260,62 +248,83 @@ function AllProductsContent() {
   }, []);
 
   // Enhanced toggleWishlist for guests: store full product object
-  const toggleWishlist = (id: number | string, product?: Product) => {
-    const key = getWishlistKey();
-    setWishlist((prev) => {
-      let updated: string[] = [];
-      let products: Product[] = [];
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        try {
-          const arr = JSON.parse(saved);
-          if (arr.length > 0 && typeof arr[0] === 'object') {
-            products = arr;
-          } else {
-            products = [];
-          }
-        } catch {
-          products = [];
+  const toggleWishlist = async (id: number | string, product?: Product) => {
+    try {
+      if (isUserLoggedIn()) {
+        // Logged in: call server
+        await toggleWishlistProduct(String(id));
+        // Refetch wishlist from server
+        const serverWishlist = await fetchUserWishlist();
+        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+        setWishlist(wishlistIds);
+      } else {
+        // Guest: update localStorage
+        const localWishlist = getLocalWishlist();
+        const isInWishlist = localWishlist.includes(String(id));
+        
+        let updatedWishlist: string[];
+        if (isInWishlist) {
+          updatedWishlist = localWishlist.filter(itemId => itemId !== String(id));
+        } else {
+          updatedWishlist = [...localWishlist, String(id)];
         }
+        
+        saveLocalWishlist(updatedWishlist);
+        setWishlist(updatedWishlist);
       }
-      if (prev.includes(String(id))) {
-        // Remove from wishlist
-        products = products.filter((p) => String(p.id) !== String(id));
-      } else if (product) {
-        // Add to wishlist
-        products = [...products, product];
-      }
-      updated = products.map((p) => String(p.id));
-      localStorage.setItem(key, JSON.stringify(products));
-      setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
-      return updated;
-    });
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+    }
   };
 
-  // In the Add to Cart button, implement logic to add the product to cart in localStorage
-  const handleAddToCart = (product: Product) => {
-    const email = getUserEmail();
-    if (!email) return; // Optionally show login modal
-    const cartKey = `cart:${email}`;
-    const cartRaw = localStorage.getItem(cartKey);
-    let cart: Product[] = [];
+  // Add to cart handler
+  const handleAddToCart = async (product: Product) => {
     try {
-      cart = cartRaw ? JSON.parse(cartRaw) : [];
-    } catch {
-      cart = [];
+      if (isUserLoggedIn()) {
+        // Logged in: add to server cart
+        await addToCartServer({
+          productId: String(product._id || product.id),
+          name: product.name,
+          price: product.price,
+          image: Array.isArray(product.image) ? product.image[0] : product.image,
+          quantity: 1,
+        });
+      } else {
+        // Guest: add to localStorage
+        const email = getUserEmail();
+        if (!email) {
+          // Show login prompt or handle guest cart
+          return;
+        }
+        
+        const cartKey = `cart:${email}`;
+        const cartRaw = localStorage.getItem(cartKey);
+        let cart = [];
+        try {
+          cart = cartRaw ? JSON.parse(cartRaw) : [];
+        } catch {
+          cart = [];
+        }
+        
+        const existingItem = cart.find((item: any) => String(item.id) === String(product._id || product.id));
+        if (existingItem) {
+          existingItem.quantity = (existingItem.quantity || 1) + 1;
+        } else {
+          cart.push({
+            id: product._id || product.id,
+            name: product.name,
+            price: product.price,
+            image: Array.isArray(product.image) ? product.image[0] : product.image,
+            quantity: 1,
+          });
+        }
+        
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+        window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err);
     }
-    const idx = cart.findIndex((item: Product) => String(item._id || item.id) === String(product._id || product.id));
-    // Always store image as a string URL
-    let image = '';
-    if (Array.isArray(product.image) && product.image.length > 0) image = product.image[0];
-    else if (typeof product.image === 'string') image = product.image;
-    if (idx > -1) {
-      cart[idx].quantity = (cart[idx].quantity || 1) + 1;
-    } else {
-      cart.push({ ...product, image, quantity: 1 });
-    }
-    localStorage.setItem(cartKey, JSON.stringify(cart));
-    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
   };
 
   // Clear localStorage when user manually changes category filter

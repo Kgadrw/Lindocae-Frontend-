@@ -7,6 +7,15 @@ import { getCurrentUserEmail } from '../../../components/Header';
 import LoginModal from '../../../components/LoginModal';
 import Head from 'next/head';
 import Image from 'next/image';
+import {
+  addToCartServer,
+  toggleWishlistProduct,
+  fetchUserWishlist,
+  getLocalWishlist,
+  saveLocalWishlist,
+  isUserLoggedIn,
+  syncLocalWishlistToServer
+} from '../../../utils/serverStorage';
 
 interface Category {
   _id: string;
@@ -17,6 +26,7 @@ interface Category {
 
 interface Product {
   _id: string;
+  id?: string | number;
   name: string;
   price: number;
   oldPrice?: number;
@@ -98,23 +108,26 @@ const CategoryPage = () => {
     const fetchProducts = async () => {
       try {
         // Fetch all products, then filter by categoryId on the client
-        const res = await fetch(`https://lindo-project.onrender.com/product/getAllProduct`);
-        const data: { products: Product[] } = await res.json();
-        let prods = data.products;
-        // Filter products by category name or other category-related property
-        if (category) {
-          prods = prods.filter((p: Product) => {
-            // Check if product has category information in tags or other properties
-            return p.tags && p.tags.includes(category.name);
-          });
-        }
-        setProducts(prods);
-      } catch {
+        const res = await fetch('https://lindo-project.onrender.com/product/getAllProduct');
+        if (!res.ok) throw new Error('Failed to fetch products');
+        const data = await res.json();
+        const allProducts = data.products || [];
+        // Filter products by category
+        const categoryProducts = allProducts.filter((p: any) => 
+          p.category === categoryId || 
+          (typeof p.category === 'object' && p.category._id === categoryId) ||
+          p.categoryId === categoryId
+        );
+        setProducts(categoryProducts);
+        setFilteredProducts(categoryProducts);
+      } catch (err) {
+        console.error('Error fetching products:', err);
         setProducts([]);
+        setFilteredProducts([]);
       }
     };
     fetchProducts();
-  }, [categoryId, category]);
+  }, [categoryId]);
 
   // Filtering logic
   useEffect(() => {
@@ -125,113 +138,143 @@ const CategoryPage = () => {
     setFilteredProducts(filtered);
   }, [products, selectedDelivery]);
 
-  // Wishlist logic (same as before)
+  // Fetch wishlist
   useEffect(() => {
     async function fetchWishlist() {
-      const token = getAuthToken();
-      const userId = getUserIdFromToken();
-      if (token && userId) {
-        try {
-          const res = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
-            headers: {
-              'accept': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (!res.ok) throw new Error('Failed to fetch wishlist');
-          const data: { products: Product[] } = await res.json();
-          setWishlist((data.products || []).map((p: Product) => String(p._id || p.id)));
-        } catch {
-          setWishlist([]);
+      try {
+        if (isUserLoggedIn()) {
+          // Logged in: fetch from server
+          const serverWishlist = await fetchUserWishlist();
+          const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+          setWishlist(wishlistIds);
+        } else {
+          // Guest: use localStorage
+          const localWishlist = getLocalWishlist();
+          setWishlist(localWishlist);
         }
-      } else {
-        const email = getCurrentUserEmail();
-        const key = email ? `wishlist_${email}` : 'wishlist';
-        const saved = localStorage.getItem(key);
-        const ids = saved ? JSON.parse(saved).map((id: string) => String(id)) : [];
-        setWishlist(ids);
+      } catch (err) {
+        console.error('Error fetching wishlist:', err);
+        setWishlist([]);
       }
     }
     fetchWishlist();
   }, []);
 
-  async function toggleWishlist(id: string) {
-    const token = getAuthToken();
-    const userId = getUserIdFromToken();
-    if (token && userId) {
-      try {
-        const res = await fetch('https://lindo-project.onrender.com/wishlist/toggleWishlistProduct', {
-          method: 'POST',
-          headers: {
-            'accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ productId: id }),
-        });
-        if (!res.ok) return;
-        const wishlistRes = await fetch(`https://lindo-project.onrender.com/wishlist/getUserWishlistProducts/${userId}`, {
-          headers: {
-            'accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        const wishlistData: { products: Product[] } = await wishlistRes.json();
-        setWishlist((wishlistData.products || []).map((p: Product) => String(p._id || p.id)));
-      } catch (err) {}
-    } else {
-      const email = getCurrentUserEmail();
-      const key = email ? `wishlist_${email}` : 'wishlist';
-      setWishlist((prev) => {
-        const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-        localStorage.setItem(key, JSON.stringify(updated));
-        setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key })), 0);
-        return updated;
-      });
+  // Listen for login events to sync local wishlist to server
+  useEffect(() => {
+    const handleLogin = async () => {
+      if (isUserLoggedIn()) {
+        await syncLocalWishlistToServer();
+        // Reload wishlist after sync
+        const serverWishlist = await fetchUserWishlist();
+        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+        setWishlist(wishlistIds);
+      }
+    };
+
+    window.addEventListener('userLogin', handleLogin);
+    return () => window.removeEventListener('userLogin', handleLogin);
+  }, []);
+
+  const toggleWishlist = async (id: string) => {
+    try {
+      if (isUserLoggedIn()) {
+        // Logged in: call server
+        await toggleWishlistProduct(id);
+        // Refetch wishlist from server
+        const serverWishlist = await fetchUserWishlist();
+        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
+        setWishlist(wishlistIds);
+      } else {
+        // Guest: update localStorage
+        const localWishlist = getLocalWishlist();
+        const isInWishlist = localWishlist.includes(id);
+        
+        let updatedWishlist: string[];
+        if (isInWishlist) {
+          updatedWishlist = localWishlist.filter(itemId => itemId !== id);
+        } else {
+          updatedWishlist = [...localWishlist, id];
+        }
+        
+        saveLocalWishlist(updatedWishlist);
+        setWishlist(updatedWishlist);
+      }
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+      setToastMsg('Failed to update wishlist. Please try again.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 1200);
     }
-  }
+  };
 
   useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
   const handleDeliveryChange = (option: string) => {
-    setSelectedDelivery(prev => prev.includes(option) ? prev.filter(d => d !== option) : [...prev, option]);
+    setSelectedDelivery(prev => 
+      prev.includes(option) ? prev.filter(d => d !== option) : [...prev, option]
+    );
   };
 
-  const handleAddToCart = (product: Product) => {
-    const email = getCurrentUserEmail();
-    if (!email) {
-      setLoginMsg('Please log in or create an account to add products to your cart.');
-      setLoginOpen(true);
-      return;
-    }
-    const cartKey = `cart:${email}`;
-    const cartRaw = localStorage.getItem(cartKey);
-    let cart: { _id: string; name: string; price: number; image: string; quantity: number }[] = [];
+  const handleAddToCart = async (product: Product) => {
     try {
-      cart = cartRaw ? JSON.parse(cartRaw) : [];
-    } catch {
-      cart = [];
+      if (isUserLoggedIn()) {
+        // Logged in: add to server cart
+        await addToCartServer({
+          productId: String(product._id),
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: 1,
+        });
+        setToastMsg(`${product.name} added to cart!`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      } else {
+        // Guest: add to localStorage
+        const email = getCurrentUserEmail();
+        if (!email) {
+          setLoginMsg('Please log in to add items to cart');
+          setLoginOpen(true);
+          return;
+        }
+        
+        const cartKey = `cart:${email}`;
+        const cartRaw = localStorage.getItem(cartKey);
+        let cart = [];
+        try {
+          cart = cartRaw ? JSON.parse(cartRaw) : [];
+        } catch {
+          cart = [];
+        }
+        
+        const existingItem = cart.find((item: any) => String(item.id) === String(product._id));
+        if (existingItem) {
+          existingItem.quantity = (existingItem.quantity || 1) + 1;
+        } else {
+          cart.push({
+            id: product._id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity: 1,
+          });
+        }
+        
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+        window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+        setToastMsg(`${product.name} added to cart!`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 1200);
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setToastMsg('Failed to add to cart. Please try again.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 1200);
     }
-    const idx = cart.findIndex((item: { _id: string }) => item._id === product._id);
-    if (idx > -1) {
-      cart[idx].quantity = (cart[idx].quantity || 1) + 1;
-    } else {
-      cart.push({
-        _id: product._id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        quantity: 1,
-      });
-    }
-    localStorage.setItem(cartKey, JSON.stringify(cart));
-    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: cartKey })), 0);
-    setTimeout(() => window.dispatchEvent(new StorageEvent('storage', { key: 'cart' })), 0);
-    setToastMsg(`${product.name} added to cart!`);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 1200);
   };
 
   if (!isClient) return null;

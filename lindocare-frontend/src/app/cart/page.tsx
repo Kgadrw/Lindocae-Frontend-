@@ -4,6 +4,18 @@ import { Lock, Gift, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { getCurrentUserEmail } from '../../components/Header';
 import { useRouter } from 'next/navigation';
+import {
+  fetchUserCart,
+  addToCartServer,
+  updateCartItemQuantity,
+  removeFromCartServer,
+  clearCartServer,
+  getLocalCart,
+  saveLocalCart,
+  isUserLoggedIn,
+  syncLocalCartToServer,
+  CartItem
+} from '../../utils/serverStorage';
 
 interface Product {
   id: string | number;
@@ -14,27 +26,7 @@ interface Product {
   color?: string;
   size?: string;
   lowStock?: boolean;
-  category?: number; // Added category property
-}
-
-// Utility: get auth token from localStorage
-function getAuthToken() {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('token');
-  }
-  return null;
-}
-
-// Utility: fetch cart from server
-async function fetchUserCartFromServer(token: string) {
-  const res = await fetch('https://lindo-project.onrender.com/cart/getCartByUserId', {
-    headers: {
-      'accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) throw new Error('Failed to fetch server cart');
-  return res.json();
+  category?: number;
 }
 
 // Helper to format RWF with thousands separator
@@ -51,83 +43,117 @@ export default function CartPage() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     async function loadCart() {
-      if (typeof window !== 'undefined') {
-        const token = getAuthToken();
-        if (token) {
-          // Logged in: fetch cart from server
+      setLoading(true);
+      setError('');
+      
+      const email = getCurrentUserEmail();
+      setUserEmail(email || '');
+
+      console.log('Loading cart for email:', email);
+      console.log('Is user logged in:', isUserLoggedIn());
+
+      // Debug: Check localStorage
+      if (email) {
+        const cartKey = `cart:${email}`;
+        const cartRaw = localStorage.getItem(cartKey);
+        console.log('LocalStorage cart key:', cartKey);
+        console.log('LocalStorage cart raw:', cartRaw);
+        if (cartRaw) {
           try {
-            const data = await fetchUserCartFromServer(token);
-            const items = (data.cart && data.cart.items) ? data.cart.items : [];
-            // Convert server cart items to local Product[] format
-            const cartItems = items.map((item: unknown) => {
-              const cartItem = item as {
-                productId: string | number;
-                name?: string;
-                price?: number;
-                image?: string;
-                quantity?: number;
-                category?: number;
-              };
-              return {
-                id: String(cartItem.productId),
-                name: cartItem.name || 'Product',
-                price: cartItem.price || 0,
-                image: cartItem.image || '/lindo.png',
-                quantity: cartItem.quantity || 1,
-                category: cartItem.category,
-              };
-            });
-            setCartItems(cartItems);
-            // Optionally sync to localStorage for UI
-            const email = getCurrentUserEmail();
-            if (email) {
-              localStorage.setItem(`cart:${email}`, JSON.stringify(cartItems));
-            }
-            return;
-          } catch (err) {
-            // Fallback to localStorage if server fetch fails
+            const parsed = JSON.parse(cartRaw);
+            console.log('LocalStorage cart parsed:', parsed);
+          } catch (e) {
+            console.log('LocalStorage cart parse error:', e);
           }
         }
-        // Guest or server fetch failed: use localStorage
-        const email = getCurrentUserEmail();
-        setUserEmail(email);
-        if (!email) {
-          setCartItems([]);
-          return;
+      }
+
+      try {
+        if (isUserLoggedIn()) {
+          // Logged in user: fetch from server
+          console.log('Fetching cart from server...');
+          const serverCart = await fetchUserCart();
+          console.log('Server cart:', serverCart);
+          const convertedCart = serverCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+            category: item.category,
+          }));
+          setCartItems(convertedCart);
+        } else {
+          // Guest user: use localStorage
+          console.log('Loading cart from localStorage...');
+          const localCart = getLocalCart();
+          console.log('Local cart:', localCart);
+          const convertedCart = localCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+            category: item.category,
+          }));
+          setCartItems(convertedCart);
         }
-        const cartRaw = localStorage.getItem(`cart:${email}`);
-        try {
-          const parsedCart = cartRaw ? JSON.parse(cartRaw) : [];
-          // Validate and clean cart items
-          const validCartItems = Array.isArray(parsedCart) ? parsedCart.filter((item: any) => 
-            item && typeof item === 'object' && 
-            (item.id || item._id) && 
-            item.name && 
-            typeof item.price === 'number'
-          ).map((item: any) => ({
-            id: item.id || item._id,
-            name: item.name || 'Product',
-            price: item.price || 0,
-            image: item.image || '/lindo.png',
-            quantity: item.quantity || 1,
-          })) : [];
-          setCartItems(validCartItems);
-        } catch {
-          setCartItems([]);
-        }
+      } catch (err) {
+        console.error('Error loading cart:', err);
+        setError('Failed to load cart. Please try again.');
+        // Fallback to localStorage
+        const localCart = getLocalCart();
+        const convertedCart = localCart.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity,
+          category: item.category,
+        }));
+        setCartItems(convertedCart);
+      } finally {
+        setLoading(false);
       }
     }
+
     loadCart();
+    
+    // Listen for login events to sync local cart to server
+    const handleLogin = async () => {
+      if (isUserLoggedIn()) {
+        await syncLocalCartToServer();
+        loadCart(); // Reload cart after sync
+      }
+    };
+
+    window.addEventListener('userLogin', handleLogin);
     window.addEventListener('storage', loadCart);
-    return () => window.removeEventListener('storage', loadCart);
+    
+    return () => {
+      window.removeEventListener('userLogin', handleLogin);
+      window.removeEventListener('storage', loadCart);
+    };
   }, []);
 
   // Calculate subtotal
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+
+  // Debug logging
+  console.log('Cart page state:', {
+    loading,
+    error,
+    userEmail,
+    cartItems: cartItems.length,
+    subtotal,
+    isUserLoggedIn: isUserLoggedIn()
+  });
 
   // Free shipping logic
   const freeShippingThreshold = 50;
@@ -135,42 +161,75 @@ export default function CartPage() {
   const progress = Math.min(1, subtotal / freeShippingThreshold);
 
   // Remove from cart handler
-  const handleRemove = (id: string | number) => {
+  const handleRemove = async (id: string | number) => {
     if (!userEmail) return;
-    const cartKey = `cart:${userEmail}`;
-    const cartRaw = localStorage.getItem(cartKey);
-    let cart = [];
+
     try {
-      cart = cartRaw ? JSON.parse(cartRaw) : [];
-    } catch {
-      cart = [];
+      if (isUserLoggedIn()) {
+        // Logged in: remove from server
+        await removeFromCartServer(String(id));
+        // Update local state
+        setCartItems(prev => prev.filter(item => String(item.id) !== String(id)));
+      } else {
+        // Guest: remove from localStorage
+        const localCart = getLocalCart();
+        const updatedCart = localCart.filter(item => String(item.productId) !== String(id));
+        saveLocalCart(updatedCart);
+        setCartItems(updatedCart.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity,
+          category: item.category,
+        })));
+      }
+    } catch (err) {
+      console.error('Error removing item from cart:', err);
+      setError('Failed to remove item from cart. Please try again.');
     }
-    const updated = cart.filter((item: Product) => String(item.id) !== String(id));
-    localStorage.setItem(cartKey, JSON.stringify(updated));
-    setCartItems(updated);
-    window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
   };
 
   // Update quantity handler
-  const handleQuantityChange = (id: string | number, delta: number) => {
+  const handleQuantityChange = async (id: string | number, delta: number) => {
     if (!userEmail) return;
-    const cartKey = `cart:${userEmail}`;
-    const cartRaw = localStorage.getItem(cartKey);
-    let cart = [];
+
+    const currentItem = cartItems.find(item => String(item.id) === String(id));
+    if (!currentItem) return;
+
+    const newQuantity = Math.max(1, (currentItem.quantity || 1) + delta);
+
     try {
-      cart = cartRaw ? JSON.parse(cartRaw) : [];
-    } catch {
-      cart = [];
-    }
-    const idx = cart.findIndex((item: Product) => String(item.id) === String(id));
-    if (idx > -1) {
-      cart[idx].quantity = Math.max(1, (cart[idx].quantity || 1) + delta);
-      if (cart[idx].quantity === 0) {
-        cart.splice(idx, 1);
+      if (isUserLoggedIn()) {
+        // Logged in: update on server
+        await updateCartItemQuantity(String(id), newQuantity);
+        // Update local state
+        setCartItems(prev => prev.map(item => 
+          String(item.id) === String(id) 
+            ? { ...item, quantity: newQuantity }
+            : item
+        ));
+      } else {
+        // Guest: update localStorage
+        const localCart = getLocalCart();
+        const updatedCart = localCart.map(item => 
+          String(item.productId) === String(id)
+            ? { ...item, quantity: newQuantity }
+            : item
+        );
+        saveLocalCart(updatedCart);
+        setCartItems(updatedCart.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity,
+          category: item.category,
+        })));
       }
-      localStorage.setItem(cartKey, JSON.stringify(cart));
-      setCartItems([...cart]);
-      window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+    } catch (err) {
+      console.error('Error updating cart item quantity:', err);
+      setError('Failed to update item quantity. Please try again.');
     }
   };
 
@@ -180,7 +239,7 @@ export default function CartPage() {
     setOrderStatus({});
     setIsSubmitting(true);
     try {
-      const token = getAuthToken();
+      const token = getCurrentUserEmail(); // Assuming token is the user's email for now
       // Prepare items for API
       const items = cartItems.map(item => ({
         productId: String(item.id),
@@ -207,7 +266,7 @@ export default function CartPage() {
         // Optionally clear cart
         const email = getCurrentUserEmail();
         if (email) {
-          localStorage.setItem(`cart:${email}`, JSON.stringify([]));
+          await clearCartServer(); // Clear server cart
           setCartItems([]);
         }
       } else {
@@ -233,7 +292,11 @@ export default function CartPage() {
       <div className="flex flex-col gap-6 lg:gap-8 lg:flex-row">
         {/* Cart Items */}
         <div className="flex-1 flex flex-col gap-4">
-          {cartItems.length === 0 ? (
+          {loading ? (
+            <div className="text-black text-center py-12 text-lg font-semibold">Loading cart...</div>
+          ) : error ? (
+            <div className="text-red-600 text-center py-12 text-lg font-semibold">{error}</div>
+          ) : cartItems.length === 0 ? (
             <div className="text-black text-center py-12 text-lg font-semibold">Your cart is empty.</div>
           ) : (
             cartItems.map((item, idx) => (

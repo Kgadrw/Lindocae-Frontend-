@@ -3,6 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUserEmail } from '../../components/getCurrentUserEmail';
+import {
+  fetchUserCart,
+  getLocalCart,
+  isUserLoggedIn,
+  clearCartServer,
+  saveLocalCart
+} from '../../utils/serverStorage';
 
 // Utility: get auth token from localStorage
 function getAuthToken() {
@@ -63,33 +70,60 @@ const CheckoutPage = () => {
   }, [router]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const email = localStorage.getItem('userEmail') || '';
+    async function loadCart() {
+      const email = getCurrentUserEmail();
+      console.log('Checkout: Loading cart for email:', email);
+      console.log('Checkout: Is user logged in:', isUserLoggedIn());
+      
       if (!email) {
         setCartItems([]);
         return;
       }
-      const cartRaw = localStorage.getItem(`cart:${email}`);
+
       try {
-        const parsedCart = cartRaw ? JSON.parse(cartRaw) : [];
-        // Validate and clean cart items
-        const validCartItems = Array.isArray(parsedCart) ? parsedCart.filter((item: any) => 
-          item && typeof item === 'object' && 
-          (item.id || item._id) && 
-          item.name && 
-          typeof item.price === 'number'
-        ).map((item: any) => ({
-          id: item.id || item._id,
-          name: item.name || 'Product',
-          price: item.price || 0,
-          image: item.image || '/lindo.png',
-          quantity: item.quantity || 1,
-        })) : [];
-        setCartItems(validCartItems);
-      } catch {
-        setCartItems([]);
+        if (isUserLoggedIn()) {
+          // Logged in user: fetch from server
+          console.log('Checkout: Fetching cart from server...');
+          const serverCart = await fetchUserCart();
+          console.log('Checkout: Server cart:', serverCart);
+          const convertedCart = serverCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+          }));
+          setCartItems(convertedCart);
+        } else {
+          // Guest user: use localStorage
+          console.log('Checkout: Loading cart from localStorage...');
+          const localCart = getLocalCart();
+          console.log('Checkout: Local cart:', localCart);
+          const convertedCart = localCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+          }));
+          setCartItems(convertedCart);
+        }
+      } catch (err) {
+        console.error('Error loading cart for checkout:', err);
+        // Fallback to localStorage
+        const localCart = getLocalCart();
+        const convertedCart = localCart.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity,
+        }));
+        setCartItems(convertedCart);
       }
     }
+
+    loadCart();
   }, []);
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
@@ -136,6 +170,21 @@ const CheckoutPage = () => {
         if (redirectUrl) {
           setPaymentRedirectUrl(redirectUrl);
           setOrderStatus({ success: 'Payment initiated successfully! Redirecting to payment gateway...' });
+          
+          // Clear cart after successful order placement
+          try {
+            if (isUserLoggedIn()) {
+              await clearCartServer();
+            } else {
+              const email = getCurrentUserEmail();
+              if (email) {
+                saveLocalCart([]);
+              }
+            }
+            console.log('Cart cleared after successful order placement');
+          } catch (clearError) {
+            console.error('Error clearing cart:', clearError);
+          }
           
           // Redirect to Pesapal payment page
           setTimeout(() => {
