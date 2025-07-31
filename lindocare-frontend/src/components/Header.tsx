@@ -109,14 +109,28 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     return () => document.removeEventListener('mousedown', handleClick);
   }, [dropdownOpen]);
 
-  // On mount, restore user from localStorage if available
-  useEffect(() => {
+  // Listen for storage changes and custom login events
+  React.useEffect(() => {
     function handleStorage() {
       updateUser(setUser);
     }
-    updateUser(setUser); // Only call here, not in render
+    function handleUserLogin(event: CustomEvent) {
+      const { email, name, avatar } = event.detail;
+      if (email && name) {
+        setUser({ name, avatar });
+      }
+    }
+    
+    // Initial user update
+    updateUser(setUser);
+    
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('userLogin', handleUserLogin as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('userLogin', handleUserLogin as EventListener);
+    };
   }, []);
 
   // Cart count effect
