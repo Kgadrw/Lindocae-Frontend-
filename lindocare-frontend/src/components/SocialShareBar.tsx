@@ -9,13 +9,13 @@ const SocialShareBar: React.FC = () => {
       {/* Invisible hover area to show the bar when hidden */}
       {hidden && (
         <div
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-50 h-24 w-2 cursor-pointer"
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-50 h-24 w-2 cursor-pointer hidden md:block"
           onMouseEnter={() => setHidden(false)}
           style={{ background: 'transparent' }}
         />
       )}
       <div
-        className={`fixed left-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center transition-transform duration-300 ${hidden ? '-translate-x-full' : ''}`}
+        className={`fixed left-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center transition-transform duration-300 hidden md:flex ${hidden ? '-translate-x-full' : ''}`}
       >
         <div className="bg-blue-600 flex flex-col items-center py-2 px-1 gap-2 shadow-lg">
           <a href="https://www.instagram.com/lindocare/" className="w-7 h-7 flex items-center justify-center" aria-label="Instagram">
