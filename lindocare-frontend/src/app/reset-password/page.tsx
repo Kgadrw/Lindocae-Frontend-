@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 
-const ResetPasswordPage = () => {
+const ResetPasswordContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [password, setPassword] = useState('');
@@ -292,6 +292,14 @@ const ResetPasswordPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ResetPasswordPage = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 };
 
