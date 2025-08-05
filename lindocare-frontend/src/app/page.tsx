@@ -357,7 +357,8 @@ export default function Home() {
       {/* WhatsApp Support Button (only visible after hero, hidden on mobile) */}
       {showWhatsappBtn && (
         <a
-          href="https://wa.me/250785064255"
+          href="https://wa.me/250795575622
+"
           target="_blank"
           rel="noopener noreferrer"
           className="hidden md:flex fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg w-16 h-16 items-center justify-center transition-colors duration-200"
