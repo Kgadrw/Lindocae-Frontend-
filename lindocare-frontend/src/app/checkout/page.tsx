@@ -62,64 +62,40 @@ const CheckoutPage = () => {
       .catch(() => setUsers([]));
   }, []);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const token = getAuthToken();
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-      
-      // Optional: Validate token with backend
-      const validateToken = async () => {
-        try {
-          const response = await fetch('https://lindo-project.onrender.com/user/validate-token', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-          
-          if (!response.ok) {
-            // Token is invalid, redirect to login
-            localStorage.removeItem('token');
-            router.push('/login');
-          }
-        } catch (error) {
-          console.error('Token validation error:', error);
-          // If validation fails, still allow checkout but log the error
-        }
-      };
-      
-      validateToken();
-    }
-  }, [router]);
+  // No authentication required for checkout - users can checkout as guests
 
   useEffect(() => {
     async function loadCart() {
       const token = getAuthToken();
       console.log('Checkout: Loading cart for token:', token ? 'Present' : 'Missing');
       
-      if (!token) {
-        setCartItems([]);
-        return;
-      }
-
       try {
-        // Always try to fetch from server when token is present
-        console.log('Checkout: Fetching cart from server...');
-        const serverCart = await fetchUserCart();
-        console.log('Checkout: Server cart:', serverCart);
-        const convertedCart = serverCart.map(item => ({
-          id: item.productId,
-          name: item.name,
-          price: item.price,
-          image: item.image,
-          quantity: item.quantity,
-        }));
-        setCartItems(convertedCart);
+        if (token) {
+          // Try to fetch from server when token is present
+          console.log('Checkout: Fetching cart from server...');
+          const serverCart = await fetchUserCart();
+          console.log('Checkout: Server cart:', serverCart);
+          const convertedCart = serverCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+          }));
+          setCartItems(convertedCart);
+        } else {
+          // No token, load from localStorage
+          console.log('Checkout: Loading cart from localStorage...');
+          const localCart = getLocalCart();
+          const convertedCart = localCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+          }));
+          setCartItems(convertedCart);
+        }
       } catch (err) {
         console.error('Error loading cart for checkout:', err);
         // Fallback to localStorage if server fetch fails
@@ -196,11 +172,14 @@ const CheckoutPage = () => {
         headers: {
           'accept': 'application/json',
           'Content-Type': 'application/json',
+          // Only include Authorization header if token exists
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(orderData),
       });
 
+      console.log('Order response status:', orderResponse.status);
+      
       if (orderResponse.ok) {
         const orderResult = await orderResponse.json();
         console.log('Order created:', orderResult);
@@ -270,23 +249,21 @@ const CheckoutPage = () => {
             setOrderStatus({ error: 'Payment gateway not available. Please try again.' });
           }
         } else if (dpoResponse.status === 401) {
-          setOrderStatus({ error: 'Please log in to complete your order.' });
-          // Redirect to login page
-          setTimeout(() => {
-            router.push('/login');
-          }, 2000);
+          setOrderStatus({ error: 'Payment initialization failed. Please try again.' });
         } else {
           const errorData = await dpoResponse.json().catch(() => ({}));
           setOrderStatus({ error: errorData.message || 'Failed to initialize payment. Please try again.' });
         }
       } else if (orderResponse.status === 401) {
-        setOrderStatus({ error: 'Please log in to complete your order.' });
-        // Redirect to login page
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
+        const errorText = await orderResponse.text();
+        console.error('Order creation 401 error response:', errorText);
+        setOrderStatus({ 
+          error: 'To complete your order, please log in to your account. You can create an account or log in with an existing one.' 
+        });
+        // Don't redirect automatically, let user decide
       } else {
         const errorData = await orderResponse.json().catch(() => ({}));
+        console.error('Order creation error response:', errorData);
         setOrderStatus({ error: errorData.message || 'Failed to create order. Please try again.' });
       }
     } catch (err) {
@@ -477,6 +454,7 @@ const CheckoutPage = () => {
               </div>
               {orderStatus.error && <div className="text-red-600 text-xs font-semibold mt-1">{orderStatus.error}</div>}
               {orderStatus.success && <div className="text-green-600 text-xs font-semibold mt-1">{orderStatus.success}</div>}
+              
               <button
                 type="submit"
                 className="w-full rounded bg-green-600 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
