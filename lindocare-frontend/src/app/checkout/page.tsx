@@ -2,11 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUserEmail } from '../../components/getCurrentUserEmail';
 import {
   fetchUserCart,
   getLocalCart,
-  isUserLoggedIn,
   clearCartServer,
   saveLocalCart
 } from '../../utils/serverStorage';
@@ -35,8 +33,13 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState('pesapal');
-  const [shippingAddress, setShippingAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('dpo');
+  const [shippingProvince, setShippingProvince] = useState('');
+  const [shippingDistrict, setShippingDistrict] = useState('');
+  const [shippingSector, setShippingSector] = useState('');
+  const [shippingCell, setShippingCell] = useState('');
+  const [shippingVillage, setShippingVillage] = useState('');
+  const [shippingStreet, setShippingStreet] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerFirstName, setCustomerFirstName] = useState('');
@@ -62,55 +65,64 @@ const CheckoutPage = () => {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const email = getCurrentUserEmail();
-      if (!email) {
+      const token = getAuthToken();
+      if (!token) {
         router.push('/login');
+        return;
       }
+      
+      // Optional: Validate token with backend
+      const validateToken = async () => {
+        try {
+          const response = await fetch('https://lindo-project.onrender.com/user/validate-token', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!response.ok) {
+            // Token is invalid, redirect to login
+            localStorage.removeItem('token');
+            router.push('/login');
+          }
+        } catch (error) {
+          console.error('Token validation error:', error);
+          // If validation fails, still allow checkout but log the error
+        }
+      };
+      
+      validateToken();
     }
   }, [router]);
 
   useEffect(() => {
     async function loadCart() {
-      const email = getCurrentUserEmail();
-      console.log('Checkout: Loading cart for email:', email);
-      console.log('Checkout: Is user logged in:', isUserLoggedIn());
+      const token = getAuthToken();
+      console.log('Checkout: Loading cart for token:', token ? 'Present' : 'Missing');
       
-      if (!email) {
+      if (!token) {
         setCartItems([]);
         return;
       }
 
       try {
-        if (isUserLoggedIn()) {
-          // Logged in user: fetch from server
-          console.log('Checkout: Fetching cart from server...');
-          const serverCart = await fetchUserCart();
-          console.log('Checkout: Server cart:', serverCart);
-          const convertedCart = serverCart.map(item => ({
-            id: item.productId,
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            quantity: item.quantity,
-          }));
-          setCartItems(convertedCart);
-        } else {
-          // Guest user: use localStorage
-          console.log('Checkout: Loading cart from localStorage...');
-          const localCart = getLocalCart();
-          console.log('Checkout: Local cart:', localCart);
-          const convertedCart = localCart.map(item => ({
-            id: item.productId,
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            quantity: item.quantity,
-          }));
-          setCartItems(convertedCart);
-        }
+        // Always try to fetch from server when token is present
+        console.log('Checkout: Fetching cart from server...');
+        const serverCart = await fetchUserCart();
+        console.log('Checkout: Server cart:', serverCart);
+        const convertedCart = serverCart.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity,
+        }));
+        setCartItems(convertedCart);
       } catch (err) {
         console.error('Error loading cart for checkout:', err);
-        // Fallback to localStorage
+        // Fallback to localStorage if server fetch fails
         const localCart = getLocalCart();
         const convertedCart = localCart.map(item => ({
           id: item.productId,
@@ -134,7 +146,7 @@ const CheckoutPage = () => {
     setIsSubmitting(true);
     
     // Validate required fields
-    if (!paymentMethod || !shippingAddress || !customerPhone || !customerEmail || !customerFirstName || !customerLastName) {
+    if (!paymentMethod || !shippingProvince || !shippingDistrict || !shippingSector || !shippingCell || !shippingVillage || !shippingStreet || !customerPhone || !customerEmail || !customerFirstName || !customerLastName) {
       setOrderStatus({ error: 'Please fill in all required fields.' });
       setIsSubmitting(false);
       return;
@@ -143,67 +155,142 @@ const CheckoutPage = () => {
     try {
       const token = getAuthToken();
       
-      // First create the order
-      const orderBody = {
-        paymentMethod,
-        shippingAddress,
-        customerEmail,
-        customerPhone,
-        customerName: `${customerFirstName} ${customerLastName}`,
+      // Calculate total amount from cart items
+      const totalAmount = cartItems.reduce((sum, item) => {
+        const itemTotal = (item.price || 0) * (item.quantity || 1);
+        return sum + itemTotal;
+      }, 0);
+
+      // Prepare order items for the API
+      const orderItems = cartItems.map(item => ({
+        productId: item.id,
+        quantity: item.quantity || 1,
+        price: item.price || 0
+      }));
+
+      // Create structured shipping address from separate fields
+      const structuredShippingAddress = {
+        province: shippingProvince,
+        district: shippingDistrict,
+        sector: shippingSector,
+        cell: shippingCell,
+        village: shippingVillage,
+        street: shippingStreet
       };
 
-      const orderRes = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
+      // First, create the order
+      const orderData = {
+        paymentMethod: "dpo", // Updated to use DPO
+        shippingAddress: structuredShippingAddress,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        customerName: `${customerFirstName} ${customerLastName}`,
+        items: orderItems,
+        totalAmount: totalAmount
+      };
+
+      console.log('Creating order with data:', orderData);
+
+      const orderResponse = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
         method: 'POST',
         headers: {
           'accept': 'application/json',
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(orderBody),
+        body: JSON.stringify(orderData),
       });
 
-      if (orderRes.status === 201) {
-        const orderData = await orderRes.json();
-        const orderId = orderData.order?._id || orderData.orderId || orderData._id;
-        const redirectUrl = orderData.redirectUrl || orderData.order?.pesapalRedirectUrl;
+      if (orderResponse.ok) {
+        const orderResult = await orderResponse.json();
+        console.log('Order created:', orderResult);
 
-        if (redirectUrl) {
-          setPaymentRedirectUrl(redirectUrl);
-          setOrderStatus({ success: 'Payment initiated successfully! Redirecting to payment gateway...' });
-          
-          // Clear cart after successful order placement
-          try {
-            if (isUserLoggedIn()) {
-              await clearCartServer();
-            } else {
-              const email = getCurrentUserEmail();
-              if (email) {
+        const orderId = orderResult.order?._id || orderResult.orderId;
+        
+        // Now initialize DPO payment with order details
+        const dpoPaymentData = {
+          totalAmount: totalAmount,
+          currency: "RWF",
+          email: customerEmail,
+          phone: customerPhone,
+          firstName: customerFirstName,
+          lastName: customerLastName,
+          serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
+          callbackUrl: `${window.location.origin}/payment-success?orderId=${orderId}`
+        };
+
+        console.log('DPO Payment Data:', dpoPaymentData);
+
+        // Initialize DPO payment
+        const dpoResponse = await fetch('https://lindo-project.onrender.com/dpo/initialize/dpoPayment', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(dpoPaymentData),
+        });
+
+        if (dpoResponse.ok) {
+          const dpoData = await dpoResponse.json();
+          console.log('DPO Response:', dpoData);
+
+          if (dpoData.redirectUrl) {
+            setPaymentRedirectUrl(dpoData.redirectUrl);
+            setOrderStatus({ success: 'Order created and payment initiated successfully! Redirecting to payment gateway...' });
+            
+            // Clear cart after successful order creation and payment initiation
+            try {
+              const token = getAuthToken();
+              if (token) {
+                // User is logged in, clear server cart
+                await clearCartServer();
+              } else {
+                // Fallback to local cart clearing
                 saveLocalCart([]);
               }
+              console.log('Cart cleared after successful order creation');
+            } catch (clearError) {
+              console.error('Error clearing cart:', clearError);
             }
-            console.log('Cart cleared after successful order placement');
-          } catch (clearError) {
-            console.error('Error clearing cart:', clearError);
+            
+            // Store payment token and order details for verification later
+            if (dpoData.token) {
+              localStorage.setItem('dpoPaymentToken', dpoData.token);
+              localStorage.setItem('pendingOrderAmount', totalAmount.toString());
+              localStorage.setItem('pendingOrderId', orderId);
+            }
+            
+            // Redirect to DPO payment page
+            setTimeout(() => {
+              window.location.href = dpoData.redirectUrl;
+            }, 2000);
+          } else {
+            setOrderStatus({ error: 'Payment gateway not available. Please try again.' });
           }
-          
-          // Redirect to Pesapal payment page
+        } else if (dpoResponse.status === 401) {
+          setOrderStatus({ error: 'Please log in to complete your order.' });
+          // Redirect to login page
           setTimeout(() => {
-            window.location.href = redirectUrl;
+            router.push('/login');
           }, 2000);
         } else {
-          setOrderStatus({ error: 'Payment gateway not available. Please try again.' });
+          const errorData = await dpoResponse.json().catch(() => ({}));
+          setOrderStatus({ error: errorData.message || 'Failed to initialize payment. Please try again.' });
         }
-      } else if (orderRes.status === 401) {
+      } else if (orderResponse.status === 401) {
         setOrderStatus({ error: 'Please log in to complete your order.' });
         // Redirect to login page
         setTimeout(() => {
           router.push('/login');
         }, 2000);
       } else {
-        const data = await orderRes.json().catch(() => ({}));
-        setOrderStatus({ error: data.message || 'Failed to place order.' });
+        const errorData = await orderResponse.json().catch(() => ({}));
+        setOrderStatus({ error: errorData.message || 'Failed to create order. Please try again.' });
       }
     } catch (err) {
+      console.error('Checkout error:', err);
       setOrderStatus({ error: 'Network error. Please try again.' });
     } finally {
       setIsSubmitting(false);
@@ -263,19 +350,6 @@ const CheckoutPage = () => {
         <div className="flex-1 flex flex-col gap-4 justify-center">
           {cartItems.length > 0 && (
             <form onSubmit={handleCheckout} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Payment Method</label>
-                <div className="flex gap-4 items-center mt-2">
-                  <button
-                    type="button"
-                    className={`rounded-lg p-1 flex flex-col items-center justify-center transition-all bg-white shadow-none ${paymentMethod === 'pesapal' ? 'ring-2 ring-green-400' : ''}`}
-                    onClick={() => setPaymentMethod('pesapal')}
-                  >
-                    <img src="/pesapal.jpg" alt="Pesapal" className="w-12 h-12 object-contain" />
-                    <span className="mt-1 text-xs font-semibold text-green-700">Pesapal</span>
-                  </button>
-                </div>
-              </div>
               
               {/* Customer Information */}
               <div className="grid grid-cols-2 gap-3">
@@ -329,14 +403,77 @@ const CheckoutPage = () => {
               
               <div>
                 <label className="block text-xs text-gray-700 mb-1">Shipping Address *</label>
-                <input
-                  type="text"
-                  value={shippingAddress}
-                  onChange={e => setShippingAddress(e.target.value)}
-                  placeholder="e.g. Kigali, Rwanda"
-                  required
-                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Province</label>
+                    <input
+                      type="text"
+                      value={shippingProvince}
+                      onChange={e => setShippingProvince(e.target.value)}
+                      placeholder="Kigali City"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">District</label>
+                    <input
+                      type="text"
+                      value={shippingDistrict}
+                      onChange={e => setShippingDistrict(e.target.value)}
+                      placeholder="Gasabo"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Sector</label>
+                    <input
+                      type="text"
+                      value={shippingSector}
+                      onChange={e => setShippingSector(e.target.value)}
+                      placeholder="Kimironko"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Cell</label>
+                    <input
+                      type="text"
+                      value={shippingCell}
+                      onChange={e => setShippingCell(e.target.value)}
+                      placeholder="Kicukiro"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Village</label>
+                    <input
+                      type="text"
+                      value={shippingVillage}
+                      onChange={e => setShippingVillage(e.target.value)}
+                      placeholder="Nyabisindu"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Street</label>
+                    <input
+                      type="text"
+                      value={shippingStreet}
+                      onChange={e => setShippingStreet(e.target.value)}
+                      placeholder="Main Street"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Please fill in all address fields for accurate delivery
+                </p>
               </div>
               {orderStatus.error && <div className="text-red-600 text-xs font-semibold mt-1">{orderStatus.error}</div>}
               {orderStatus.success && <div className="text-green-600 text-xs font-semibold mt-1">{orderStatus.success}</div>}
@@ -345,7 +482,7 @@ const CheckoutPage = () => {
                 className="w-full rounded bg-green-600 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
                 disabled={cartItems.length === 0 || isSubmitting}
               >
-                {isSubmitting ? 'Initializing Payment...' : 'Pay with Pesapal'}
+                {isSubmitting ? 'Initializing Payment...' : 'Checkout'}
               </button>
             </form>
           )}
