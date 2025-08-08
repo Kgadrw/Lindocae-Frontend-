@@ -251,12 +251,18 @@ export default function CartPage() {
         shippingAddress,
         items,
       };
+       const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
       const res = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
         method: 'POST',
         headers: {
           'accept': 'application/json',
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          'Authorization': `Bearer ${openLock}`
         },
         body: JSON.stringify(body),
       });

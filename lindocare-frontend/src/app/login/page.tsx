@@ -62,60 +62,70 @@ const LoginPage: React.FC = () => {
   };
 
   // Login handler
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-    setLoginLoading(true);
-    if (!loginEmail || !loginPassword) {
-      setLoginError("Email and password are required.");
-      setLoginLoading(false);
-      return;
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoginError("");
+  setLoginLoading(true);
+
+  if (!loginEmail || !loginPassword) {
+    setLoginError("Email and password are required.");
+    setLoginLoading(false);
+    return;
+  }
+
+  try {
+    const res = await fetch('https://lindo-project.onrender.com/user/Login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+    });
+
+    const data = await res.json(); // <-- parse the JSON here
+
+    if (res.status === 200 && data?.user) {
+      // Save token in localStorage
+      localStorage.setItem('userData', JSON.stringify(data));
+      // if (token) {
+      //   localStorage.setItem('accessToken', token);
+      // }
+
+      // Save email
+      localStorage.setItem('userEmail', loginEmail);
+
+      // Save full name (if available)
+      const name = `${data.user.firstName || ''} ${data.user.lastName || ''}`.trim() 
+                    || data.user.email 
+                    || loginEmail;
+      localStorage.setItem(`userName:${loginEmail}`, name);
+
+      // Dispatch event so UI updates
+      window.dispatchEvent(new StorageEvent('storage', { key: 'userEmail' }));
+
+      setLoginSuccess('Login successful!');
+      setLoginEmail("");
+      setLoginPassword("");
+
+      setTimeout(() => {
+        setLoginSuccess("");
+        router.push('/');
+      }, 800);
+    } 
+    else if (res.status === 401) {
+      setLoginError('Invalid credentials');
+    } 
+    else if (res.status === 404) {
+      setLoginError('User not found');
+    } 
+    else {
+      setLoginError(data?.message || 'Server error. Please try again later.');
     }
-    try {
-      const res = await fetch('https://lindo-project.onrender.com/user/Login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      });
-      if (res.status === 200) {
-        // Save email in localStorage
-        localStorage.setItem('userEmail', loginEmail);
-        // Try to fetch user profile for name
-        let name = '';
-        try {
-          const profileRes = await fetch(`https://lindo-project.onrender.com/user/getUserByEmail/${encodeURIComponent(loginEmail)}`);
-          if (profileRes.ok) {
-            const userData = await profileRes.json();
-            name = userData?.name || userData?.fullName || userData?.email || loginEmail;
-          } else {
-            name = loginEmail;
-          }
-        } catch {
-          name = loginEmail;
-        }
-        localStorage.setItem(`userName:${loginEmail}`, name);
-        // Dispatch storage event so header updates in same tab
-        window.dispatchEvent(new StorageEvent('storage', { key: 'userEmail' }));
-        setLoginSuccess('Login successful!');
-        setLoginEmail("");
-        setLoginPassword("");
-        setTimeout(() => {
-          setLoginSuccess("");
-          router.push('/');
-        }, 800);
-      } else if (res.status === 401) {
-        setLoginError('Invalid credentials');
-      } else if (res.status === 404) {
-        setLoginError('User not found');
-      } else {
-        setLoginError('Server error. Please try again later.');
-      }
-    } catch {
-      setLoginError('Network error. Please try again.');
-    } finally {
-      setLoginLoading(false);
-    }
-  };
+  } catch {
+    setLoginError('Network error. Please try again.');
+  } finally {
+    setLoginLoading(false);
+  }
+};
+
 
   // Handle Google OAuth callback
   useEffect(() => {

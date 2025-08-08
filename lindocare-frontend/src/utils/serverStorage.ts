@@ -125,18 +125,33 @@ export async function addToCartServer(product: CartItem): Promise<void> {
 
 // Update cart item quantity on server
 export async function updateCartItemQuantity(productId: string, quantity: number): Promise<void> {
+  
   const token = getAuthToken();
   if (!token) {
     throw new Error('User not authenticated');
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
+
+
+if (token) {
+  console.log("Access token:", token);
+} else {
+  console.log("No token found in localStorage");
+}
+
     const response = await fetch(`${API_BASE}/cart/updateCartItem`, {
       method: 'PUT',
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
       body: JSON.stringify({
         productId,
@@ -162,12 +177,18 @@ export async function removeFromCartServer(productId: string): Promise<void> {
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
     const response = await fetch(`${API_BASE}/cart/removeFromCart`, {
       method: 'DELETE',
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
       body: JSON.stringify({
         productId,
@@ -192,11 +213,17 @@ export async function clearCartServer(): Promise<void> {
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
     const response = await fetch(`${API_BASE}/cart/clearCart`, {
       method: 'DELETE',
       headers: {
         'accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
     });
 
@@ -236,10 +263,16 @@ export async function fetchUserWishlist(): Promise<WishlistProduct[]> {
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
     const response = await fetch(`${API_BASE}/wishlist/getUserWishlistProducts/${userId}`, {
       headers: {
         'accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
     });
 
@@ -264,12 +297,18 @@ export async function toggleWishlistProduct(productId: string): Promise<void> {
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
     const response = await fetch(`${API_BASE}/wishlist/toggleWishlistProduct`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
       body: JSON.stringify({ productId }),
     });
@@ -292,12 +331,18 @@ export async function addToWishlistServer(productId: string): Promise<void> {
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
     const response = await fetch(`${API_BASE}/wishlist/addToWishlist`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
       body: JSON.stringify({ productId }),
     });
@@ -320,12 +365,18 @@ export async function removeFromWishlistServer(productId: string): Promise<void>
   }
 
   try {
+    const stored = localStorage.getItem('userData');
+    
+
+  const parsed = JSON.parse(stored); // back to object
+  const openLock = parsed.user.tokens.accessToken;
+  console.log(openLock);
     const response = await fetch(`${API_BASE}/wishlist/removeFromWishlist`, {
       method: 'DELETE',
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${openLock}`,
       },
       body: JSON.stringify({ productId }),
     });
