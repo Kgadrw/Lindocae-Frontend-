@@ -3,19 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  fetchUserCart,
-  getLocalCart,
+  addToCartServer,
   clearCartServer,
+  fetchUserCart,
+  fetchUserCartWithProducts,
+  getAuthToken,
+  getLocalCart,
+  isUserLoggedIn,
   saveLocalCart,
 } from "../../utils/serverStorage";
-
-// Utility: get auth token from localStorage
-function getAuthToken() {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("token");
-  }
-  return null;
-}
 
 interface Product {
   id: string | number;
@@ -51,6 +47,9 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
   const [users, setUsers] = useState<any[]>([]); // Store users for header
+  const [isRefreshingCart, setIsRefreshingCart] = useState(false);
+  const [lastCartRefresh, setLastCartRefresh] = useState<Date | null>(null);
+  const [isLoadingCart, setIsLoadingCart] = useState(true);
   const router = useRouter();
 
   // Fetch users for header
@@ -69,56 +68,150 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     async function loadCart() {
-      const token = getAuthToken();
-      console.log(
-        "Checkout: Loading cart for token:",
-        token ? "Present" : "Missing"
-      );
-
       try {
-        if (token) {
-          // Try to fetch from server when token is present
-          console.log("Checkout: Fetching cart from server...");
-          const serverCart = await fetchUserCart();
-          console.log("Checkout: Server cart:", serverCart);
+        if (isUserLoggedIn()) {
+          // User is logged in, fetch from server
+          console.log("Checkout: User logged in, fetching cart from server...");
+          
+          let serverCart;
+          try {
+            // Try to get cart with full product details first
+            serverCart = await fetchUserCartWithProducts();
+            console.log("Checkout: Server cart with products fetched successfully:", serverCart);
+          } catch (productsError) {
+            console.warn("Checkout: Failed to fetch cart with products, falling back to basic cart:", productsError);
+            // Fallback to basic cart if product details fetch fails
+            serverCart = await fetchUserCart();
+            console.log("Checkout: Basic server cart fetched as fallback:", serverCart);
+          }
+          
+          if (serverCart && serverCart.length > 0) {
           const convertedCart = serverCart.map((item) => ({
             id: item.productId,
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            quantity: item.quantity,
+              name: item.name || 'Product',
+              price: item.price || 0,
+              image: item.image || '/lindo.png',
+              quantity: item.quantity || 1,
           }));
           setCartItems(convertedCart);
+            setLastCartRefresh(new Date());
+            console.log("Checkout: Cart items set from server:", convertedCart);
+          } else {
+            setCartItems([]);
+            setLastCartRefresh(new Date());
+            console.log("Checkout: Server cart is empty");
+          }
         } else {
-          // No token, load from localStorage
-          console.log("Checkout: Loading cart from localStorage...");
+          // User not logged in, load from localStorage
+          console.log("Checkout: User not logged in, loading cart from localStorage...");
           const localCart = getLocalCart();
           const convertedCart = localCart.map((item) => ({
             id: item.productId,
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            quantity: item.quantity,
+            name: item.name || 'Product',
+            price: item.price || 0,
+            image: item.image || '/lindo.png',
+            quantity: item.quantity || 1,
           }));
           setCartItems(convertedCart);
+          console.log("Checkout: Cart items set from localStorage:", convertedCart);
         }
       } catch (err) {
         console.error("Error loading cart for checkout:", err);
-        // Fallback to localStorage if server fetch fails
+        
+        // If server fetch fails and user is logged in, try localStorage as fallback
+        if (isUserLoggedIn()) {
+          console.log("Checkout: Server fetch failed, trying localStorage fallback...");
+          try {
         const localCart = getLocalCart();
         const convertedCart = localCart.map((item) => ({
           id: item.productId,
-          name: item.name,
-          price: item.price,
-          image: item.image,
-          quantity: item.quantity,
+              name: item.name || 'Product',
+              price: item.price || 0,
+              image: item.image || '/lindo.png',
+              quantity: item.quantity || 1,
         }));
         setCartItems(convertedCart);
+            console.log("Checkout: Fallback to localStorage successful:", convertedCart);
+          } catch (localError) {
+            console.error("Checkout: Both server and localStorage failed:", localError);
+            setCartItems([]);
+          }
+        } else {
+          // User not logged in, just set empty cart
+          setCartItems([]);
+        }
+      } finally {
+        setIsLoadingCart(false);
       }
     }
 
     loadCart();
   }, []);
+
+  // Debug: Log cart items whenever they change
+  useEffect(() => {
+    console.log("Checkout: Cart items updated:", cartItems);
+    console.log("Checkout: Cart items length:", cartItems.length);
+    if (cartItems.length > 0) {
+      console.log("Checkout: First cart item details:", {
+        id: cartItems[0].id,
+        name: cartItems[0].name,
+        price: cartItems[0].price,
+        image: cartItems[0].image,
+        quantity: cartItems[0].quantity
+      });
+    }
+  }, [cartItems]);
+
+  // Refresh cart from server
+  const refreshCart = async () => {
+    if (isRefreshingCart) return; // Prevent multiple simultaneous refreshes
+    
+    try {
+      setIsRefreshingCart(true);
+      setIsLoadingCart(true);
+      if (isUserLoggedIn()) {
+        console.log("Checkout: Refreshing cart from server...");
+        
+        let serverCart;
+        try {
+          // Try to get cart with full product details first
+          serverCart = await fetchUserCartWithProducts();
+          console.log("Checkout: Server cart with products refreshed:", serverCart);
+        } catch (productsError) {
+          console.warn("Checkout: Failed to refresh cart with products, falling back to basic cart:", productsError);
+          // Fallback to basic cart if product details fetch fails
+          serverCart = await fetchUserCart();
+          console.log("Checkout: Basic server cart refreshed as fallback:", serverCart);
+        }
+        
+        if (serverCart && serverCart.length > 0) {
+          const convertedCart = serverCart.map((item) => ({
+            id: item.productId,
+            name: item.name || 'Product',
+            price: item.price || 0,
+            image: item.image || '/lindo.png',
+            quantity: item.quantity || 1,
+          }));
+          setCartItems(convertedCart);
+          setLastCartRefresh(new Date());
+          console.log("Checkout: Cart refreshed from server:", convertedCart);
+        } else {
+          setCartItems([]);
+          setLastCartRefresh(new Date());
+          console.log("Checkout: Server cart is empty after refresh");
+        }
+      } else {
+        console.log("Checkout: User not logged in, cannot refresh from server");
+      }
+    } catch (err) {
+      console.error("Error refreshing cart:", err);
+      setOrderStatus({ error: "Failed to refresh cart. Please try again." });
+    } finally {
+      setIsRefreshingCart(false);
+      setIsLoadingCart(false);
+    }
+  };
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
@@ -179,19 +272,61 @@ const CheckoutPage = () => {
       const orderData = {
         paymentMethod: "dpo", // Updated to use DPO
         shippingAddress: structuredShippingAddress,
-        customerEmail: customerEmail,
-        customerPhone: customerPhone,
-        customerName: `${customerFirstName} ${customerLastName}`,
+        email: customerEmail,
+        phone: customerPhone,
+        firstName: customerFirstName,
+        lastName: customerLastName,
         items: orderItems,
         totalAmount: totalAmount,
+        currency: "RWF",
+        status: "pending",
+        createdAt: new Date().toISOString(),
       };
+
+      // Validate that all required fields have values
+      if (!customerEmail || !customerPhone || !customerFirstName || !customerLastName || totalAmount <= 0) {
+        console.error("Validation failed:", {
+          email: customerEmail,
+          phone: customerPhone,
+          firstName: customerFirstName,
+          lastName: customerLastName,
+          totalAmount: totalAmount
+        });
+        setOrderStatus({ error: "Please ensure all required fields are filled and cart is not empty." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log("Order data being sent to API:", orderData);
+      console.log("Cart items:", cartItems);
+      console.log("Total amount calculated:", totalAmount);
 // passing The Token in The Local Storage
       const stored = localStorage.getItem("userData");
 
-      const parsed = JSON.parse(stored); // back to object
+      if (!stored) {
+        setOrderStatus({ error: "User data not found. Please log in again." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(stored); // back to object
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        setOrderStatus({ error: "Invalid user data. Please log in again." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!parsed?.user?.tokens?.accessToken) {
+        setOrderStatus({ error: "Access token not found. Please log in again." });
+        setIsSubmitting(false);
+        return;
+      }
+
       const openLock = parsed.user.tokens.accessToken;
-      console.log(openLock);
-      console.log(openLock);
+      console.log("Access token found:", openLock ? "Present" : "Missing");
 
       const orderResponse = await fetch(
         "https://lindo-project.onrender.com/orders/createOrder",
@@ -255,17 +390,21 @@ const CheckoutPage = () => {
 
             // Clear cart after successful order creation and payment initiation
             try {
-              const token = getAuthToken();
-              if (token) {
+              if (isUserLoggedIn()) {
                 // User is logged in, clear server cart
                 await clearCartServer();
+                console.log("Server cart cleared after successful order creation");
               } else {
                 // Fallback to local cart clearing
                 saveLocalCart([]);
+                console.log("Local cart cleared after successful order creation");
               }
-              console.log("Cart cleared after successful order creation");
+              // Update local state to reflect empty cart
+              setCartItems([]);
             } catch (clearError) {
               console.error("Error clearing cart:", clearError);
+              // Even if clearing fails, update local state
+              setCartItems([]);
             }
 
             // Store payment token and order details for verification later
@@ -308,11 +447,28 @@ const CheckoutPage = () => {
         });
         // Don't redirect automatically, let user decide
       } else {
-        const errorData = await orderResponse.json().catch(() => ({}));
-        console.error("Order creation error response:", errorData);
+        // Enhanced error handling to see exact API response
+        let errorData: any = {};
+        let responseText = '';
+        try {
+          responseText = await orderResponse.text();
+          if (responseText) {
+            errorData = JSON.parse(responseText);
+          }
+        } catch (parseError) {
+          errorData = { message: responseText || 'Unknown error' };
+        }
+        
+        console.error("Order creation error response:", {
+          status: orderResponse.status,
+          statusText: orderResponse.statusText,
+          responseText,
+          errorData
+        });
+        
         setOrderStatus({
           error:
-            errorData.message || "Failed to create order. Please try again.",
+            errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
         });
       }
     } catch (err) {
@@ -328,8 +484,35 @@ const CheckoutPage = () => {
       <div className="w-full max-w-4xl bg-white rounded-xl shadow p-6 flex flex-col md:flex-row gap-8">
         {/* Left: Checkout summary and products */}
         <div className="flex-1 flex flex-col gap-4 border-r border-gray-200 pr-0 md:pr-8">
-          <h1 className="text-2xl font-bold text-black mb-2">Checkout</h1>
-          {cartItems.length === 0 ? (
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-2xl font-bold text-black">Checkout</h1>
+            {isUserLoggedIn() && (
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  onClick={refreshCart}
+                  disabled={isRefreshingCart}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    isRefreshingCart 
+                      ? 'bg-gray-400 text-white cursor-not-allowed' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                  title="Refresh cart from server"
+                >
+                  {isRefreshingCart ? '⏳ Loading...' : '🔄 Refresh'}
+                </button>
+                {lastCartRefresh && (
+                  <span className="text-xs text-gray-500">
+                    Last synced: {lastCartRefresh.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          {isLoadingCart ? (
+            <div className="text-center text-gray-500 font-semibold mb-4">
+              Loading your cart...
+            </div>
+          ) : cartItems.length === 0 ? (
             <>
               <div className="text-center text-gray-500 font-semibold mb-4">
                 Your cart is empty.
@@ -377,25 +560,60 @@ const CheckoutPage = () => {
                     className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0"
                   >
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      {item.image &&
-                      typeof item.image === "string" &&
+                      {item.image ? (
+                        // Handle both string and array image formats
+                        typeof item.image === "string" ? (
                       item.image.trim().length > 0 ? (
                         <img
                           src={item.image}
                           alt={item.name}
                           className="object-cover w-full h-full"
-                        />
+                              onError={(e) => {
+                                // If image fails, just log the error but don't change the src
+                                console.warn('Image failed to load:', item.image);
+                              }}
+                              onLoad={() => {
+                                console.log('Image loaded successfully:', item.image);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                              No Image
+                            </div>
+                          )
+                        ) : Array.isArray(item.image) ? (
+                          // Handle array of images - use first image if available
+                          (item.image as any[]).length > 0 ? (
+                            <img
+                              src={(item.image as any[])[0]}
+                              alt={item.name}
+                              className="object-cover w-full h-full"
+                              onError={(e) => {
+                                console.warn('Array image failed to load:', (item.image as any[])[0]);
+                              }}
+                              onLoad={() => {
+                                console.log('Array image loaded successfully:', (item.image as any[])[0]);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                              No Image
+                            </div>
+                          )
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                            No Image
+                          </div>
+                        )
                       ) : (
-                        <img
-                          src="/lindo.png"
-                          alt="No image"
-                          className="object-cover w-full h-full opacity-60"
-                        />
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                          No Image
+                        </div>
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="font-medium text-black text-base">
-                        {item.name}
+                        {item.name || 'Product'}
                       </div>
                       <div className="text-xs text-gray-500">
                         Qty: {item.quantity || 1}

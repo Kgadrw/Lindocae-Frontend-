@@ -1,11 +1,11 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { getCurrentUserEmail } from '../../components/Header';
 import Image from 'next/image';
-import { Suspense } from "react";
+import { addToCartServer, isUserLoggedIn, getUserEmail } from "../../utils/serverStorage";
 
 // Remove template productsData. Use real products from backend.
 
@@ -27,6 +27,7 @@ const SearchPage = () => {
   const [results, setResults] = React.useState<any[]>([]);
   const [allProducts, setAllProducts] = React.useState<any[]>([]);
   const [allCategories, setAllCategories] = React.useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Fetch all products and categories on mount
   React.useEffect(() => {
@@ -106,6 +107,56 @@ const SearchPage = () => {
       window.dispatchEvent(new StorageEvent('storage', { key: wishlistKey }));
       return updated;
     });
+  };
+
+  // Add to cart handler
+  const handleAddToCart = async (product: any) => {
+    try {
+      if (isUserLoggedIn()) {
+        // Logged in: add to server cart
+        await addToCartServer({
+          productId: String(product._id || product.id),
+          quantity: 1,
+        });
+        alert('Added to cart!');
+      } else {
+        // Guest: add to localStorage
+        const email = getUserEmail();
+        if (!email) {
+          alert('Please log in to add items to cart');
+          return;
+        }
+        
+        const cartKey = `cart:${email}`;
+        const cartRaw = localStorage.getItem(cartKey);
+        let cart = [];
+        try {
+          cart = cartRaw ? JSON.parse(cartRaw) : [];
+        } catch {
+          cart = [];
+        }
+        
+        const existingItem = cart.find((item: any) => String(item.id) === String(product._id || product.id));
+        if (existingItem) {
+          existingItem.quantity = (existingItem.quantity || 1) + 1;
+        } else {
+          cart.push({
+            id: product._id || product.id,
+            name: product.name,
+            price: product.price,
+            image: Array.isArray(product.image) ? product.image[0] : product.image,
+            quantity: 1,
+          });
+        }
+        
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+        window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+        alert('Added to cart!');
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      alert('Failed to add to cart. Please try again.');
+    }
   };
 
   // Check if query matches a category
@@ -192,7 +243,12 @@ const SearchPage = () => {
                       <span className="text-lg font-bold text-blue-900">${product.price.toFixed(2)}</span>
                       {product.oldPrice && <span className="text-sm line-through text-blue-400">${product.oldPrice}</span>}
                     </div>
-                    <button className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition">Add to Cart</button>
+                    <button 
+                      className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition" 
+                      onClick={() => handleAddToCart(product)}
+                    >
+                      Add to Cart
+                    </button>
                   </div>
                 </div>
               ))}
@@ -252,7 +308,12 @@ const SearchPage = () => {
                     <span className="text-lg font-bold text-blue-900">${product.price.toFixed(2)}</span>
                     {product.oldPrice && <span className="text-sm line-through text-blue-400">${product.oldPrice}</span>}
                   </div>
-                  <button className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition">Add to Cart</button>
+                  <button 
+                    className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition" 
+                    onClick={() => handleAddToCart(product)}
+                  >
+                    Add to Cart
+                  </button>
                 </div>
               </div>
             ))}

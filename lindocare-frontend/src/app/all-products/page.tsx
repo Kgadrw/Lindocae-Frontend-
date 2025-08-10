@@ -284,9 +284,6 @@ function AllProductsContent() {
         // Logged in: add to server cart
         await addToCartServer({
           productId: String(product._id || product.id),
-          name: product.name,
-          price: product.price,
-          image: Array.isArray(product.image) ? product.image[0] : product.image,
           quantity: 1,
         });
       } else {

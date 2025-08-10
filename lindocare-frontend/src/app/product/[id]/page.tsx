@@ -193,11 +193,7 @@ export default function ProductDetailsPage() {
         // Logged in: add to server cart
         await addToCartServer({
           productId: String(product.id || product._id),
-          name: product.name,
-          price: product.price,
-          image: imageUrl,
           quantity: quantity,
-          category: typeof product.category === 'string' ? parseInt(product.category) : undefined,
         });
         setToastMsg(`${product.name} added to cart!`);
         setShowToast(true);

@@ -24,36 +24,7 @@ import NewArrivalsSection from '../components/home/NewArrivalsSection';
 import SocialShareBar from '../components/SocialShareBar';
 import VideoSection from '../components/home/VideoSection';
 
-// Add helpers for wishlist backend logic
-function getAuthToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
-}
-function getUserIdFromToken() {
-  const token = getAuthToken();
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.userId || payload.id || payload._id || payload.user || null;
-  } catch {
-    return null;
-  }
-}
-
-// Utility: add to cart on server
-async function addToCartOnServer(token: string, productId: string, quantity: number) {
-  const res = await fetch('https://lindo-project.onrender.com/cart/addToCart', {
-    method: 'POST',
-    headers: {
-      'accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ productId, quantity }),
-  });
-  if (!res.ok) throw new Error('Failed to add to server cart');
-  return res.json();
-}
+// Note: Using imported functions from serverStorage.ts instead of local duplicates
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -264,11 +235,7 @@ export default function Home() {
         // Logged in: add to server cart
         await addToCartServer({
           productId: String(product._id || product.id),
-          name: product.name,
-          price: product.price,
-          image: Array.isArray(product.image) ? product.image[0] : product.image,
           quantity: 1,
-          category: product.category,
         });
         setToastMsg('Added to cart!');
         setShowToast(true);

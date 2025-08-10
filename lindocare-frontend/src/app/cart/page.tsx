@@ -35,6 +35,20 @@ function formatRWF(amount: number | undefined | null) {
   return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
+// Helper to get the access token from userData
+function getAccessToken(): string | null {
+  try {
+    const stored = localStorage.getItem('userData');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.user?.tokens?.accessToken || null;
+    }
+  } catch (error) {
+    console.error('Error parsing userData:', error);
+  }
+  return null;
+}
+
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<Product[]>([]);
   const [userEmail, setUserEmail] = useState('');
@@ -58,24 +72,8 @@ export default function CartPage() {
       console.log('Loading cart for email:', email);
       console.log('Is user logged in:', isUserLoggedIn());
 
-      // Debug: Check localStorage
-      if (email) {
-        const cartKey = `cart:${email}`;
-        const cartRaw = localStorage.getItem(cartKey);
-        console.log('LocalStorage cart key:', cartKey);
-        console.log('LocalStorage cart raw:', cartRaw);
-        if (cartRaw) {
-          try {
-            const parsed = JSON.parse(cartRaw);
-            console.log('LocalStorage cart parsed:', parsed);
-          } catch (e) {
-            console.log('LocalStorage cart parse error:', e);
-          }
-        }
-      }
-
       try {
-        if (isUserLoggedIn()) {
+        if (isUserLoggedIn() && getAccessToken()) {
           // Logged in user: fetch from server
           console.log('Fetching cart from server...');
           const serverCart = await fetchUserCart();
@@ -127,7 +125,7 @@ export default function CartPage() {
     
     // Listen for login events to sync local cart to server
     const handleLogin = async () => {
-      if (isUserLoggedIn()) {
+      if (isUserLoggedIn() && getAccessToken()) {
         await syncLocalCartToServer();
         loadCart(); // Reload cart after sync
       }
@@ -152,7 +150,8 @@ export default function CartPage() {
     userEmail,
     cartItems: cartItems.length,
     subtotal,
-    isUserLoggedIn: isUserLoggedIn()
+    isUserLoggedIn: isUserLoggedIn(),
+    hasAccessToken: !!getAccessToken()
   });
 
   // Free shipping logic
@@ -165,7 +164,7 @@ export default function CartPage() {
     if (!userEmail) return;
 
     try {
-      if (isUserLoggedIn()) {
+      if (isUserLoggedIn() && getAccessToken()) {
         // Logged in: remove from server
         await removeFromCartServer(String(id));
         // Update local state
@@ -200,7 +199,7 @@ export default function CartPage() {
     const newQuantity = Math.max(1, (currentItem.quantity || 1) + delta);
 
     try {
-      if (isUserLoggedIn()) {
+      if (isUserLoggedIn() && getAccessToken()) {
         // Logged in: update on server
         await updateCartItemQuantity(String(id), newQuantity);
         // Update local state
@@ -239,7 +238,13 @@ export default function CartPage() {
     setOrderStatus({});
     setIsSubmitting(true);
     try {
-      const token = getCurrentUserEmail(); // Assuming token is the user's email for now
+      const token = getAccessToken();
+      if (!token) {
+        setOrderStatus({ error: 'Please log in to place an order.' });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Prepare items for API
       const items = cartItems.map(item => ({
         productId: String(item.id),
@@ -251,18 +256,13 @@ export default function CartPage() {
         shippingAddress,
         items,
       };
-       const stored = localStorage.getItem('userData');
-    
 
-  const parsed = JSON.parse(stored); // back to object
-  const openLock = parsed.user.tokens.accessToken;
-  console.log(openLock);
       const res = await fetch('https://lindo-project.onrender.com/orders/createOrder', {
         method: 'POST',
         headers: {
           'accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openLock}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(body),
       });

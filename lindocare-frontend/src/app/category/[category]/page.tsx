@@ -224,9 +224,6 @@ const CategoryPage = () => {
         // Logged in: add to server cart
         await addToCartServer({
           productId: String(product._id),
-          name: product.name,
-          price: product.price,
-          image: product.image,
           quantity: 1,
         });
         setToastMsg(`${product.name} added to cart!`);

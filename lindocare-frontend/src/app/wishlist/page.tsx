@@ -12,6 +12,10 @@ import {
   saveLocalWishlist,
   isUserLoggedIn,
   syncLocalWishlistToServer,
+  getAuthToken,
+  getUserEmail,
+  getUserIdFromToken,
+  addToCartServer,
   WishlistProduct
 } from '../../utils/serverStorage';
 
@@ -34,34 +38,6 @@ interface CartItem {
   quantity: number;
 }
 
-// Add a function to get the token from localStorage
-function getAuthToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
-}
-
-function getUserEmail() {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('userEmail') || '';
-  }
-  return '';
-}
-
-function getUserIdFromToken() {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.userId || payload.sub || null;
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
 function getWishlistKey() {
   const email = getUserEmail();
   return email ? `wishlist:${email}` : 'wishlist:guest';
@@ -74,31 +50,46 @@ function addToCart(product: Product) {
     return;
   }
 
-  const cartKey = `cart:${email}`;
-  const cartRaw = localStorage.getItem(cartKey);
-  let cart = [];
-  try {
-    cart = cartRaw ? JSON.parse(cartRaw) : [];
-  } catch {
-    cart = [];
-  }
-
-  const existingItem = cart.find((item: any) => String(item.id) === String(product.id || product._id));
-  if (existingItem) {
-    existingItem.quantity = (existingItem.quantity || 1) + 1;
-  } else {
-    cart.push({
-      id: product.id || product._id,
-      name: product.name,
-      price: product.price,
-      image: Array.isArray(product.image) ? product.image[0] : product.image,
+  // Check if user is logged in and has access token
+  if (isUserLoggedIn() && getAuthToken()) {
+    // Logged in: add to server cart
+    addToCartServer({
+      productId: String(product.id || product._id),
       quantity: 1,
+    }).then(() => {
+      alert('Added to cart!');
+    }).catch((error) => {
+      console.error('Error adding to server cart:', error);
+      alert('Failed to add to cart. Please try again.');
     });
-  }
+  } else {
+    // Guest: add to localStorage
+    const cartKey = `cart:${email}`;
+    const cartRaw = localStorage.getItem(cartKey);
+    let cart = [];
+    try {
+      cart = cartRaw ? JSON.parse(cartRaw) : [];
+    } catch {
+      cart = [];
+    }
 
-  localStorage.setItem(cartKey, JSON.stringify(cart));
-  window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
-  alert('Added to cart!');
+    const existingItem = cart.find((item: any) => String(item.id) === String(product.id || product._id));
+    if (existingItem) {
+      existingItem.quantity = (existingItem.quantity || 1) + 1;
+    } else {
+      cart.push({
+        id: product.id || product._id,
+        name: product.name,
+        price: product.price,
+        image: Array.isArray(product.image) ? product.image[0] : product.image,
+        quantity: 1,
+      });
+    }
+
+    localStorage.setItem(cartKey, JSON.stringify(cart));
+    window.dispatchEvent(new StorageEvent('storage', { key: cartKey }));
+    alert('Added to cart!');
+  }
 }
 
 const WishlistSkeleton = () => (

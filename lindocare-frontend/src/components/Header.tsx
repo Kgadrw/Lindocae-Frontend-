@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   fetchUserCart,
   fetchUserWishlist,
+  fetchUserWishlistWithFallback,
   getLocalCart,
   getLocalWishlist,
   isUserLoggedIn
@@ -39,8 +40,8 @@ async function fetchWishlistCountFromBackend() {
   
   try {
     if (isUserLoggedIn()) {
-      // Logged in: fetch from server
-      const wishlist = await fetchUserWishlist();
+      // Logged in: use robust fallback strategy
+      const wishlist = await fetchUserWishlistWithFallback();
       return wishlist.length;
     } else {
       // Guest: use localStorage
@@ -49,6 +50,19 @@ async function fetchWishlistCountFromBackend() {
     }
   } catch (error) {
     console.error('Error fetching wishlist count:', error);
+    // If server wishlist fails, fall back to local storage for logged-in users
+    if (isUserLoggedIn()) {
+      try {
+        const localWishlist = getLocalWishlist();
+        console.log('Falling back to local wishlist storage');
+        return localWishlist.length;
+      } catch (localError) {
+        console.error('Local wishlist fallback also failed:', localError);
+        return 0;
+      }
+    }
+    // Return 0 instead of throwing to prevent app crashes
+    // This allows the app to continue functioning even if wishlist API fails
     return 0;
   }
 }
@@ -163,8 +177,14 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   useEffect(() => {
     async function updateWishlistCount() {
       if (typeof window !== 'undefined') {
+        try {
         const count = await fetchWishlistCountFromBackend();
         setWishlistCount(count);
+        } catch (error) {
+          console.error('Error updating wishlist count:', error);
+          // Set wishlist count to 0 on error to prevent UI issues
+          setWishlistCount(0);
+        }
       }
     }
     updateWishlistCount();
