@@ -270,7 +270,7 @@ const CheckoutPage = () => {
 
       // First, create the order using required API format
       const orderData = {
-        paymentMethod: "pesapal",
+        paymentMethod: "DPO",
         shippingAddress: structuredShippingAddress,
         customerEmail: customerEmail,
         customerPhone: customerPhone,
