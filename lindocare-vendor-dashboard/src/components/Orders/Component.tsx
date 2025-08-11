@@ -487,10 +487,13 @@ const OrdersComponent: React.FC = () => {
                     <td className="px-6 py-4 align-middle">
                       <div className="text-gray-900 font-semibold">{order.items.length} items</div>
                       <div className="text-gray-700 max-w-xs truncate">
-                        {order.items.slice(0, 2).map(item => {
-                          const product = getProductById(item.productId);
-                          return product?.name || `Product ${item.productId.slice(-8)}`;
-                        }).join(', ')}
+                      {order.items.slice(0, 2).map(item => {
+  const productId = typeof item.productId === 'string' ? item.productId : item.productId?._id;
+  const product = getProductById(productId || '');
+  const idStr = typeof item.productId === 'string' ? item.productId : String(item.productId?._id || item.productId || '');
+  return product?.name || `Product ${idStr.slice(-8)}`;
+}).join(', ')}
+
                         {order.items.length > 2 && ` +${order.items.length - 2} more`}
                       </div>
                     </td>
