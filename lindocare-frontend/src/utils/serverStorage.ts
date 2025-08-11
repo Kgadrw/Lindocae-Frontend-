@@ -163,15 +163,37 @@ export async function fetchUserCart(): Promise<CartItem[]> {
     const data = await response.json();
     const items = (data.cart && data.cart.items) ? data.cart.items : [];
     
+    console.log('Raw cart items from server:', items);
+    
     // Convert server cart items to local format
-    return items.map((item: any) => ({
-      productId: String(item.productId || item._id),
-      name: item.name || 'Product',
-      price: item.price || 0,
-      image: item.image || '/lindo.png',
-      quantity: item.quantity || 1,
-      category: item.category,
-    }));
+    return items.map((item: any) => {
+      // Handle different possible productId formats
+      let productId = '';
+      if (item.productId) {
+        if (typeof item.productId === 'string') {
+          productId = item.productId;
+        } else if (typeof item.productId === 'object' && item.productId._id) {
+          productId = item.productId._id;
+        } else if (typeof item.productId === 'object' && item.productId.id) {
+          productId = item.productId.id;
+        } else {
+          productId = String(item.productId);
+        }
+      } else if (item._id) {
+        productId = String(item._id);
+      }
+      
+      console.log('Extracted productId:', { original: item.productId, extracted: productId });
+      
+      return {
+        productId,
+        name: item.name || 'Product',
+        price: item.price || 0,
+        image: item.image || '/lindo.png',
+        quantity: item.quantity || 1,
+        category: item.category,
+      };
+    });
   } catch (error) {
     console.error('Error fetching cart:', error);
     throw error;
@@ -229,16 +251,18 @@ export async function addToCartServer(product: CartItem): Promise<void> {
   }
 }
 
-// Update cart item quantity on server
-export async function updateCartItemQuantity(productId: string, quantity: number): Promise<void> {
+
+
+// Increase cart item quantity using the increaseToCart endpoint
+export async function increaseCartItemQuantity(productId: string, quantity: number = 1): Promise<void> {
   const token = getAuthToken();
   if (!token) {
     throw new Error('User not authenticated');
   }
 
   try {
-    const response = await fetch(`${API_BASE}/cart/updateCartItem`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE}/cart/increaseToCart`, {
+      method: 'POST',
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
@@ -262,7 +286,7 @@ export async function updateCartItemQuantity(productId: string, quantity: number
         errorData = { message: responseText || 'Unknown error' };
       }
       
-      console.error('Update cart quantity API Error:', {
+      console.error('Increase cart quantity API Error:', {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
@@ -271,12 +295,12 @@ export async function updateCartItemQuantity(productId: string, quantity: number
         quantity
       });
       
-      throw new Error(errorData.message || 'Failed to update cart item');
+      throw new Error(errorData.message || 'Failed to increase cart item quantity');
     }
     
-    console.log('Cart item quantity updated successfully:', { productId, quantity });
+    console.log('Cart item quantity increased successfully:', { productId, quantity });
   } catch (error) {
-    console.error('Error updating cart item:', error);
+    console.error('Error increasing cart item quantity:', error);
     throw error;
   }
 }
@@ -289,16 +313,12 @@ export async function removeFromCartServer(productId: string): Promise<void> {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/cart/removeFromCart`, {
+    const response = await fetch(`${API_BASE}/cart/removeFromCart/${productId}`, {
       method: 'DELETE',
       headers: {
         'accept': 'application/json',
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        productId,
-      }),
     });
 
     if (!response.ok) {
@@ -327,6 +347,52 @@ export async function removeFromCartServer(productId: string): Promise<void> {
     console.log('Cart item removed successfully:', { productId });
   } catch (error) {
     console.error('Error removing from cart:', error);
+    throw error;
+  }
+}
+
+// Reduce item quantity from cart on server
+export async function reduceFromCartServer(productId: string): Promise<void> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/cart/reduceFromCart/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      let errorData: any = {};
+      let responseText = '';
+      try {
+        responseText = await response.text();
+        if (responseText) {
+          errorData = JSON.parse(responseText);
+        }
+      } catch (parseError) {
+        errorData = { message: responseText || 'Unknown error' };
+      }
+      
+      console.error('Reduce from cart API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        errorData,
+        productId
+      });
+      
+      throw new Error(errorData.message || 'Failed to reduce item from cart');
+    }
+    
+    console.log('Cart item reduced successfully:', { productId });
+  } catch (error) {
+    console.error('Error reducing from cart:', error);
     throw error;
   }
 }
@@ -850,8 +916,32 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
     
     for (const cartItem of basicCartItems) {
       try {
+        // Ensure productId is a string - handle object cases
+        let productId = '';
+        if (cartItem.productId) {
+          if (typeof cartItem.productId === 'string') {
+            productId = cartItem.productId;
+          } else if (typeof cartItem.productId === 'object' && cartItem.productId._id) {
+            productId = cartItem.productId._id;
+          } else if (typeof cartItem.productId === 'object' && cartItem.productId.id) {
+            productId = cartItem.productId.id;
+          } else {
+            productId = String(cartItem.productId);
+          }
+        } else if (cartItem._id) {
+          productId = String(cartItem._id);
+        }
+        
+        if (!productId || productId === 'undefined' || productId === 'null') {
+          console.warn('Invalid productId for cart item:', cartItem);
+          enrichedCartItems.push(cartItem);
+          continue;
+        }
+        
+        console.log('Fetching product details for productId:', productId);
+        
         // Fetch full product details using productId
-        const productResponse = await fetch(`${API_BASE}/product/getProductById/${cartItem.productId}`, {
+        const productResponse = await fetch(`${API_BASE}/product/getProductById/${productId}`, {
           headers: {
             'accept': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -859,28 +949,32 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
         });
 
         if (productResponse.ok) {
-          const productData = await productResponse.json();
-          console.log('Product details fetched for:', cartItem.productId, productData);
+          const productDataRaw = await productResponse.json();
+          const product = (productDataRaw && typeof productDataRaw === 'object' && (productDataRaw as any).product)
+            ? (productDataRaw as any).product
+            : productDataRaw;
+          console.log('Product details fetched for:', productId, product);
           console.log('Product image field:', {
-            images: productData.images,
-            image: productData.image,
-            finalImage: productData.images && Array.isArray(productData.images) && productData.images.length > 0 
-              ? productData.images[0] 
-              : productData.image || cartItem.image || '/lindo.png'
+            images: (product as any).images,
+            image: (product as any).image,
+            finalImage: (product as any).images && Array.isArray((product as any).images) && (product as any).images.length > 0 
+              ? (product as any).images[0] 
+              : (product as any).image || cartItem.image || '/lindo.png'
           });
           
           // Enrich cart item with full product details
           const finalImageUrl = (() => {
             // Handle image URL construction like in vendor dashboard
             let imageUrl = '';
-            if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
-              imageUrl = productData.images[0].startsWith('http')
-                ? productData.images[0]
-                : `https://lindo-project.onrender.com/${productData.images[0]}`;
-            } else if (productData.image && typeof productData.image === 'string') {
-              imageUrl = productData.image.startsWith('http')
-                ? productData.image
-                : `https://lindo-project.onrender.com/${productData.image}`;
+            const pAny: any = product as any;
+            if (pAny.images && Array.isArray(pAny.images) && pAny.images.length > 0) {
+              imageUrl = pAny.images[0].startsWith('http')
+                ? pAny.images[0]
+                : `https://lindo-project.onrender.com/${pAny.images[0]}`;
+            } else if (pAny.image && typeof pAny.image === 'string') {
+              imageUrl = pAny.image.startsWith('http')
+                ? pAny.image
+                : `https://lindo-project.onrender.com/${pAny.image}`;
             } else {
               // No fallback to lindo.png - return empty string if no image
               imageUrl = '';
@@ -888,22 +982,22 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
             return imageUrl;
           })();
           
-          console.log('Image URL construction for product:', cartItem.productId, {
-            originalImages: productData.images,
-            originalImage: productData.image,
+          console.log('Image URL construction for product:', productId, {
+            originalImages: (product as any).images,
+            originalImage: (product as any).image,
             finalImageUrl: finalImageUrl
           });
           
           enrichedCartItems.push({
-            productId: cartItem.productId,
+            productId: productId,
             quantity: cartItem.quantity,
-            name: productData.name || cartItem.name || 'Product',
-            price: productData.price || cartItem.price || 0,
+            name: (product as any).name || cartItem.name || 'Product',
+            price: (product as any).price || cartItem.price || 0,
             image: finalImageUrl,
-            category: productData.categoryId || cartItem.category,
+            category: (product as any).categoryId || (product as any).category || cartItem.category,
           });
         } else {
-          console.warn('Failed to fetch product details for:', cartItem.productId, {
+          console.warn('Failed to fetch product details for:', productId, {
             status: productResponse.status,
             statusText: productResponse.statusText
           });
@@ -911,7 +1005,7 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
           enrichedCartItems.push(cartItem);
         }
       } catch (productError) {
-        console.error('Error fetching product details for:', cartItem.productId, productError);
+        console.error('Error fetching product details for:', productId, productError);
         // Use basic cart item as fallback
         enrichedCartItems.push(cartItem);
       }

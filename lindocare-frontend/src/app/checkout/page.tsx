@@ -47,8 +47,6 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
   const [users, setUsers] = useState<any[]>([]); // Store users for header
-  const [isRefreshingCart, setIsRefreshingCart] = useState(false);
-  const [lastCartRefresh, setLastCartRefresh] = useState<Date | null>(null);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const router = useRouter();
 
@@ -94,7 +92,6 @@ const CheckoutPage = () => {
               quantity: item.quantity || 1,
           }));
           setCartItems(convertedCart);
-            setLastCartRefresh(new Date());
             console.log("Checkout: Cart items set from server:", convertedCart);
           } else {
             setCartItems([]);
@@ -163,55 +160,7 @@ const CheckoutPage = () => {
     }
   }, [cartItems]);
 
-  // Refresh cart from server
-  const refreshCart = async () => {
-    if (isRefreshingCart) return; // Prevent multiple simultaneous refreshes
-    
-    try {
-      setIsRefreshingCart(true);
-      setIsLoadingCart(true);
-      if (isUserLoggedIn()) {
-        console.log("Checkout: Refreshing cart from server...");
-        
-        let serverCart;
-        try {
-          // Try to get cart with full product details first
-          serverCart = await fetchUserCartWithProducts();
-          console.log("Checkout: Server cart with products refreshed:", serverCart);
-        } catch (productsError) {
-          console.warn("Checkout: Failed to refresh cart with products, falling back to basic cart:", productsError);
-          // Fallback to basic cart if product details fetch fails
-          serverCart = await fetchUserCart();
-          console.log("Checkout: Basic server cart refreshed as fallback:", serverCart);
-        }
-        
-        if (serverCart && serverCart.length > 0) {
-          const convertedCart = serverCart.map((item) => ({
-            id: item.productId,
-            name: item.name || 'Product',
-            price: item.price || 0,
-            image: item.image || '/lindo.png',
-            quantity: item.quantity || 1,
-          }));
-          setCartItems(convertedCart);
-          setLastCartRefresh(new Date());
-          console.log("Checkout: Cart refreshed from server:", convertedCart);
-        } else {
-          setCartItems([]);
-          setLastCartRefresh(new Date());
-          console.log("Checkout: Server cart is empty after refresh");
-        }
-      } else {
-        console.log("Checkout: User not logged in, cannot refresh from server");
-      }
-    } catch (err) {
-      console.error("Error refreshing cart:", err);
-      setOrderStatus({ error: "Failed to refresh cart. Please try again." });
-    } finally {
-      setIsRefreshingCart(false);
-      setIsLoadingCart(false);
-    }
-  };
+
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
@@ -500,27 +449,6 @@ const CheckoutPage = () => {
         <div className="flex-1 flex flex-col gap-4 border-r border-gray-200 pr-0 md:pr-8">
           <div className="flex justify-between items-center mb-2">
             <h1 className="text-2xl font-bold text-black">Checkout</h1>
-            {isUserLoggedIn() && (
-              <div className="flex flex-col items-end gap-1">
-                <button
-                  onClick={refreshCart}
-                  disabled={isRefreshingCart}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
-                    isRefreshingCart 
-                      ? 'bg-gray-400 text-white cursor-not-allowed' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                  title="Refresh cart from server"
-                >
-                  {isRefreshingCart ? '⏳ Loading...' : '🔄 Refresh'}
-                </button>
-                {lastCartRefresh && (
-                  <span className="text-xs text-gray-500">
-                    Last synced: {lastCartRefresh.toLocaleTimeString()}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
           {isLoadingCart ? (
             <div className="text-center text-gray-500 font-semibold mb-4">

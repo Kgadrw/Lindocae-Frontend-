@@ -6,9 +6,11 @@ import { getCurrentUserEmail } from '../../components/Header';
 import { useRouter } from 'next/navigation';
 import {
   fetchUserCart,
+  fetchUserCartWithProducts,
   addToCartServer,
-  updateCartItemQuantity,
+  increaseCartItemQuantity,
   removeFromCartServer,
+  reduceFromCartServer,
   clearCartServer,
   getLocalCart,
   saveLocalCart,
@@ -76,10 +78,19 @@ export default function CartPage() {
 
       try {
         if (isUserLoggedIn() && getAccessToken()) {
-          // Logged in user: fetch from server
-          console.log('Fetching cart from server...');
-          const serverCart = await fetchUserCart();
-          console.log('Server cart:', serverCart);
+          // Logged in user: fetch from server with full product details
+          console.log('Fetching cart from server with product details...');
+          let serverCart;
+          try {
+            // Try to get cart with full product details first
+            serverCart = await fetchUserCartWithProducts();
+            console.log('Server cart with products:', serverCart);
+          } catch (productsError) {
+            console.warn('Failed to load cart with products, falling back to basic cart:', productsError);
+            // Fallback to basic cart if product details fetch fails
+            serverCart = await fetchUserCart();
+            console.log('Basic server cart as fallback:', serverCart);
+          }
           const convertedCart = serverCart.map(item => ({
             id: item.productId,
             name: item.name,
@@ -88,6 +99,7 @@ export default function CartPage() {
             quantity: item.quantity,
             category: item.category,
           }));
+          console.log('Converted cart items with product details:', convertedCart);
           setCartItems(convertedCart);
         } else {
           // Guest user: use localStorage
@@ -169,8 +181,23 @@ export default function CartPage() {
       if (isUserLoggedIn() && getAccessToken()) {
         // Logged in: remove from server
         await removeFromCartServer(String(id));
-        // Update local state
-        setCartItems(prev => prev.filter(item => String(item.id) !== String(id)));
+        // Refresh cart with full product details after removal
+        try {
+          const updatedServerCart = await fetchUserCartWithProducts();
+          const updatedConvertedCart = updatedServerCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+            category: item.category,
+          }));
+          setCartItems(updatedConvertedCart);
+        } catch (refreshError) {
+          console.warn('Failed to refresh cart with products after removal, updating local state only:', refreshError);
+          // Fallback to local state update
+          setCartItems(prev => prev.filter(item => String(item.id) !== String(id)));
+        }
       } else {
         // Guest: remove from localStorage
         const localCart = getLocalCart();
@@ -202,14 +229,35 @@ export default function CartPage() {
 
     try {
       if (isUserLoggedIn() && getAccessToken()) {
-        // Logged in: update on server
-        await updateCartItemQuantity(String(id), newQuantity);
-        // Update local state
-        setCartItems(prev => prev.map(item => 
-          String(item.id) === String(id) 
-            ? { ...item, quantity: newQuantity }
-            : item
-        ));
+        // Logged in: update on server using appropriate endpoints
+        if (delta > 0) {
+          // Increase quantity using increaseToCart endpoint
+          await increaseCartItemQuantity(String(id), delta);
+        } else {
+          // Decrease quantity using reduceFromCart endpoint
+          await reduceFromCartServer(String(id));
+        }
+        // Refresh cart with full product details after update
+        try {
+          const updatedServerCart = await fetchUserCartWithProducts();
+          const updatedConvertedCart = updatedServerCart.map(item => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            quantity: item.quantity,
+            category: item.category,
+          }));
+          setCartItems(updatedConvertedCart);
+        } catch (refreshError) {
+          console.warn('Failed to refresh cart with products, updating local state only:', refreshError);
+          // Fallback to local state update
+          setCartItems(prev => prev.map(item => 
+            String(item.id) === String(id) 
+              ? { ...item, quantity: newQuantity }
+              : item
+          ));
+        }
       } else {
         // Guest: update localStorage
         const localCart = getLocalCart();
@@ -309,13 +357,26 @@ export default function CartPage() {
           ) : (
             cartItems.map((item, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  {item.image && typeof item.image === 'string' && item.image.trim().length > 0 ? (
-                    <Image src={item.image} alt={item.name} width={96} height={96} className="object-cover w-full h-full" />
-                  ) : (
-                    <Image src="/lindo.png" alt="No image" width={96} height={96} className="object-cover w-full h-full opacity-60" style={{ width: 'auto', height: 'auto' }} />
-                  )}
-                </div>
+                                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                   {item.image && typeof item.image === 'string' && item.image.trim().length > 0 ? (
+                     <Image 
+                       src={item.image} 
+                       alt={item.name || 'Product'} 
+                       width={96} 
+                       height={96} 
+                       className="object-cover w-full h-full"
+                       onError={(e) => {
+                         // If image fails to load, show placeholder
+                         const target = e.target as HTMLImageElement;
+                         target.style.display = 'none';
+                         target.nextElementSibling?.classList.remove('hidden');
+                       }}
+                     />
+                   ) : null}
+                   <div className={`w-full h-full bg-gray-200 flex items-center justify-center ${item.image && item.image.trim().length > 0 ? 'hidden' : ''}`}>
+                     <span className="text-gray-400 text-xs text-center">No Image</span>
+                   </div>
+                 </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
                   <div className="font-semibold text-black text-base sm:text-lg">{item.name}</div>
                   {/* Optionally show color/size if present */}
@@ -324,28 +385,48 @@ export default function CartPage() {
                   )}
                   <div className="flex items-center gap-2">
                     <span className="text-black font-bold text-lg">{formatRWF(item.price || 0)} RWF</span>
+                    <span className="text-gray-500 text-sm">× {item.quantity || 1}</span>
+                    <span className="text-black font-bold text-lg ml-auto">
+                      = {formatRWF((item.price || 0) * (item.quantity || 1))} RWF
+                    </span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 text-xs mt-1 w-full">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-2 w-full">
                     {/* Quantity controls */}
-                    <button
-                      className="w-9 h-9 sm:w-7 sm:h-7 rounded-full border-2 border-black text-black flex items-center justify-center text-lg font-bold disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 bg-white hover:bg-gray-100"
-                      onClick={() => handleQuantityChange(item.id, -1)}
-                      disabled={(item.quantity || 1) <= 1}
-                      aria-label="Decrease quantity"
-                    >-</button>
-                    <span className="font-semibold text-base text-black mx-2 min-w-[24px] text-center">{item.quantity || 1}</span>
-                    <button
-                      className="w-9 h-9 sm:w-7 sm:h-7 rounded-full border-2 border-black text-black flex items-center justify-center text-lg font-bold active:scale-95 bg-white hover:bg-gray-100"
-                      onClick={() => handleQuantityChange(item.id, 1)}
-                      aria-label="Increase quantity"
-                    >+</button>
-                    {/* Product status */}
-                    {item.lowStock ? (
-                      <span className="flex items-center gap-1 ml-2 sm:ml-4 text-black font-semibold"><span className="w-2 h-2 rounded-full bg-black inline-block" />Low Stock</span>
-                    ) : (
-                      <span className="flex items-center gap-1 ml-2 sm:ml-4 text-green-600 font-semibold"><span className="w-2 h-2 rounded-full bg-green-600 inline-block" />In Stock</span>
-                    )}
-                    <button className="text-red-500 hover:text-red-700 ml-2" onClick={() => handleRemove(item.id)}>Remove</button>
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                      <button
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 text-gray-600 flex items-center justify-center text-lg font-bold disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 bg-white hover:bg-gray-100 hover:border-gray-400 transition-all"
+                        onClick={() => handleQuantityChange(item.id, -1)}
+                        disabled={(item.quantity || 1) <= 1}
+                        aria-label="Decrease quantity"
+                      >-</button>
+                      <span className="font-semibold text-lg text-black mx-3 min-w-[32px] text-center">{item.quantity || 1}</span>
+                      <button
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 text-gray-600 flex items-center justify-center text-lg font-bold active:scale-95 bg-white hover:bg-gray-100 hover:border-gray-400 transition-all"
+                        onClick={() => handleQuantityChange(item.id, 1)}
+                        aria-label="Increase quantity"
+                      >+</button>
+                    </div>
+                    
+                    {/* Product status and actions */}
+                    <div className="flex items-center gap-3">
+                      {item.lowStock ? (
+                        <span className="flex items-center gap-1 text-orange-600 font-semibold text-sm">
+                          <span className="w-2 h-2 rounded-full bg-orange-600 inline-block" />
+                          Low Stock
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-green-600 font-semibold text-sm">
+                          <span className="w-2 h-2 rounded-full bg-green-600 inline-block" />
+                          In Stock
+                        </span>
+                      )}
+                      <button 
+                        className="text-red-500 hover:text-red-700 font-medium text-sm px-3 py-1 rounded-md hover:bg-red-50 transition-all" 
+                        onClick={() => handleRemove(item.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -375,30 +456,6 @@ export default function CartPage() {
             >
               Proceed to Checkout
             </button>
-            {/* Payment Method Selection */}
-            <div className="flex flex-col items-center gap-2 mt-2">
-              <span className="text-sm text-gray-700 font-medium mb-1">Choose Payment Method:</span>
-              <div className="flex gap-4 items-start">
-                <button
-                  type="button"
-                  className={`rounded-lg p-1 flex flex-col items-center justify-center transition-all bg-white shadow-none`}
-                  onClick={() => setPaymentMethod('mtn')}
-                  style={{ boxShadow: paymentMethod === 'mtn' ? '0 0 0 2px #FFD600' : 'none' }}
-                >
-                  <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 object-contain" />
-                  <span className="mt-1 text-xs font-semibold text-yellow-700">MTN</span>
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-lg p-1 flex flex-col items-center justify-center transition-all bg-white shadow-none`}
-                  onClick={() => setPaymentMethod('airtel')}
-                  style={{ boxShadow: paymentMethod === 'airtel' ? '0 0 0 2px #E60000' : 'none' }}
-                >
-                  <img src="/airtel.png" alt="Airtel" className="w-10 h-10 object-contain" />
-                  <span className="mt-1 text-xs font-semibold text-red-700">Airtel</span>
-                </button>
-              </div>
-            </div>
             {cartItems.length === 0 && (
               <div className="text-center text-gray-400 font-semibold mt-2">Add products to your cart to proceed.</div>
             )}

@@ -66,10 +66,10 @@ const Footer = () => {
           <p className="text-xs font-normal mb-3">Stay connected for the latest updates</p>
           <div className="space-y-1 text-xs font-normal">
             <div className="flex gap-4">
-              <span>📞 <a href="tel:+250785064255" className="hover:underline">+250 795 575 622</a></span>
-              <span>📧 <a href="mailto:hello@lindocare.com" className="hover:underline">hello@lindocare.com</a></span>
+              <span >Tel:<a href="tel:+250785064255" className="hover:underline">+250 795 575 622</a></span>
+              <span >Email: <a href="mailto:hello@lindocare.com" className="hover:underline">hello@lindocare.com</a></span>
             </div>
-            <div>📍 Unify Buildings, Behind T 2000 Hotel <br /> Kigali, Rwanda</div>
+            <div >Adress : Unify Buildings, Behind T 2000 Hotel <br /> Kigali, Rwanda</div>
           </div>
         </div>
       </div>
