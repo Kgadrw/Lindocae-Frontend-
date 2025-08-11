@@ -8,7 +8,6 @@ import CategoriesSection from '../components/CategoriesSection/Component';
 import AdList from '../components/AdList/Component';
 import BannerSection from '../components/BannerSection';
 import ProductsSection from '../components/ProductsSection/Component';
-import CartComponent from '../components/Cart/Component';
 import OrdersComponent from '../components/Orders/Component';
 import LoginForm from '../components/LoginForm';
 
@@ -32,7 +31,6 @@ const SIDEBAR_SECTIONS = [
   { key: 'banner', label: 'Banner', icon: () => <ImageIcon size={20} /> },
   { key: 'products', label: 'Products', icon: () => <ShoppingCart size={20} /> },
   { key: 'orders', label: 'Orders', icon: () => <Receipt size={20} /> },
-  { key: 'cart', label: 'Cart', icon: () => <ShoppingCart size={20} /> },
 ];
 
 export default function AdminDashboard() {
@@ -44,6 +42,12 @@ export default function AdminDashboard() {
     if (userData.role === 'vendor') {
       setUser(userData);
       setIsAuthenticated(true);
+      // Store unified auth state so child components (which read `userData`) work
+      try {
+        localStorage.setItem('userData', JSON.stringify({ user: userData }));
+        if (userData.email) localStorage.setItem('userEmail', userData.email);
+      } catch {}
+      // Backwards compatibility with any older keys
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('accessToken', userData.tokens?.accessToken || '');
@@ -53,6 +57,7 @@ export default function AdminDashboard() {
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('userData');
     }
   };
 
@@ -62,17 +67,36 @@ export default function AdminDashboard() {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('userData');
     alert('Logged out successfully!');
   };
 
   useEffect(() => {
-    const auth = localStorage.getItem('isAuthenticated');
-    const userData = localStorage.getItem('user');
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (auth === 'true' && userData && accessToken) {
+    // Preferred: use unified `userData`
+    const unified = localStorage.getItem('userData');
+    if (unified) {
       try {
-        const parsedUser = JSON.parse(userData);
+        const parsed = JSON.parse(unified);
+        const u: User | undefined = parsed?.user;
+        if (u && u.role === 'vendor') {
+          setIsAuthenticated(true);
+          setUser(u);
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing userData:', e);
+      }
+      // If invalid or not vendor, clear it
+      localStorage.removeItem('userData');
+    }
+
+    // Fallback to older keys if present
+    const auth = localStorage.getItem('isAuthenticated');
+    const legacyUser = localStorage.getItem('user');
+    const accessToken = localStorage.getItem('accessToken');
+    if (auth === 'true' && legacyUser && accessToken) {
+      try {
+        const parsedUser = JSON.parse(legacyUser);
         if (parsedUser.role === 'vendor') {
           setIsAuthenticated(true);
           setUser(parsedUser);
@@ -82,7 +106,7 @@ export default function AdminDashboard() {
           localStorage.removeItem('accessToken');
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('Error parsing legacy user data:', error);
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
@@ -109,7 +133,6 @@ export default function AdminDashboard() {
         {activeSection === 'ads' && <AdList />}
         {activeSection === 'banner' && <BannerSection />}
         {activeSection === 'products' && <ProductsSection />}
-        {activeSection === 'cart' && <CartComponent />}
         {activeSection === 'orders' && <OrdersComponent />}
       </main>
     </div>

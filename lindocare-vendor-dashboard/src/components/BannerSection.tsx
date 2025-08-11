@@ -20,7 +20,19 @@ const BannerSection: React.FC = () => {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/getAllBanners`);
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+          if (openLock) { console.log(openLock); console.log(openLock); }
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      const res = await fetch(`${API_URL}/getAllBanners`, { headers });
       const data = await res.json();
       setBanners(data.banners || []);
     } catch {
@@ -34,8 +46,19 @@ const BannerSection: React.FC = () => {
 
   // Fetch categories when modal opens
   useEffect(() => {
-    if (showModal) {
-      fetch('https://lindo-project.onrender.com/category/getAllCategories')
+      if (showModal) {
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      fetch('https://lindo-project.onrender.com/category/getAllCategories', { headers })
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) setCategories(data);
@@ -92,9 +115,31 @@ const BannerSection: React.FC = () => {
     try {
       let res;
       if (editBanner) {
-        res = await fetch(`${API_URL}/updateBanner/${editBanner._id}`, { method: 'PUT', body: formData });
+        // passing The Token in The Local Storage
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+        let openLock: string | null = null;
+        try {
+          if (stored) {
+            const parsed = JSON.parse(stored); // back to object
+            openLock = parsed?.user?.tokens?.accessToken || null;
+          }
+        } catch {}
+        const headers: Record<string, string> = {};
+        if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+        res = await fetch(`${API_URL}/updateBanner/${editBanner._id}`, { method: 'PUT', body: formData, headers });
       } else {
-        res = await fetch(`${API_URL}/createBanner`, { method: 'POST', body: formData });
+        // passing The Token in The Local Storage
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+        let openLock: string | null = null;
+        try {
+          if (stored) {
+            const parsed = JSON.parse(stored); // back to object
+            openLock = parsed?.user?.tokens?.accessToken || null;
+          }
+        } catch {}
+        const headers: Record<string, string> = {};
+        if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+        res = await fetch(`${API_URL}/createBanner`, { method: 'POST', body: formData, headers });
       }
       if (res.status === 201 || res.status === 200) {
         setShowModal(false);
@@ -119,7 +164,18 @@ const BannerSection: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this banner?')) return;
     setFormLoading(true);
     try {
-      await fetch(`${API_URL}/deleteBanner/${bannerId}`, { method: 'DELETE' });
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      await fetch(`${API_URL}/deleteBanner/${bannerId}`, { method: 'DELETE', headers });
       fetchBanners();
     } catch {}
     setFormLoading(false);

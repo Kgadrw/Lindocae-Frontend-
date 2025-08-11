@@ -43,7 +43,19 @@ const CategoriesSection: React.FC = () => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/getAllCategories`);
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+          if (openLock) { console.log(openLock); console.log(openLock); }
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      const res = await fetch(`${API_URL}/getAllCategories`, { headers });
       const data = await res.json();
       const allCategories = data.categories || data || [];
       
@@ -67,7 +79,18 @@ const CategoriesSection: React.FC = () => {
   // Fetch icons
   const fetchIcons = async () => {
     try {
-      const res = await fetch(`${ICONS_URL}/getIcons`);
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      const res = await fetch(`${ICONS_URL}/getIcons`, { headers });
       const data = await res.json();
       setIcons(Array.isArray(data) ? data : []);
     } catch {
@@ -78,8 +101,19 @@ const CategoriesSection: React.FC = () => {
   // Fetch products
   const fetchProducts = async () => {
     try {
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
       // First, try to get all products and then filter by category
-      const allProductsRes = await fetch(`${PRODUCTS_URL}/getAllProduct`);
+      const allProductsRes = await fetch(`${PRODUCTS_URL}/getAllProduct`, { headers });
       if (!allProductsRes.ok) {
         console.error('Failed to fetch all products');
         setProductsByCategory({});

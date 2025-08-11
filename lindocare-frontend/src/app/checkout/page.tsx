@@ -268,41 +268,29 @@ const CheckoutPage = () => {
         street: shippingStreet,
       };
 
-      // First, create the order
+      // First, create the order using required API format
       const orderData = {
-        paymentMethod: "dpo", // Updated to use DPO
+        paymentMethod: "pesapal",
         shippingAddress: structuredShippingAddress,
-        email: customerEmail,
-        phone: customerPhone,
-        firstName: customerFirstName,
-        lastName: customerLastName,
-        items: orderItems,
-        totalAmount: totalAmount,
-        currency: "RWF",
-        status: "pending",
-        createdAt: new Date().toISOString(),
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        customerName: `${customerFirstName} ${customerLastName}`,
       };
 
-      // Validate that all required fields have values
-      if (!customerEmail || !customerPhone || !customerFirstName || !customerLastName || totalAmount <= 0) {
-        console.error("Validation failed:", {
-          email: customerEmail,
-          phone: customerPhone,
-          firstName: customerFirstName,
-          lastName: customerLastName,
-          totalAmount: totalAmount
-        });
-        setOrderStatus({ error: "Please ensure all required fields are filled and cart is not empty." });
+      // Validate required fields per API format
+      if (!orderData.customerEmail || !orderData.customerPhone || !customerFirstName || !customerLastName) {
+        setOrderStatus({ error: "Please provide email, phone, first and last name." });
         setIsSubmitting(false);
         return;
       }
 
-      console.log("Order data being sent to API:", orderData);
+      console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
       console.log("Total amount calculated:", totalAmount);
-// passing The Token in The Local Storage
-      const stored = localStorage.getItem("userData");
 
+      // passing The Token in The Local Storage
+      const stored = localStorage.getItem("userData");
+      
       if (!stored) {
         setOrderStatus({ error: "User data not found. Please log in again." });
         setIsSubmitting(false);
@@ -350,102 +338,128 @@ const CheckoutPage = () => {
 
         const orderId = orderResult.order?._id || orderResult.orderId;
 
-        // Now initialize DPO payment with order details
-        const dpoPaymentData = {
-          totalAmount: totalAmount,
-          currency: "RWF",
-          email: customerEmail,
-          phone: customerPhone,
-          firstName: customerFirstName,
-          lastName: customerLastName,
-          serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
-          callbackUrl: `${window.location.origin}/payment-success?orderId=${orderId}`,
-        };
+        // If backend returns a redirect URL, use it directly (preferred flow)
+        const redirectUrl = orderResult.dpoRedirectUrl || orderResult.order?.dpoRedirectUrl;
 
-        console.log("DPO Payment Data:", dpoPaymentData);
-
-        // Initialize DPO payment
-        const dpoResponse = await fetch(
-          "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
-          {
-            method: "POST",
-            headers: {
-              accept: "application/json",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(dpoPaymentData),
-          }
-        );
-
-        if (dpoResponse.ok) {
-          const dpoData = await dpoResponse.json();
-          console.log("DPO Response:", dpoData);
-
-          if (dpoData.redirectUrl) {
-            setPaymentRedirectUrl(dpoData.redirectUrl);
-            setOrderStatus({
-              success:
-                "Order created and payment initiated successfully! Redirecting to payment gateway...",
-            });
-
-            // Clear cart after successful order creation and payment initiation
-            try {
-              if (isUserLoggedIn()) {
-                // User is logged in, clear server cart
-                await clearCartServer();
-                console.log("Server cart cleared after successful order creation");
-              } else {
-                // Fallback to local cart clearing
-                saveLocalCart([]);
-                console.log("Local cart cleared after successful order creation");
-              }
-              // Update local state to reflect empty cart
-              setCartItems([]);
-            } catch (clearError) {
-              console.error("Error clearing cart:", clearError);
-              // Even if clearing fails, update local state
-              setCartItems([]);
-            }
-
-            // Store payment token and order details for verification later
-            if (dpoData.token) {
-              localStorage.setItem("dpoPaymentToken", dpoData.token);
-              localStorage.setItem(
-                "pendingOrderAmount",
-                totalAmount.toString()
-              );
-              localStorage.setItem("pendingOrderId", orderId);
-            }
-
-            // Redirect to DPO payment page
-            setTimeout(() => {
-              window.location.href = dpoData.redirectUrl;
-            }, 2000);
-          } else {
-            setOrderStatus({
-              error: "Payment gateway not available. Please try again.",
-            });
-          }
-        } else if (dpoResponse.status === 401) {
+        if (redirectUrl) {
+          setPaymentRedirectUrl(redirectUrl);
           setOrderStatus({
-            error: "Payment initialization failed. Please try again.",
+            success: "Order created! Redirecting to payment gateway...",
           });
+
+          // Clear cart after successful order creation
+          try {
+            if (isUserLoggedIn()) {
+              await clearCartServer();
+              console.log("Server cart cleared after successful order creation");
+            } else {
+              saveLocalCart([]);
+              console.log("Local cart cleared after successful order creation");
+            }
+            // Update local state to reflect empty cart
+            setCartItems([]);
+          } catch (clearError) {
+            console.error("Error clearing cart:", clearError);
+            setCartItems([]);
+          }
+
+          // Optional: store order metadata for later
+          if (orderResult.dpoTransactionToken) {
+            localStorage.setItem("dpoPaymentToken", orderResult.dpoTransactionToken);
+            localStorage.setItem("pendingOrderId", orderId || "");
+          }
+
+          // Redirect to payment page
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 1500);
         } else {
-          const errorData = await dpoResponse.json().catch(() => ({}));
-          setOrderStatus({
-            error:
-              errorData.message ||
-              "Failed to initialize payment. Please try again.",
-          });
+          // No redirect provided by createOrder: initialize DPO payment per spec
+          const dpoInitBody = {
+            orderId: String(orderId || ""),
+            totalAmount: totalAmount,
+            currency: "RWF",
+            email: customerEmail,
+            phone: customerPhone,
+            firstName: customerFirstName,
+            lastName: customerLastName,
+            serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
+            callbackUrl: "https://lindocae-frontend.vercel.app/payment/success",
+          };
+
+          console.log("Initializing DPO with:", dpoInitBody);
+          const dpoResponse = await fetch(
+            "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
+            {
+              method: "POST",
+              headers: {
+                accept: "application/json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(dpoInitBody),
+            }
+          );
+
+          if (dpoResponse.ok) {
+            const dpoData = await dpoResponse.json();
+            console.log("DPO Response:", dpoData);
+
+            if (dpoData.redirectUrl) {
+              setPaymentRedirectUrl(dpoData.redirectUrl);
+              setOrderStatus({
+                success: "Order created! Redirecting to payment gateway...",
+              });
+
+              // Clear cart
+              try {
+                if (isUserLoggedIn()) {
+                  await clearCartServer();
+                } else {
+                  saveLocalCart([]);
+                }
+                setCartItems([]);
+              } catch (clearError) {
+                console.error("Error clearing cart:", clearError);
+                setCartItems([]);
+              }
+
+              // Store token if present
+              if (dpoData.token) {
+                localStorage.setItem("dpoPaymentToken", dpoData.token);
+                localStorage.setItem("pendingOrderId", String(orderId || ""));
+                localStorage.setItem("pendingOrderAmount", String(totalAmount));
+              }
+
+              setTimeout(() => {
+                window.location.href = dpoData.redirectUrl;
+              }, 1500);
+            } else {
+              setOrderStatus({ error: "Payment initialization failed. No redirect URL returned." });
+            }
+          } else {
+            let errorData: any = {};
+            let responseText = '';
+            try {
+              responseText = await dpoResponse.text();
+              if (responseText) errorData = JSON.parse(responseText);
+            } catch {
+              errorData = { message: responseText || 'Unknown error' };
+            }
+            console.error("DPO init error:", {
+              status: dpoResponse.status,
+              statusText: dpoResponse.statusText,
+              errorData,
+            });
+            setOrderStatus({ error: errorData.message || "Payment initialization failed. Please try again." });
+          }
         }
       } else if (orderResponse.status === 401) {
         const errorText = await orderResponse.text();
         console.error("Order creation 401 error response:", errorText);
         setOrderStatus({
           error:
-            "To complete your order, please log in to your account. You can create an account or log in with an existing one.",
+            "Authorization failed. Please log in and try again.",
         });
-        // Don't redirect automatically, let user decide
       } else {
         // Enhanced error handling to see exact API response
         let errorData: any = {};
@@ -556,7 +570,7 @@ const CheckoutPage = () => {
               <div className="flex flex-col gap-3">
                 {cartItems.map((item, idx) => (
                   <div
-                    key={item.id || idx}
+                    key={`cart-${String((item as any)?.id ?? '')}-${idx}`}
                     className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0"
                   >
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">

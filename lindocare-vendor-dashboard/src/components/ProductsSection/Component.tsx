@@ -88,6 +88,20 @@ const ProductsSection: React.FC = () => {
   const fetchProducts = async (page = 1) => {
     setLoading(true);
     try {
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+          if (openLock) {
+            console.log(openLock);
+            console.log(openLock);
+          }
+        }
+      } catch {}
+
       let url = `https://lindo-project.onrender.com/product/getAllProduct?page=${page}&limit=${PAGE_SIZE}`;
       if (selectedCategory) url += `&category=${selectedCategory}`;
       if (selectedStatus) url += `&status=${selectedStatus}`;
@@ -96,7 +110,9 @@ const ProductsSection: React.FC = () => {
       if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
       if (sortBy) url += `&sort=${sortBy}`;
       console.log('Fetching products with URL:', url); // Debug log
-      const response = await fetch(url);
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      const response = await fetch(url, { headers });
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched products data:', data); // Debug log
@@ -142,7 +158,18 @@ const ProductsSection: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('https://lindo-project.onrender.com/category/getAllCategories');
+      // passing The Token in The Local Storage
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored); // back to object
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      const response = await fetch('https://lindo-project.onrender.com/category/getAllCategories', { headers });
       if (response.ok) {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {

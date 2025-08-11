@@ -90,7 +90,18 @@ const StatsCards: React.FC<StatsCardsProps> = ({
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('https://lindo-project.onrender.com/user/getAllUsers');
+      // Use token from localStorage userData as requested
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      let openLock: string | null = null;
+      try {
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {}
+      const headers: Record<string, string> = {};
+      if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      const response = await fetch('https://lindo-project.onrender.com/user/getAllUsers', { headers });
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched users from API:', data);
@@ -115,9 +126,39 @@ const StatsCards: React.FC<StatsCardsProps> = ({
     }
   };
 
+  const getAccessToken = (): string | null => {
+    try {
+      const unified = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      if (unified) {
+        const parsed = JSON.parse(unified);
+        const tokenFromUnified: string | null = parsed?.user?.tokens?.accessToken || parsed?.tokens?.accessToken || null;
+        if (tokenFromUnified) return tokenFromUnified;
+      }
+      // Fallbacks
+      const direct = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (direct) return direct;
+      const legacyUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      if (legacyUser) {
+        try {
+          const parsedLegacy = JSON.parse(legacyUser);
+          return parsedLegacy?.tokens?.accessToken || null;
+        } catch {}
+      }
+    } catch {}
+    return null;
+  };
+
   const fetchOrders = async () => {
     try {
-      const response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders');
+      const token = getAccessToken();
+      const headers: Record<string, string> = { 'accept': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      let response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders', { headers });
+      if (response.status === 404) {
+        response = await fetch('https://lindo-project.onrender.com/orders/allOrders', { headers });
+      }
+
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched orders from API:', data);
@@ -130,6 +171,9 @@ const StatsCards: React.FC<StatsCardsProps> = ({
           console.log('No orders array found, setting empty array');
           setOrders([]);
         }
+      } else if (response.status === 401) {
+        console.error('Authentication required (401). Please log in as vendor.');
+        setOrders([]);
       } else {
         console.error('Error fetching orders:', response.status, response.statusText);
         setOrders([]);

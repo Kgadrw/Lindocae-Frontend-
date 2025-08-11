@@ -29,8 +29,8 @@ interface Order {
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentMethod: 'cash' | 'card' | 'mobile_money';
-  shippingAddress: string;
+  paymentMethod: 'cash' | 'card' | 'mobile_money' | 'pesapal' | string;
+  shippingAddress: any;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,18 +57,40 @@ const OrdersComponent: React.FC = () => {
     fetchProducts();
   }, []);
 
+  function getAccessToken(): string | null {
+    // Use the exact pattern provided: read userData, parse, and access tokens.accessToken
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      const openLock: string | null = parsed?.user?.tokens?.accessToken || null;
+      if (openLock) {
+        console.log('Access token (openLock) present');
+      }
+      return openLock;
+    } catch {
+      return null;
+    }
+  }
+
   const fetchOrders = async () => {
     try {
-      // This would be an endpoint to get all orders for vendor management
-      // You might need to create this endpoint: /orders/getAllOrders
-      const response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders', {
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authorization header when implementing auth
-          // 'Authorization': `Bearer ${token}`
-        }
-      });
-      
+      setLoading(true);
+      const token = getAccessToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // Try primary endpoint
+      let response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders', { headers });
+
+      // Fallback if 404
+      if (response.status === 404) {
+        response = await fetch('https://lindo-project.onrender.com/orders/allOrders', { headers });
+      }
+
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched orders:', data);
@@ -79,16 +101,19 @@ const OrdersComponent: React.FC = () => {
         } else {
           setOrders([]);
         }
+        setErrorMessage('');
       } else if (response.status === 401) {
         setErrorMessage('Authentication required. Please log in.');
         setOrders([]);
       } else {
         console.error('Error fetching orders:', response.status, response.statusText);
         setOrders([]);
+        setErrorMessage('Failed to fetch orders.');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
+      setErrorMessage('Failed to fetch orders.');
     } finally {
       setLoading(false);
     }
@@ -159,20 +184,31 @@ const OrdersComponent: React.FC = () => {
         return <span className="text-green-600 font-bold">$</span>;
       case 'mobile_money':
         return <span className="text-purple-600 font-bold">M</span>;
+      case 'pesapal':
+        return <CreditCard size={16} className="text-blue-600" />;
       default:
         return <CreditCard size={16} className="text-gray-600" />;
     }
   };
 
+  const formatShippingAddress = (addr: any) => {
+    if (!addr) return '';
+    if (typeof addr === 'string') return addr;
+    const { province, district, sector, cell, village, street } = addr || {};
+    return [province, district, sector, cell, village, street].filter(Boolean).join(', ');
+  };
+
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
+      const token = getAccessToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch(`https://lindo-project.onrender.com/orders/updateOrderStatus/${orderId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authorization header when implementing auth
-          // 'Authorization': `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify({ status: newStatus })
       });
 
@@ -385,6 +421,7 @@ const OrdersComponent: React.FC = () => {
             <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="mobile_money">Mobile Money</option>
+            <option value="pesapal">Pesapal</option>
           </select>
         </div>
       </div>
@@ -472,7 +509,7 @@ const OrdersComponent: React.FC = () => {
                       <div className="flex items-center gap-2">
                         {getPaymentMethodIcon(order.paymentMethod)}
                         <span className="text-gray-900 capitalize">
-                          {order.paymentMethod.replace('_', ' ')}
+                          {String(order.paymentMethod || '').replace('_', ' ')}
                         </span>
                       </div>
                     </td>
@@ -480,7 +517,7 @@ const OrdersComponent: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <MapPin size={12} className="text-gray-400" />
                         <span className="text-gray-700 max-w-xs truncate">
-                          {order.shippingAddress}
+                          {formatShippingAddress(order.shippingAddress)}
                         </span>
                       </div>
                     </td>

@@ -62,7 +62,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
       const data: SignUpResponse = await response.json();
 
-      // Store user data and token
+      // Store unified user data and token for dashboard consumers
+      try {
+        localStorage.setItem('userData', JSON.stringify({ user: data.user }));
+        if (data.user.email) localStorage.setItem('userEmail', data.user.email);
+      } catch {}
+      // Backwards compatibility
       localStorage.setItem('user', JSON.stringify(data.user));
       if (data.user.tokens?.accessToken) {
         localStorage.setItem('accessToken', data.user.tokens.accessToken);
@@ -78,6 +83,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         setError('Access denied. Only vendors can access this dashboard.');
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('userData');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
@@ -94,8 +100,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
             <User className="h-8 w-8 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Vendor Dashboard</h2>
-          <p className="text-gray-600">Create your vendor account</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Vendor Login</h2>
+          <p className="text-gray-600">Sign in to access your vendor dashboard</p>
         </div>
 
         {/* Form */}
@@ -194,10 +200,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating account...
+                  Signing in...
                   </div>
               ) : (
-                'Sign Up'
+                'Sign In'
               )}
                             </button>
           </form>
