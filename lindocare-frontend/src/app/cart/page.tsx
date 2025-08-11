@@ -92,7 +92,7 @@ export default function CartPage() {
             console.log('Basic server cart as fallback:', serverCart);
           }
           const convertedCart = serverCart.map(item => ({
-            id: item.productId,
+            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
             name: item.name,
             price: item.price,
             image: item.image,
@@ -120,7 +120,7 @@ export default function CartPage() {
           const localCart = getLocalCart();
           console.log('Local cart:', localCart);
           const convertedCart = localCart.map(item => ({
-            id: item.productId,
+            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
             name: item.name,
             price: item.price,
             image: item.image,
@@ -135,7 +135,7 @@ export default function CartPage() {
         // Fallback to localStorage
         const localCart = getLocalCart();
         const convertedCart = localCart.map(item => ({
-          id: item.productId,
+          id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
           name: item.name,
           price: item.price,
           image: item.image,
@@ -198,7 +198,7 @@ export default function CartPage() {
         try {
           const updatedServerCart = await fetchUserCartWithProducts();
           const updatedConvertedCart = updatedServerCart.map(item => ({
-            id: item.productId,
+            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
             name: item.name,
             price: item.price,
             image: item.image,
@@ -217,7 +217,7 @@ export default function CartPage() {
         const updatedCart = localCart.filter(item => String(item.productId) !== String(id));
         saveLocalCart(updatedCart);
         setCartItems(updatedCart.map(item => ({
-          id: item.productId,
+          id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
           name: item.name,
           price: item.price,
           image: item.image,
@@ -254,7 +254,7 @@ export default function CartPage() {
         try {
           const updatedServerCart = await fetchUserCartWithProducts();
           const updatedConvertedCart = updatedServerCart.map(item => ({
-            id: item.productId,
+            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
             name: item.name,
             price: item.price,
             image: item.image,
@@ -281,7 +281,7 @@ export default function CartPage() {
         );
         saveLocalCart(updatedCart);
         setCartItems(updatedCart.map(item => ({
-          id: item.productId,
+          id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
           name: item.name,
           price: item.price,
           image: item.image,
