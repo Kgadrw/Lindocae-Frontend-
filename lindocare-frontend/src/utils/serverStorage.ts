@@ -183,7 +183,12 @@ export async function fetchUserCart(): Promise<CartItem[]> {
         productId = String(item._id);
       }
       
-      console.log('Extracted productId:', { original: item.productId, extracted: productId });
+      console.log('Extracted productId:', { 
+        original: item.productId, 
+        originalType: typeof item.productId,
+        extracted: productId,
+        itemKeys: Object.keys(item)
+      });
       
       return {
         productId,
@@ -915,9 +920,9 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
     const enrichedCartItems: CartItem[] = [];
     
     for (const cartItem of basicCartItems) {
+      let productId: string = '';
       try {
         // Ensure productId is a string - handle object cases
-        let productId = '';
         if (cartItem.productId) {
           if (typeof cartItem.productId === 'string') {
             productId = cartItem.productId;
@@ -938,7 +943,7 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
           continue;
         }
         
-        console.log('Fetching product details for productId:', productId);
+        console.log('Fetching product details for productId:', productId, 'from cart item:', cartItem);
         
         // Fetch full product details using productId
         const productResponse = await fetch(`${API_BASE}/product/getProductById/${productId}`, {
@@ -962,25 +967,56 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
               : (product as any).image || cartItem.image || '/lindo.png'
           });
           
-          // Enrich cart item with full product details
-          const finalImageUrl = (() => {
-            // Handle image URL construction like in vendor dashboard
-            let imageUrl = '';
-            const pAny: any = product as any;
-            if (pAny.images && Array.isArray(pAny.images) && pAny.images.length > 0) {
-              imageUrl = pAny.images[0].startsWith('http')
-                ? pAny.images[0]
-                : `https://lindo-project.onrender.com/${pAny.images[0]}`;
-            } else if (pAny.image && typeof pAny.image === 'string') {
-              imageUrl = pAny.image.startsWith('http')
-                ? pAny.image
-                : `https://lindo-project.onrender.com/${pAny.image}`;
-            } else {
-              // No fallback to lindo.png - return empty string if no image
-              imageUrl = '';
-            }
-            return imageUrl;
-          })();
+                     // Enrich cart item with full product details
+           const finalImageUrl = (() => {
+             // Handle image URL construction for Cloudinary and other sources
+             let imageUrl = '';
+             const pAny: any = product as any;
+             
+             // Check for images array first (Cloudinary URLs)
+             if (pAny.images && Array.isArray(pAny.images) && pAny.images.length > 0) {
+               const firstImage = pAny.images[0];
+               if (typeof firstImage === 'string') {
+                 // If it's already a full URL (Cloudinary), use it directly
+                 if (firstImage.startsWith('http')) {
+                   imageUrl = firstImage;
+                 } else {
+                   // If it's a relative path, construct full URL
+                   imageUrl = `https://lindo-project.onrender.com/${firstImage}`;
+                 }
+               }
+             } 
+             // Check for single image field
+             else if (pAny.image && typeof pAny.image === 'string') {
+               if (pAny.image.startsWith('http')) {
+                 imageUrl = pAny.image;
+               } else {
+                 imageUrl = `https://lindo-project.onrender.com/${pAny.image}`;
+               }
+             }
+             // Check for imageUrl field (sometimes used)
+             else if (pAny.imageUrl && typeof pAny.imageUrl === 'string') {
+               if (pAny.imageUrl.startsWith('http')) {
+                 imageUrl = pAny.imageUrl;
+               } else {
+                 imageUrl = `https://lindo-project.onrender.com/${pAny.imageUrl}`;
+               }
+             }
+             
+             console.log('Image URL construction details:', {
+               productId,
+               hasImages: !!(pAny.images && Array.isArray(pAny.images)),
+               imagesLength: pAny.images ? pAny.images.length : 0,
+               firstImage: pAny.images && pAny.images.length > 0 ? pAny.images[0] : null,
+               hasImage: !!pAny.image,
+               image: pAny.image,
+               hasImageUrl: !!pAny.imageUrl,
+               imageUrl: pAny.imageUrl,
+               finalImageUrl: imageUrl
+             });
+             
+             return imageUrl;
+           })();
           
           console.log('Image URL construction for product:', productId, {
             originalImages: (product as any).images,

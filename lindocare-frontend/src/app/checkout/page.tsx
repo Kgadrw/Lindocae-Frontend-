@@ -17,7 +17,7 @@ interface Product {
   id: string | number;
   name: string;
   price: number;
-  image: string;
+  image: string | string[];
   quantity?: number;
 }
 
@@ -95,7 +95,6 @@ const CheckoutPage = () => {
             console.log("Checkout: Cart items set from server:", convertedCart);
           } else {
             setCartItems([]);
-            setLastCartRefresh(new Date());
             console.log("Checkout: Server cart is empty");
           }
         } else {
@@ -502,56 +501,29 @@ const CheckoutPage = () => {
                     className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0"
                   >
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      {item.image ? (
-                        // Handle both string and array image formats
-                        typeof item.image === "string" ? (
-                      item.image.trim().length > 0 ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="object-cover w-full h-full"
-                              onError={(e) => {
-                                // If image fails, just log the error but don't change the src
-                                console.warn('Image failed to load:', item.image);
-                              }}
-                              onLoad={() => {
-                                console.log('Image loaded successfully:', item.image);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                              No Image
-                            </div>
-                          )
-                        ) : Array.isArray(item.image) ? (
-                          // Handle array of images - use first image if available
-                          (item.image as any[]).length > 0 ? (
-                            <img
-                              src={(item.image as any[])[0]}
-                              alt={item.name}
-                              className="object-cover w-full h-full"
-                              onError={(e) => {
-                                console.warn('Array image failed to load:', (item.image as any[])[0]);
-                              }}
-                              onLoad={() => {
-                                console.log('Array image loaded successfully:', (item.image as any[])[0]);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                              No Image
-                            </div>
-                          )
+                      {(() => {
+                        let image = '';
+                        if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
+                        else if (typeof item.image === 'string') image = item.image;
+                        
+                        return image && image.trim().length > 0 ? (
+                          <img
+                            src={image}
+                            alt={item.name}
+                            className="object-cover w-full h-full"
+                            onError={(e) => {
+                              console.warn('Image failed to load:', image);
+                            }}
+                            onLoad={() => {
+                              console.log('Image loaded successfully:', image);
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
                             No Image
                           </div>
-                        )
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                          No Image
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                     <div className="flex-1">
                       <div className="font-medium text-black text-base">

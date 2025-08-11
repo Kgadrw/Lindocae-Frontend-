@@ -23,7 +23,7 @@ interface Product {
   id: string | number;
   name: string;
   price: number;
-  image: string;
+  image: string | string[];
   quantity?: number;
   color?: string;
   size?: string;
@@ -100,6 +100,16 @@ export default function CartPage() {
             category: item.category,
           }));
           console.log('Converted cart items with product details:', convertedCart);
+          console.log('Image URLs in cart items:', convertedCart.map(item => {
+            const imageStr = Array.isArray(item.image)
+              ? (item.image[0] || '')
+              : (item.image || '');
+            return {
+              name: item.name,
+              image: item.image,
+              hasImage: imageStr.trim().length > 0,
+            };
+          }));
           setCartItems(convertedCart);
         } else {
           // Guest user: use localStorage
@@ -358,24 +368,35 @@ export default function CartPage() {
             cartItems.map((item, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
                                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                   {item.image && typeof item.image === 'string' && item.image.trim().length > 0 ? (
-                     <Image 
-                       src={item.image} 
-                       alt={item.name || 'Product'} 
-                       width={96} 
-                       height={96} 
-                       className="object-cover w-full h-full"
-                       onError={(e) => {
-                         // If image fails to load, show placeholder
-                         const target = e.target as HTMLImageElement;
-                         target.style.display = 'none';
-                         target.nextElementSibling?.classList.remove('hidden');
-                       }}
-                     />
-                   ) : null}
-                   <div className={`w-full h-full bg-gray-200 flex items-center justify-center ${item.image && item.image.trim().length > 0 ? 'hidden' : ''}`}>
-                     <span className="text-gray-400 text-xs text-center">No Image</span>
-                   </div>
+                   {(() => {
+                     let image = '';
+                     if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
+                     else if (typeof item.image === 'string') image = item.image;
+                     
+                     return image && image.trim().length > 0 ? (
+                       <Image 
+                         src={image} 
+                         alt={item.name || 'Product'} 
+                         width={96} 
+                         height={96} 
+                         className="object-cover w-full h-full"
+                         onError={(e) => {
+                           console.log('Image failed to load:', image, 'for product:', item.name);
+                           // If image fails to load, show placeholder
+                           const target = e.target as HTMLImageElement;
+                           target.style.display = 'none';
+                           target.nextElementSibling?.classList.remove('hidden');
+                         }}
+                         onLoad={() => {
+                           console.log('Image loaded successfully:', image, 'for product:', item.name);
+                         }}
+                       />
+                     ) : (
+                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                         <span className="text-gray-400 text-xs text-center">No Image</span>
+                       </div>
+                     );
+                   })()}
                  </div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
                   <div className="font-semibold text-black text-base sm:text-lg">{item.name}</div>
