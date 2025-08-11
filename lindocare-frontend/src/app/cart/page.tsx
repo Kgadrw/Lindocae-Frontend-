@@ -38,6 +38,7 @@ function formatRWF(amount: number | undefined | null) {
 // Helper to get the access token from userData
 function getAccessToken(): string | null {
   try {
+    if (typeof window === 'undefined') return null;  // Add this to avoid SSR errors
     const stored = localStorage.getItem('userData');
     if (stored) {
       const parsed = JSON.parse(stored);
@@ -48,6 +49,7 @@ function getAccessToken(): string | null {
   }
   return null;
 }
+
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<Product[]>([]);

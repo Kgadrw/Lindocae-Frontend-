@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { XCircle, Home, ShoppingBag, RefreshCw } from 'lucide-react';
 
-const PaymentCancelPage = () => {
+const PaymentCancelContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orderDetails, setOrderDetails] = useState<any>(null);
@@ -145,6 +145,18 @@ const PaymentCancelPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const PaymentCancelPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600"></div>
+      </div>
+    }>
+      <PaymentCancelContent />
+    </Suspense>
   );
 };
 
