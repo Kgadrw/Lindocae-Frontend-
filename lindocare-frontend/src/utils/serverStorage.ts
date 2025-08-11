@@ -103,7 +103,7 @@ export function isUserLoggedIn(): boolean {
 // ==================== CART MANAGEMENT ====================
 
 export interface CartItem {
-  productId: string;
+  productId: string | object;
   quantity: number;
   // Optional fields for local storage fallback
   name?: string;
@@ -167,28 +167,37 @@ export async function fetchUserCart(): Promise<CartItem[]> {
     
     // Convert server cart items to local format
     return items.map((item: any) => {
-      // Handle different possible productId formats
-      let productId = '';
-      if (item.productId) {
+      // Preserve the original productId - it might be an object with full product details
+      let productId: string | object = item.productId;
+      
+      // If productId is an object with full product details, keep it as is
+      if (typeof item.productId === 'object' && item.productId) {
+        productId = item.productId;
+        console.log('Preserving product object with full details:', {
+          productId: item.productId._id || item.productId.id,
+          productName: item.productId.name,
+          productImage: item.productId.image,
+          itemKeys: Object.keys(item)
+        });
+      } else {
+        // Handle string productId or convert to string if needed
         if (typeof item.productId === 'string') {
           productId = item.productId;
-        } else if (typeof item.productId === 'object' && item.productId._id) {
-          productId = item.productId._id;
-        } else if (typeof item.productId === 'object' && item.productId.id) {
-          productId = item.productId.id;
-        } else {
+        } else if (item.productId) {
           productId = String(item.productId);
+        } else if (item._id) {
+          productId = String(item._id);
+        } else {
+          productId = '';
         }
-      } else if (item._id) {
-        productId = String(item._id);
+        
+        console.log('Using string productId:', { 
+          original: item.productId, 
+          originalType: typeof item.productId,
+          extracted: productId,
+          itemKeys: Object.keys(item)
+        });
       }
-      
-      console.log('Extracted productId:', { 
-        original: item.productId, 
-        originalType: typeof item.productId,
-        extracted: productId,
-        itemKeys: Object.keys(item)
-      });
       
       return {
         productId,
@@ -916,134 +925,163 @@ export async function fetchUserCartWithProducts(): Promise<CartItem[]> {
       return [];
     }
 
-    // Now fetch full product details for each cart item
+    // Now enrich cart items with product details
     const enrichedCartItems: CartItem[] = [];
     
     for (const cartItem of basicCartItems) {
-      let productId: string = '';
-      try {
-        // Ensure productId is a string - handle object cases
-        if (cartItem.productId) {
-          if (typeof cartItem.productId === 'string') {
-            productId = cartItem.productId;
-          } else if (typeof cartItem.productId === 'object' && cartItem.productId._id) {
-            productId = cartItem.productId._id;
-          } else if (typeof cartItem.productId === 'object' && cartItem.productId.id) {
-            productId = cartItem.productId.id;
-          } else {
-            productId = String(cartItem.productId);
-          }
-        } else if (cartItem._id) {
-          productId = String(cartItem._id);
+      console.log('Processing cart item:', cartItem);
+      
+      // Check if productId is already an object with full product details
+      if (cartItem.productId && typeof cartItem.productId === 'object') {
+        console.log('ProductId is an object with full product details:', cartItem.productId);
+        
+        const product = cartItem.productId as any;
+        const productId = product._id || product.id || String(product);
+        
+        // Extract image from the product object
+        let imageUrl = '';
+        if (product.image && Array.isArray(product.image) && product.image.length > 0) {
+          imageUrl = product.image[0];
+        } else if (product.image && typeof product.image === 'string') {
+          imageUrl = product.image;
+        } else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+          imageUrl = product.images[0];
+        } else if (product.images && typeof product.images === 'string') {
+          imageUrl = product.images;
         }
         
-        if (!productId || productId === 'undefined' || productId === 'null') {
-          console.warn('Invalid productId for cart item:', cartItem);
-          enrichedCartItems.push(cartItem);
-          continue;
-        }
-        
-        console.log('Fetching product details for productId:', productId, 'from cart item:', cartItem);
-        
-        // Fetch full product details using productId
-        const productResponse = await fetch(`${API_BASE}/product/getProductById/${productId}`, {
-          headers: {
-            'accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+        console.log('Extracted image from product object:', {
+          productId,
+          productName: product.name,
+          productImage: product.image,
+          productImages: product.images,
+          finalImageUrl: imageUrl
         });
+        
+        enrichedCartItems.push({
+          productId: productId,
+          quantity: cartItem.quantity,
+          name: product.name || cartItem.name || 'Product',
+          price: product.price || cartItem.price || 0,
+          image: imageUrl || cartItem.image,
+          category: product.category || cartItem.category,
+        });
+      } else {
+        // Handle case where productId is a string - fetch product details from API
+        let productId: string = '';
+        try {
+          // Ensure productId is a string
+          if (cartItem.productId) {
+            if (typeof cartItem.productId === 'string') {
+              productId = cartItem.productId;
+            } else {
+              productId = String(cartItem.productId);
+            }
+          } else if (cartItem._id) {
+            productId = String(cartItem._id);
+          }
+          
+          if (!productId || productId === 'undefined' || productId === 'null') {
+            console.warn('Invalid productId for cart item:', cartItem);
+            enrichedCartItems.push(cartItem);
+            continue;
+          }
+          
+          console.log('Fetching product details for productId:', productId, 'from cart item:', cartItem);
+          
+          // Fetch full product details using productId
+          const productResponse = await fetch(`${API_BASE}/product/getProductById/${productId}`, {
+            headers: {
+              'accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
 
-        if (productResponse.ok) {
-          const productDataRaw = await productResponse.json();
-          const product = (productDataRaw && typeof productDataRaw === 'object' && (productDataRaw as any).product)
-            ? (productDataRaw as any).product
-            : productDataRaw;
-          console.log('Product details fetched for:', productId, product);
-          console.log('Product image field:', {
-            images: (product as any).images,
-            image: (product as any).image,
-            finalImage: (product as any).images && Array.isArray((product as any).images) && (product as any).images.length > 0 
-              ? (product as any).images[0] 
-              : (product as any).image || cartItem.image || '/lindo.png'
-          });
-          
-                     // Enrich cart item with full product details
-           const finalImageUrl = (() => {
-             // Handle image URL construction for Cloudinary and other sources
-             let imageUrl = '';
-             const pAny: any = product as any;
-             
-             // Check for images array first (Cloudinary URLs)
-             if (pAny.images && Array.isArray(pAny.images) && pAny.images.length > 0) {
-               const firstImage = pAny.images[0];
-               if (typeof firstImage === 'string') {
-                 // If it's already a full URL (Cloudinary), use it directly
-                 if (firstImage.startsWith('http')) {
-                   imageUrl = firstImage;
-                 } else {
-                   // If it's a relative path, construct full URL
-                   imageUrl = `https://lindo-project.onrender.com/${firstImage}`;
-                 }
-               }
-             } 
-             // Check for single image field
-             else if (pAny.image && typeof pAny.image === 'string') {
-               if (pAny.image.startsWith('http')) {
-                 imageUrl = pAny.image;
-               } else {
-                 imageUrl = `https://lindo-project.onrender.com/${pAny.image}`;
-               }
-             }
-             // Check for imageUrl field (sometimes used)
-             else if (pAny.imageUrl && typeof pAny.imageUrl === 'string') {
-               if (pAny.imageUrl.startsWith('http')) {
-                 imageUrl = pAny.imageUrl;
-               } else {
-                 imageUrl = `https://lindo-project.onrender.com/${pAny.imageUrl}`;
-               }
-             }
-             
-             console.log('Image URL construction details:', {
-               productId,
-               hasImages: !!(pAny.images && Array.isArray(pAny.images)),
-               imagesLength: pAny.images ? pAny.images.length : 0,
-               firstImage: pAny.images && pAny.images.length > 0 ? pAny.images[0] : null,
-               hasImage: !!pAny.image,
-               image: pAny.image,
-               hasImageUrl: !!pAny.imageUrl,
-               imageUrl: pAny.imageUrl,
-               finalImageUrl: imageUrl
-             });
-             
-             return imageUrl;
-           })();
-          
-          console.log('Image URL construction for product:', productId, {
-            originalImages: (product as any).images,
-            originalImage: (product as any).image,
-            finalImageUrl: finalImageUrl
-          });
-          
-          enrichedCartItems.push({
-            productId: productId,
-            quantity: cartItem.quantity,
-            name: (product as any).name || cartItem.name || 'Product',
-            price: (product as any).price || cartItem.price || 0,
-            image: finalImageUrl,
-            category: (product as any).categoryId || (product as any).category || cartItem.category,
-          });
-        } else {
-          console.warn('Failed to fetch product details for:', productId, {
-            status: productResponse.status,
-            statusText: productResponse.statusText
-          });
+          if (productResponse.ok) {
+            const productDataRaw = await productResponse.json();
+            const product = (productDataRaw && typeof productDataRaw === 'object' && (productDataRaw as any).product)
+              ? (productDataRaw as any).product
+              : productDataRaw;
+            console.log('Product details fetched for:', productId, product);
+            
+            // Enrich cart item with full product details
+            const finalImageUrl = (() => {
+              // Handle image URL construction for Cloudinary and other sources
+              let imageUrl = '';
+              const pAny: any = product as any;
+              
+              // Check for images array first (Cloudinary URLs)
+              if (pAny.images && Array.isArray(pAny.images) && pAny.images.length > 0) {
+                const firstImage = pAny.images[0];
+                if (typeof firstImage === 'string') {
+                  // If it's already a full URL (Cloudinary), use it directly
+                  if (firstImage.startsWith('http')) {
+                    imageUrl = firstImage;
+                  } else {
+                    // If it's a relative path, construct full URL
+                    imageUrl = `https://lindo-project.onrender.com/${firstImage}`;
+                  }
+                }
+              } 
+              // Check for single image field
+              else if (pAny.image && typeof pAny.image === 'string') {
+                if (pAny.image.startsWith('http')) {
+                  imageUrl = pAny.image;
+                } else {
+                  imageUrl = `https://lindo-project.onrender.com/${pAny.image}`;
+                }
+              }
+              // Check for imageUrl field (sometimes used)
+              else if (pAny.imageUrl && typeof pAny.imageUrl === 'string') {
+                if (pAny.imageUrl.startsWith('http')) {
+                  imageUrl = pAny.imageUrl;
+                } else {
+                  imageUrl = `https://lindo-project.onrender.com/${pAny.imageUrl}`;
+                }
+              }
+              
+              console.log('Image URL construction details:', {
+                productId,
+                hasImages: !!(pAny.images && Array.isArray(pAny.images)),
+                imagesLength: pAny.images ? pAny.images.length : 0,
+                firstImage: pAny.images && pAny.images.length > 0 ? pAny.images[0] : null,
+                hasImage: !!pAny.image,
+                image: pAny.image,
+                hasImageUrl: !!pAny.imageUrl,
+                imageUrl: pAny.imageUrl,
+                finalImageUrl: imageUrl
+              });
+              
+              return imageUrl;
+            })();
+            
+            console.log('Image URL construction for product:', productId, {
+              originalImages: (product as any).images,
+              originalImage: (product as any).image,
+              finalImageUrl: finalImageUrl
+            });
+            
+            enrichedCartItems.push({
+              productId: productId,
+              quantity: cartItem.quantity,
+              name: (product as any).name || cartItem.name || 'Product',
+              price: (product as any).price || cartItem.price || 0,
+              image: finalImageUrl || (product as any).images || (product as any).image || cartItem.image,
+              category: (product as any).categoryId || (product as any).category || cartItem.category,
+            });
+          } else {
+            console.warn('Failed to fetch product details for:', productId, {
+              status: productResponse.status,
+              statusText: productResponse.statusText
+            });
+            // Use basic cart item as fallback
+            enrichedCartItems.push(cartItem);
+          }
+        } catch (productError) {
+          console.error('Error fetching product details for:', productId, productError);
           // Use basic cart item as fallback
           enrichedCartItems.push(cartItem);
         }
-      } catch (productError) {
-        console.error('Error fetching product details for:', productId, productError);
-        // Use basic cart item as fallback
-        enrichedCartItems.push(cartItem);
       }
     }
 

@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       "cdn.jsdelivr.net",
       "images.pexels.com",
       "res.cloudinary.com",
+      "lindo-project.onrender.com",
     ],
   },
   typescript: {

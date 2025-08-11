@@ -509,19 +509,19 @@ const CheckoutPage = () => {
                         return image && image.trim().length > 0 ? (
                           <img
                             src={image}
-                            alt={item.name}
-                            className="object-cover w-full h-full"
-                            onError={(e) => {
+                          alt={item.name}
+                          className="object-cover w-full h-full"
+                              onError={(e) => {
                               console.warn('Image failed to load:', image);
-                            }}
-                            onLoad={() => {
+                              }}
+                              onLoad={() => {
                               console.log('Image loaded successfully:', image);
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                            No Image
-                          </div>
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                              No Image
+                            </div>
                         );
                       })()}
                     </div>

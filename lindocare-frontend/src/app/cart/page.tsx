@@ -107,7 +107,10 @@ export default function CartPage() {
             return {
               name: item.name,
               image: item.image,
+              imageType: typeof item.image,
+              isArray: Array.isArray(item.image),
               hasImage: imageStr.trim().length > 0,
+              imageStr: imageStr
             };
           }));
           setCartItems(convertedCart);
@@ -372,6 +375,12 @@ export default function CartPage() {
                      let image = '';
                      if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
                      else if (typeof item.image === 'string') image = item.image;
+                     
+                     console.log('Rendering image for product:', item.name, {
+                       originalImage: item.image,
+                       processedImage: image,
+                       hasImage: image && image.trim().length > 0
+                     });
                      
                      return image && image.trim().length > 0 ? (
                        <Image 
