@@ -133,11 +133,12 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
       ) : (
         <div className="w-full">
           {/* Auto-sliding container */}
-          <div 
-            ref={scrollContainerRef}
-            className="flex gap-5 overflow-x-hidden pb-4"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
+                  <div 
+          ref={scrollContainerRef}
+          className="flex gap-5 pb-4 justify-center flex-wrap"
+          style={{ overflowX: 'hidden' }}
+        >
+
             {icons?.map((icon: Icon, idx: number) => {
               let image = '';
               if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
