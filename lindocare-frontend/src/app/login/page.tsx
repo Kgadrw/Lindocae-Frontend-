@@ -233,127 +233,73 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="w-full max-w-md">
-  {/* Create Account Form */}
-  {activeTab === "register" && (
-    <form onSubmit={handleRegister} className="space-y-4">
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <UserPlus size={24} className="text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
-        </div>
-        <p className="text-gray-600 text-sm">Join Lindo for the best baby care experience</p>
-      </div>
+          {/* Create Account Form */}
+          {activeTab === "register" && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <UserPlus size={24} className="text-green-600" />
+                  <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
+                </div>
+                <p className="text-gray-600 text-sm">Join Lindo for the best baby care experience</p>
+              </div>
 
-      <input
-        type="text"
-        placeholder="First Name"
-        value={firstName}
-        onChange={(e) => setFirstName(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
-        required
-      />
+              <input
+                type="text"
+                placeholder="First Name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
+                required
+              />
 
-      <input
-        type="text"
-        placeholder="Last Name"
-        value={lastName}
-        onChange={(e) => setLastName(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
-        required
-      />
+              <input
+                type="text"
+                placeholder="Last Name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
+                required
+              />
 
-      <select
-        value={gender}
-        onChange={(e) => setGender(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-        required
-      >
-        <option value="">Select Gender</option>
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-      </select>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
 
-      <input
-        type="email"
-        placeholder="Email address"
-        value={registerEmail}
-        onChange={(e) => setRegisterEmail(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
-        required
-      />
+              <input
+                type="email"
+                placeholder="Email address"
+                value={registerEmail}
+                onChange={(e) => setRegisterEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
+                required
+              />
 
-      <div className="relative">
-        <input
-          type={registerShowPassword ? "text" : "password"}
-          placeholder="Create password"
-          value={registerPassword}
-          onChange={(e) => setRegisterPassword(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
-          required
-        />
-        <button
-          type="button"
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          onClick={() => setRegisterShowPassword((v) => !v)}
-          tabIndex={-1}
-        >
-          {registerShowPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-        </button>
-      </div>
-
-      <label className="flex items-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-50">
-        <Upload size={18} className="text-gray-500" />
-        <span className="text-gray-600">
-          {registerImage ? registerImage.name : "Upload profile image"}
-        </span>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setRegisterImage(e.target.files?.[0] || null)}
-          className="hidden"
-        />
-      </label>
-
-      <label className="flex items-center gap-2 text-sm text-gray-700">
-        <input
-          type="checkbox"
-          checked={registerKeepSignedIn}
-          onChange={(e) => setRegisterKeepSignedIn(e.target.checked)}
-          className="accent-green-600"
-        />
-        Keep me signed in
-      </label>
-
-      {registerError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-          <XCircle size={16} className="text-red-500" />
-          <span className="text-red-700 text-sm font-medium">{registerError}</span>
-        </div>
-      )}
-
-      {registerSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
-          <CheckCircle size={16} className="text-green-500" />
-          <span className="text-green-700 text-sm font-medium">{registerSuccess}</span>
-        </div>
-      )}
-
-      <button
-        type="submit"
-        className="w-full rounded-lg bg-green-600 text-white font-semibold py-3 flex items-center justify-center gap-2 hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={registerLoading}
-      >
-        {registerLoading ? (
-          <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            Creating Account...
-          </>
-        ) : (
-          <>
-            <UserPlus size={20} /> Create Account
-          </>
-        )}
-      </button>
+              <div className="relative">
+                <input
+                  type={registerShowPassword ? "text" : "password"}
+                  placeholder="Create password"
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setRegisterShowPassword((v) => !v)}
+                  tabIndex={-1}
+                >
+                  {registerShowPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
               <label className="flex items-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-50">
               <Upload size={18} className="text-gray-500" />
