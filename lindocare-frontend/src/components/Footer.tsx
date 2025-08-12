@@ -57,21 +57,41 @@ const Footer = () => {
           </ul>
         </div>
         <div>
-          <h3 className="font-bold mb-2">Follow Us</h3>
-          <div className="flex gap-3 mb-2">
-            <a href="https://www.instagram.com/lindocare/" aria-label="Instagram" className="hover:text-lindo-yellow"><Instagram size={24} strokeWidth={2} /></a>
-            <a href="https://www.facebook.com/lindocare/" aria-label="Facebook" className="hover:text-lindo-yellow"><Facebook size={24} strokeWidth={2} /></a>
-            <a href="https://www.youtube.com/lindocare/" aria-label="YouTube" className="hover:text-lindo-yellow"><Youtube size={24} strokeWidth={2} /></a>
-          </div>
-          <p className="text-xs font-normal mb-3">Stay connected for the latest updates</p>
-          <div className="space-y-1 text-xs font-normal">
-            <div className="flex gap-4">
-              <span >Tel:<a href="tel:+250785064255" className="hover:underline">+250 795 575 622</a></span>
-              <span >Email: <a href="mailto:hello@lindocare.com" className="hover:underline">hello@lindocare.com</a></span>
-            </div>
-            <div >Adress : Unify Buildings, Behind T 2000 Hotel <br /> Kigali, Rwanda</div>
-          </div>
-        </div>
+  <h3 className="font-bold mb-2">Follow Us</h3>
+  <div className="flex gap-3 mb-3">
+    <a href="https://www.instagram.com/lindocare/" aria-label="Instagram" className="hover:text-lindo-yellow">
+      <Instagram size={24} strokeWidth={2} />
+    </a>
+    <a href="https://www.facebook.com/lindocare/" aria-label="Facebook" className="hover:text-lindo-yellow">
+      <Facebook size={24} strokeWidth={2} />
+    </a>
+    <a href="https://www.youtube.com/lindocare/" aria-label="YouTube" className="hover:text-lindo-yellow">
+      <Youtube size={24} strokeWidth={2} />
+    </a>
+  </div>
+  <p className="text-xs font-normal mb-4">Stay connected for the latest updates</p>
+  
+  {/* Contact Info */}
+  <div className="space-y-2 text-sm font-normal">
+    <div>
+      <span className="font-medium">Tel:</span>{" "}
+      <a href="tel:+250795575622" className="hover:underline">
+        +250 795 575 622
+      </a>
+    </div>
+    <div>
+      <span className="font-medium">Email:</span>{" "}
+      <a href="mailto:hello@lindocare.com" className="hover:underline">
+        hello@lindocare.com
+      </a>
+    </div>
+    <div>
+      <span className="font-medium">Address:</span>{" "}
+      Unify Buildings, Behind T 2000 Hotel, Kigali, Rwanda
+    </div>
+  </div>
+</div>
+
       </div>
       <div className="text-center text-xs text-gray-700 mt-8 font-normal">
         © 2025 Lindocare. All rights reserved.<br />

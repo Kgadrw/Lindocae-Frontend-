@@ -168,25 +168,42 @@ const LoginPage: React.FC = () => {
   };
 
   // Handle Google OAuth callback in URL (if your backend redirects back with email/user)
+ 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const googleEmail = params.get("email");
-      const googleUserId = params.get("user");
-      const loginValue = googleEmail || googleUserId;
-      if (loginValue) {
-        localStorage.setItem("userEmail", loginValue);
-        localStorage.setItem(
-          `userName:${loginValue}`,
-          loginValue.includes("@") ? loginValue.split("@")[0] : loginValue
-        );
+      const userJson = params.get("user");
+      const token = params.get("token");
+  
+      if (userJson) {
         try {
-          window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
-        } catch (e) { /* ignore */ }
-        window.location.replace("/");
+          const user = JSON.parse(decodeURIComponent(userJson));
+          const data = { user, token };
+          localStorage.setItem("userData", JSON.stringify(data));
+          localStorage.setItem("userEmail", user.email);
+          const name =
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+          localStorage.setItem(`userName:${user.email}`, name);
+          if (user.image) {
+            localStorage.setItem(`userImage:${user.email}`, user.image);
+          }
+  
+          try {
+            window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+          } catch {
+            localStorage.setItem("userEmail", user.email);
+          }
+  
+          // Redirect home instantly
+          window.location.replace("/");
+        } catch (err) {
+          console.error("Failed to parse Google user data", err);
+        }
       }
     }
   }, []);
+  
+
 
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
