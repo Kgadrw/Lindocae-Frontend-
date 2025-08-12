@@ -218,7 +218,7 @@ const CheckoutPage = () => {
 
       // First, create the order using required API format
       const orderData = {
-        paymentMethod: "DPO",
+        paymentMethod: "dpo",
         shippingAddress: structuredShippingAddress,
         customerEmail: customerEmail,
         customerPhone: customerPhone,
