@@ -386,7 +386,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   }, []);
 
   return (
-    <header className="w-full bg-white shadow-md sticky top-0 z-50">
+    <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
       {/* Mobile Header with Hamburger Menu */}
       <div className="block md:hidden px-4 py-1 pb-0 bg-white border-b border-gray-100">
@@ -667,7 +667,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 onBlur={handleBlur}
                 ref={searchInputRef}
                 placeholder="Find babycare essentials..."
-                className="w-full rounded-full border text-blue-700 border-gray-700 px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-black text-base placeholder:text-gray-900"
+                className="w-full rounded-full border text-blue-700 border-gray-700 px-4 py-2 pr-12 focus:outline-none focus:ring-1 focus:ring-blue-700 text-base placeholder:text-gray-900"
                 onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
               />
               <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-1 rounded-full cursor-pointer" aria-label="Search">
@@ -679,7 +679,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 {suggestions.map(s => (
                   <li
                     key={s.type + '-' + s.id + '-' + s.name}
-                    className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-900 flex items-center gap-2"
+                    className="px-4 py-2 cursor-pointer hover:bg-yellow-600 text-gray-900 flex items-center gap-2"
                     onMouseDown={() => handleSuggestionClick(s.name, s.type)}
                   >
                     <span className="inline-block w-2 h-2 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>

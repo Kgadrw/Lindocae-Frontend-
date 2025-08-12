@@ -22,11 +22,11 @@ const BannerSkeleton = () => (
   <section className="w-full mb-8 animate-pulse">
     <div className="grid grid-cols-1 lg:grid-cols-9 gap-8">
       {/* Large promo skeleton */}
-      <div className="lg:col-span-4 relative rounded-xl p-6 flex flex-col justify-end pb-10 overflow-hidden bg-gray-200 h-80" />
+      <div className="lg:col-span-4 relative  p-6 flex flex-col justify-end pb-10 overflow-hidden bg-gray-200 h-80" />
       {/* 2x2 grid skeleton */}
       <div className="lg:col-span-5 grid grid-cols-2 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-gray-200 rounded-xl h-48" />
+          <div key={i} className="bg-gray-200  h-48" />
         ))}
       </div>
     </div>
@@ -67,7 +67,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
   };
 
   return (
-    <section className="w-full mb-8">
+    <section className="w-full mb-8 ">
       {bannerLoading ? (
         <BannerSkeleton />
       ) : bannerError ? (
