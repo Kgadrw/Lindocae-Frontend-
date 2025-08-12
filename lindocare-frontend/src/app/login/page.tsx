@@ -172,36 +172,105 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const userJson = params.get("user");
-      const token = params.get("token");
-  
-      if (userJson) {
+      
+      // Debug: Log all parameters to see what we're getting
+      console.log("Google callback parameters:", Object.fromEntries(params.entries()));
+      
+      // Check if we have a JSON response in the URL hash or body
+      const hash = window.location.hash;
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      let userData = null;
+      
+      // Try to parse JSON from URL hash
+      if (hash && hash.startsWith('#/')) {
         try {
-          const user = JSON.parse(decodeURIComponent(userJson));
-          const data = { user, token };
-          localStorage.setItem("userData", JSON.stringify(data));
-          localStorage.setItem("userEmail", user.email);
-          const name =
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
-          localStorage.setItem(`userName:${user.email}`, name);
-          if (user.image) {
-            localStorage.setItem(`userImage:${user.email}`, user.image);
-          }
-  
-          try {
-            window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
-          } catch {
-            localStorage.setItem("userEmail", user.email);
-          }
-  
-          // Redirect home instantly
-          window.location.replace("/");
-        } catch (err) {
-          console.error("Failed to parse Google user data", err);
+          const jsonStr = decodeURIComponent(hash.substring(2));
+          userData = JSON.parse(jsonStr);
+          console.log("Found JSON data in hash:", userData);
+        } catch (e) {
+          console.log("No valid JSON in hash");
         }
       }
+      
+      // If we have JSON data, use it
+      if (userData) {
+        const userEmail = userData.email || userData._id;
+        const userName = userData.firstName && userData.lastName 
+          ? `${userData.firstName} ${userData.lastName}`
+          : userData.firstName || userData.name || (userEmail && userEmail.includes("@") ? userEmail.split("@")[0] : userEmail);
+        const userAvatar = userData.image && userData.image.length > 0 ? userData.image[0] : userData.avatar;
+        
+        console.log("Extracted user data from JSON:", { userEmail, userName, userAvatar });
+        
+        if (userEmail) {
+          localStorage.setItem("userEmail", userEmail);
+          
+          if (userName && userName !== userEmail) {
+            localStorage.setItem(`userName:${userEmail}`, userName);
+            console.log("Stored userName:", userName);
+          }
+          
+          if (userAvatar) {
+            localStorage.setItem(`userAvatar:${userEmail}`, userAvatar);
+            console.log("Stored userAvatar:", userAvatar);
+          }
+          
+          window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+          window.dispatchEvent(new CustomEvent("userLogin", { 
+            detail: { email: userEmail, name: userName, avatar: userAvatar } 
+          }));
+          
+          setTimeout(() => {
+            window.location.replace("/");
+          }, 100);
+          return;
+        }
+      }
+      
+      // Fallback to URL parameters (existing logic)
+      const googleEmail = params.get("email");
+      const googleName = params.get("name");
+      const googleUserId = params.get("user");
+      const googleAvatar = params.get("avatar");
+      const googleDisplayName = params.get("displayName");
+      const googleGivenName = params.get("givenName");
+      const googleFamilyName = params.get("familyName");
+      
+      const userEmail = googleEmail || googleUserId;
+      const userName = googleName || googleDisplayName || 
+                     (googleGivenName && googleFamilyName ? `${googleGivenName} ${googleFamilyName}` : null) ||
+                     googleGivenName || 
+                     (userEmail && userEmail.includes("@") ? userEmail.split("@")[0] : userEmail);
+      
+      console.log("Extracted user data from URL params:", { userEmail, userName, googleAvatar });
+      
+      if (userEmail) {
+        localStorage.setItem("userEmail", userEmail);
+        
+        if (userName && userName !== userEmail) {
+          localStorage.setItem(`userName:${userEmail}`, userName);
+          console.log("Stored userName:", userName);
+        }
+        
+        if (googleAvatar) {
+          localStorage.setItem(`userAvatar:${userEmail}`, googleAvatar);
+          console.log("Stored userAvatar:", googleAvatar);
+        }
+        
+        window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+        window.dispatchEvent(new CustomEvent("userLogin", { 
+          detail: { email: userEmail, name: userName, avatar: googleAvatar } 
+        }));
+        
+        setTimeout(() => {
+          window.location.replace("/");
+        }, 100);
+      } else {
+        router.replace("/login");
+      }
     }
-  }, []);
+  }, [router]);
   
 
 
