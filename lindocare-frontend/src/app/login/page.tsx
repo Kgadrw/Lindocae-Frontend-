@@ -362,19 +362,7 @@ const LoginPage: React.FC = () => {
                 <div className="flex-grow border-t border-gray-200"></div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => (window.location.href = "https://lindo-project.onrender.com/auth/google")}
-                className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium py-3 text-base shadow-sm hover:bg-gray-50 transition"
-              >
-                <img
-                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
-                  alt="Google"
-                  width={20}
-                  height={20}
-                />
-                Continue with Google
-              </button>
+             
 
               <div className="text-xs text-gray-500 text-center mt-4">
                 By creating an account, you agree to our{" "}
@@ -473,19 +461,7 @@ const LoginPage: React.FC = () => {
                 <div className="flex-grow border-t border-gray-200"></div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => (window.location.href = "https://lindo-project.onrender.com/auth/google")}
-                className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium py-3 text-base shadow-sm hover:bg-gray-50 transition"
-              >
-                <img
-                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
-                  alt="Google"
-                  width={20}
-                  height={20}
-                />
-                Continue with Google
-              </button>
+              
             </form>
           )}
         </div>
