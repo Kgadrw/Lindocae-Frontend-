@@ -35,37 +35,76 @@ function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: 
 }
 
 // Updated function to fetch wishlist count from server
+// Safe helpers for user info
+function getLoggedInUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("userId") || null;
+}
+
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token") || null;
+}
+
+// Fixed wishlist fetch function
 async function fetchWishlistCountFromBackend() {
-  if (typeof window === 'undefined') return 0;
-  
+  if (typeof window === "undefined") return 0;
+
   try {
     if (isUserLoggedIn()) {
-      // Logged in: use robust fallback strategy
-      const wishlist = await fetchUserWishlistWithFallback();
-      return wishlist.length;
+      const userId = getLoggedInUserId();
+      if (!userId) return 0;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+      if (!baseUrl) {
+        console.error("❌ API base URL is missing. Set NEXT_PUBLIC_API_BASE_URL in .env.local");
+        return 0;
+      }
+
+      const token = getAuthToken();
+
+      const response = await fetch(
+        `${baseUrl}/wishlist/getUserWishlistProducts/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}), // add auth only if token exists
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch wishlist: ${response.status}`);
+      }
+
+      const wishlist = await response.json();
+      return Array.isArray(wishlist) ? wishlist.length : 0;
     } else {
-      // Guest: use localStorage
+      // Guest: from localStorage
       const localWishlist = getLocalWishlist();
       return localWishlist.length;
     }
   } catch (error) {
-    console.error('Error fetching wishlist count:', error);
-    // If server wishlist fails, fall back to local storage for logged-in users
+    console.error("Error fetching wishlist count:", error);
+
+    // Fallback for logged-in users
     if (isUserLoggedIn()) {
       try {
         const localWishlist = getLocalWishlist();
-        console.log('Falling back to local wishlist storage');
+        console.log("⚠️ Falling back to local wishlist storage");
         return localWishlist.length;
       } catch (localError) {
-        console.error('Local wishlist fallback also failed:', localError);
+        console.error("Local wishlist fallback also failed:", localError);
         return 0;
       }
     }
-    // Return 0 instead of throwing to prevent app crashes
-    // This allows the app to continue functioning even if wishlist API fails
+
     return 0;
   }
 }
+
+
 
 // Updated function to fetch cart count from server
 async function fetchCartCountFromBackend() {
@@ -251,17 +290,19 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   };
 
 
-
   const handleSearch = (e?: React.FormEvent | React.KeyboardEvent) => {
     if (e) e.preventDefault();
     if (search.trim()) {
       // If matches a category, go to all-products page filtered by that category
-      const cat = allCategories.find(c => c.name.toLowerCase() === search.trim().toLowerCase());
+      const cat = allCategories.find(
+        c => c.name.toLowerCase() === search.trim().toLowerCase()
+      );
       if (cat) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('selectedCategoryId', cat._id || '');
         }
-        router.push('/all-products');
+        // Pass categoryId in URL so all-products can filter
+        router.push(`/all-products?category=${encodeURIComponent(cat._id || '')}`);
         setSearch('');
         setShowSuggestions(false);
         return;
@@ -272,14 +313,28 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       setShowSuggestions(false);
     }
   };
-
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearch(value);
     if (value.trim()) {
       // Search both products and categories
-      const prodMatches = allProducts.filter(p => p.name.toLowerCase().includes(value.toLowerCase())).map(p => ({ type: 'product' as const, id: p.id, name: p.name }));
-      const catMatches = allCategories.filter(c => c.name.toLowerCase().includes(value.toLowerCase())).map(c => ({ type: 'category' as const, id: c._id, name: c.name }));
+      const prodMatches = allProducts
+        .filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+        .map(p => ({
+          type: 'product' as const,
+          id: p.id,
+          name: p.name
+        }));
+  
+      const catMatches = allCategories
+        .filter(c => c.name.toLowerCase().includes(value.toLowerCase()))
+        .map(c => ({
+          type: 'category' as const,
+          id: c._id,
+          name: c.name
+        }));
+  
       const filtered = [...catMatches, ...prodMatches].slice(0, 7);
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
@@ -287,43 +342,58 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       setShowSuggestions(false);
     }
   };
-
-  const handleSuggestionClick = (name: string, type: 'product'|'category') => {
+  
+  const handleSuggestionClick = (
+    name: string,
+    type: 'product' | 'category',
+    id: string
+  ) => {
     setSearch(name);
     setShowSuggestions(false);
     if (type === 'category') {
-      router.push(`/category/${encodeURIComponent(name)}`);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('selectedCategoryId', id || '');
+      }
+      router.push(`/all-products?category=${encodeURIComponent(id || '')}`);
     } else {
       router.push(`/search?q=${encodeURIComponent(name)}`);
     }
   };
-
+  
   const handleBlur = () => {
     setTimeout(() => setShowSuggestions(false), 100); // Delay to allow click
   };
-
+  
   // Restore highlight logic for active category
   let selectedCategoryId = '';
   let highlightActive = false;
   if (typeof window !== 'undefined') {
     const path = window.location.pathname;
-    highlightActive = path.startsWith('/all-products') || path.startsWith('/category');
-    selectedCategoryId = highlightActive ? (localStorage.getItem('selectedCategoryId') || '') : '';
+    highlightActive =
+      path.startsWith('/all-products') || path.startsWith('/category');
+    selectedCategoryId = highlightActive
+      ? localStorage.getItem('selectedCategoryId') || ''
+      : '';
   }
-
-  // Fetch products for a specific category
+  
+  // Fetch products for a specific category (kept same)
   const fetchCategoryProducts = async (categoryId: string) => {
     if (categoryProducts[categoryId]) return; // Already loaded
-    
+  
     setLoadingCategoryProducts(prev => ({ ...prev, [categoryId]: true }));
     try {
-      const res = await fetch(`https://lindo-project.onrender.com/product/getProductsByCategory/${categoryId}`);
+      const res = await fetch(
+        `https://lindo-project.onrender.com/product/getProductsByCategory/${categoryId}`
+      );
       if (res.ok) {
         const data = await res.json();
         let prods = [];
         if (Array.isArray(data)) prods = data;
         else if (data && Array.isArray(data.products)) prods = data.products;
-        setCategoryProducts(prev => ({ ...prev, [categoryId]: prods.slice(0, 8) })); // Limit to 8 products
+        setCategoryProducts(prev => ({
+          ...prev,
+          [categoryId]: prods.slice(0, 8)
+        })); // Limit to 8 products
       } else {
         setCategoryProducts(prev => ({ ...prev, [categoryId]: [] }));
       }
@@ -333,50 +403,42 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       setLoadingCategoryProducts(prev => ({ ...prev, [categoryId]: false }));
     }
   };
-
+  
   // Handle category hover
   const handleCategoryHover = (categoryId: string) => {
-    // Clear any existing timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
-    
-    // Set a small delay before showing the dropdown
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredCategory(categoryId);
       setShowCategoryDropdown(categoryId);
       if (!categoryProducts[categoryId] && !loadingCategoryProducts[categoryId]) {
         fetchCategoryProducts(categoryId);
       }
-    }, 200); // 200ms delay
+    }, 200);
   };
-
+  
   const handleCategoryLeave = () => {
-    // Clear any existing timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
-    
-    // Add a small delay before hiding to allow moving mouse to dropdown
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredCategory(null);
       setShowCategoryDropdown(null);
     }, 100);
   };
-
-  // Handle dropdown hover to keep it open
+  
   const handleDropdownHover = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
   };
-
+  
   const handleDropdownLeave = () => {
     setHoveredCategory(null);
     setShowCategoryDropdown(null);
   };
-
-  // Cleanup timeout on unmount
+  
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
@@ -384,6 +446,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       }
     };
   }, []);
+  
 
   return (
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
