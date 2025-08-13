@@ -358,7 +358,7 @@ const LoginPage: React.FC = () => {
 
               <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-gray-200"></div>
-                <span className="mx-3 text-gray-400 text-sm">or</span>
+                
                 <div className="flex-grow border-t border-gray-200"></div>
               </div>
 
@@ -367,7 +367,7 @@ const LoginPage: React.FC = () => {
               <div className="text-xs text-gray-500 text-center mt-4">
                 By creating an account, you agree to our{" "}
                 <Link href="/terms-of-use" className="text-green-600 hover:underline">Terms & Conditions</Link> and{" "}
-                <Link href="/privacy-policy" className="text-green-600 hover:underline">Privacy Policy</Link>.
+                <Link href="/terms-of-use" className="text-green-600 hover:underline">Privacy Policy</Link>.
               </div>
             </form>
           )}
@@ -457,7 +457,7 @@ const LoginPage: React.FC = () => {
 
               <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-gray-200"></div>
-                <span className="mx-3 text-gray-400 text-sm">or</span>
+                
                 <div className="flex-grow border-t border-gray-200"></div>
               </div>
 
