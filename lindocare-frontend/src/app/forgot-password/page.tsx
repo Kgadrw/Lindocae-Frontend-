@@ -3,12 +3,15 @@ import React, { useState, Suspense } from 'react';
 import Image from 'next/image';
 import { ArrowLeft, Mail, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 
 const ForgotPasswordContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const params = useParams();
+
+  // Get token from query param (?token=) or path (/reset-password/[token])
+  const token = searchParams.get('token') || params.token;
 
   // Forgot password state
   const [email, setEmail] = useState("");
@@ -242,4 +245,4 @@ const ForgotPasswordPage: React.FC = () => {
   );
 };
 
-export default ForgotPasswordPage; 
+export default ForgotPasswordPage;
