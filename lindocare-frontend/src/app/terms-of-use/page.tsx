@@ -8,7 +8,7 @@ emailjs.init("0t7uS81N1_DAuGVjE");
 const TERMS_TEXT = `
 Last updated: 23 July 2025
 
-Welcome to Lindocare. These Terms and Conditions ("Terms") govern your use of our website and services. By accessing or purchasing from our site (www.lindocare.rw), you agree to these Terms. Please read them carefully.
+Welcome to Lindocare. These Terms and Conditions ("Terms") govern your use of our website and services. By accessing or purchasing from our site (www.lindocare.store), you agree to these Terms. Please read them carefully.
 
 1. About Us
 Lindocare is a Rwandan-based company dedicated to providing high-quality baby care products, including diapers, baby wipes, baby lotions, and more. Our services are primarily available through our online platform.
@@ -25,6 +25,8 @@ Orders can be placed through our website and will be confirmed via email or SMS.
 All prices are listed in Rwandan Francs (RWF).
 
 We accept various forms of payment, including Mobile Money and card payments.
+
+we use DPO Payment gateway
 
 Lindocare reserves the right to cancel or refuse any order if fraud or payment issues are suspected.
 
@@ -60,7 +62,7 @@ These Terms shall be governed by and interpreted under the laws of the Republic 
 12. Contact Us
 For any questions about these Terms, please contact us at:
 
-  Email: lindocare@gmail.com
+  Email: hello@lindocare.com
   Phone: +250 785 064 255
   Address: Kigali, Rwanda
   Downtown , Unify House , 4th floor behind T-2000

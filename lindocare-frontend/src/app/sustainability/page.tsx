@@ -1,20 +1,21 @@
 import React from 'react';
 import Link from 'next/link';
+import { 
+  Leaf, Package, Truck, Users, Heart, Star, Target, Book, Hospital 
+} from 'lucide-react';
 
 const SustainabilityPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Our Commitment to Sustainability
-            </h1>
-            <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Caring for the environment while caring for your family. We're committed to making a positive impact on our planet and communities.
-            </p>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Our Commitment to Sustainability
+          </h1>
+          <p className="text-xl md:text-2xl max-w-3xl mx-auto">
+            Caring for the environment while caring for your family. We're committed to making a positive impact on our planet and communities.
+          </p>
         </div>
       </section>
 
@@ -33,14 +34,12 @@ const SustainabilityPage = () => {
                 We're committed to sourcing eco-friendly materials, reducing waste, and supporting sustainable practices throughout our supply chain. Every decision we make considers the impact on future generations.
               </p>
             </div>
-            <div className="bg-blue-100 rounded-2xl p-8">
-              <div className="text-center">
-                <div className="text-6xl mb-4">🌱</div>
-                <h3 className="text-2xl font-bold text-blue-900 mb-4">Green Future</h3>
-                <p className="text-blue-800">
-                  Building a sustainable future for the next generation of families in Rwanda and beyond.
-                </p>
-              </div>
+            <div className="bg-blue-100 rounded-2xl p-8 text-center">
+              <Leaf className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-blue-900 mb-4">Green Future</h3>
+              <p className="text-blue-800">
+                Building a sustainable future for the next generation of families in Rwanda and beyond.
+              </p>
             </div>
           </div>
         </div>
@@ -57,34 +56,34 @@ const SustainabilityPage = () => {
               We focus on four key areas to create a positive environmental and social impact
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <div className="text-4xl mb-4">♻️</div>
+            <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+              <Leaf className="w-10 h-10 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Eco-Friendly Products</h3>
               <p className="text-gray-600">
                 We prioritize products made from sustainable materials, biodegradable packaging, and non-toxic ingredients that are safe for babies and the environment.
               </p>
             </div>
-            
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <div className="text-4xl mb-4">📦</div>
+
+            <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+              <Package className="w-10 h-10 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Sustainable Packaging</h3>
               <p className="text-gray-600">
                 Our packaging is designed to minimize waste, using recyclable materials and reducing plastic usage wherever possible.
               </p>
             </div>
-            
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <div className="text-4xl mb-4">🚚</div>
+
+            <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+              <Truck className="w-10 h-10 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Green Logistics</h3>
               <p className="text-gray-600">
                 We optimize our delivery routes and work with partners who share our commitment to reducing carbon emissions.
               </p>
             </div>
-            
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <div className="text-4xl mb-4">🤝</div>
+
+            <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+              <Users className="w-10 h-10 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Community Impact</h3>
               <p className="text-gray-600">
                 We support local communities through education programs, charitable initiatives, and partnerships that benefit families across Rwanda.
@@ -105,50 +104,50 @@ const SustainabilityPage = () => {
               Discover products that are good for your baby and the planet
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="text-3xl mb-4">🧴</div>
+            <div className="bg-blue-50 rounded-xl p-6 text-center">
+              <Leaf className="w-8 h-8 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Natural Baby Care</h3>
               <p className="text-gray-600">
                 Organic and natural baby care products free from harmful chemicals and made with sustainable ingredients.
               </p>
             </div>
-            
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="text-3xl mb-4">👕</div>
+
+            <div className="bg-blue-50 rounded-xl p-6 text-center">
+              <Package className="w-8 h-8 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Organic Clothing</h3>
               <p className="text-gray-600">
                 Baby clothes made from organic cotton and other sustainable fabrics that are gentle on sensitive skin.
               </p>
             </div>
-            
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="text-3xl mb-4">🍼</div>
+
+            <div className="bg-blue-50 rounded-xl p-6 text-center">
+              <Truck className="w-8 h-8 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Reusable Products</h3>
               <p className="text-gray-600">
                 Eco-friendly alternatives to disposable items, reducing waste and saving money in the long run.
               </p>
             </div>
-            
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="text-3xl mb-4">🧸</div>
+
+            <div className="bg-blue-50 rounded-xl p-6 text-center">
+              <Users className="w-8 h-8 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Sustainable Toys</h3>
               <p className="text-gray-600">
                 Educational toys made from natural materials and sustainable wood, promoting eco-conscious play.
               </p>
             </div>
-            
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="text-3xl mb-4">🛏️</div>
+
+            <div className="bg-blue-50 rounded-xl p-6 text-center">
+              <Heart className="w-8 h-8 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Green Nursery</h3>
               <p className="text-gray-600">
                 Furniture and bedding made from sustainable materials, creating a healthy environment for your baby.
               </p>
             </div>
-            
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="text-3xl mb-4">🌿</div>
+
+            <div className="bg-blue-50 rounded-xl p-6 text-center">
+              <Leaf className="w-8 h-8 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Plant-Based Products</h3>
               <p className="text-gray-600">
                 Products derived from natural, plant-based ingredients that are safe for babies and biodegradable.
@@ -169,50 +168,50 @@ const SustainabilityPage = () => {
               Making a positive impact in communities across Rwanda
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white bg-opacity-10 rounded-xl p-6">
-              <div className="text-3xl mb-4">📚</div>
+            <div className="bg-white bg-opacity-10 rounded-xl p-6 text-center">
+              <Book className="w-10 h-10 text-blue-700 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-3 text-blue-700">Education Programs</h3>
               <p className="text-blue-700">
                 Supporting early childhood education initiatives and providing resources to families in need.
               </p>
             </div>
-            
-            <div className="bg-white bg-opacity-10 rounded-xl p-6">
-              <div className="text-3xl mb-4">🏥</div>
+
+            <div className="bg-white bg-opacity-10 rounded-xl p-6 text-center">
+              <Hospital className="w-10 h-10 text-blue-700 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-3 text-blue-700">Health Partnerships</h3>
               <p className="text-blue-700">
                 Collaborating with healthcare providers to improve maternal and child health outcomes.
               </p>
             </div>
-            
-            <div className="bg-white bg-opacity-10 rounded-xl p-6">
-              <div className="text-3xl mb-4">🌱</div>
+
+            <div className="bg-white bg-opacity-10 rounded-xl p-6 text-center">
+              <Leaf className="w-10 h-10 text-blue-700 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-3 text-blue-700">Environmental Education</h3>
               <p className="text-blue-700">
                 Teaching families about sustainable practices and environmental conservation.
               </p>
             </div>
-            
-            <div className="bg-white bg-opacity-10 rounded-xl p-6">
-              <div className="text-3xl mb-4">🤝</div>
+
+            <div className="bg-white bg-opacity-10 rounded-xl p-6 text-center">
+              <Users className="w-10 h-10 text-blue-700 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-3 text-blue-700">Local Partnerships</h3>
               <p className="text-blue-700">
                 Working with local artisans and businesses to support the Rwandan economy.
               </p>
             </div>
-            
-            <div className="bg-white bg-opacity-10 rounded-xl p-6">
-              <div className="text-3xl mb-4">💝</div>
+
+            <div className="bg-white bg-opacity-10 rounded-xl p-6 text-center">
+              <Heart className="w-10 h-10 text-blue-700 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-3 text-blue-700">Charitable Giving</h3>
               <p className="text-blue-700">
                 Donating products and resources to families who need support during challenging times.
               </p>
             </div>
-            
-            <div className="bg-white bg-opacity-10 rounded-xl p-6">
-              <div className="text-3xl mb-4">🌟</div>
+
+            <div className="bg-white bg-opacity-10 rounded-xl p-6 text-center">
+              <Star className="w-10 h-10 text-blue-700 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-3 text-blue-700">Volunteer Programs</h3>
               <p className="text-blue-700">
                 Encouraging our team to participate in community service and environmental clean-up activities.
@@ -233,47 +232,47 @@ const SustainabilityPage = () => {
               We're committed to continuous improvement and setting ambitious targets for environmental impact
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-gray-50 rounded-xl p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-6">2025 Targets</h3>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">✓</span>
+                  <Package className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>100% recyclable packaging by end of 2025</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">✓</span>
+                  <Truck className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>50% reduction in carbon footprint</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">✓</span>
+                  <Leaf className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>Expand eco-friendly product range by 75%</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">✓</span>
+                  <Users className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>Partner with 10 local sustainable suppliers</span>
                 </li>
               </ul>
             </div>
-            
+
             <div className="bg-gray-50 rounded-xl p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Long-term Vision</h3>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">🎯</span>
+                  <Target className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>Carbon neutral operations by 2030</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">🎯</span>
+                  <Target className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>Zero waste to landfill</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">🎯</span>
+                  <Target className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>100% sustainable product sourcing</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">🎯</span>
+                  <Target className="text-blue-600 w-6 h-6 flex-shrink-0 mt-1" />
                   <span>Expand community programs across Rwanda</span>
                 </li>
               </ul>
@@ -291,7 +290,7 @@ const SustainabilityPage = () => {
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             Every purchase supports our commitment to sustainability and community impact
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
               href="/all-products"
@@ -308,11 +307,8 @@ const SustainabilityPage = () => {
           </div>
         </div>
       </section>
-
-      {/* Footer CTA */}
-      
     </div>
   );
 };
 
-export default SustainabilityPage; 
+export default SustainabilityPage;
