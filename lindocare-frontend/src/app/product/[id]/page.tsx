@@ -122,12 +122,9 @@ export default function ProductDetailsPage() {
           setWishlist([]);
         }
       } else {
-        // Guest: fallback to localStorage
-        const email = getCurrentUserEmail();
-        const key = email ? `wishlist_${email}` : 'wishlist';
-        const saved = localStorage.getItem(key);
-        const ids = saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
-        setWishlist(ids);
+        // Guest: fallback to unified localStorage key via helper
+        const localIds = getLocalWishlist();
+        setWishlist(localIds);
       }
     }
     fetchWishlist();
@@ -146,33 +143,28 @@ export default function ProductDetailsPage() {
   // Toggle wishlist handler
   const toggleWishlist = async (id: string) => {
     try {
+      const wasIn = wishlist.includes(id);
+      // Optimistic
+      setWishlist(prev => wasIn ? prev.filter(x => x !== id) : [...prev, id]);
+      if (typeof window !== 'undefined') {
+        try { window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: wasIn ? 'remove' : 'add', productId: id } })); } catch {}
+      }
+
       if (isUserLoggedIn()) {
-        // Logged in: call server
         await toggleWishlistProduct(id);
-        // Refetch wishlist from server
-        const serverWishlist = await fetchUserWishlist();
-        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
-        setWishlist(wishlistIds);
       } else {
-        // Guest: update localStorage
         const localWishlist = getLocalWishlist();
         const isInWishlist = localWishlist.includes(id);
-        
-        let updatedWishlist: string[];
-        if (isInWishlist) {
-          updatedWishlist = localWishlist.filter(itemId => itemId !== id);
-        } else {
-          updatedWishlist = [...localWishlist, id];
-        }
-        
-        saveLocalWishlist(updatedWishlist);
-        setWishlist(updatedWishlist);
+        const updated = isInWishlist ? localWishlist.filter(itemId => itemId !== id) : [...localWishlist, id];
+        saveLocalWishlist(updated);
       }
     } catch (err) {
       console.error('Error toggling wishlist:', err);
       setToastMsg('Failed to update wishlist. Please try again.');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 1200);
+      // revert optimistic
+      setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     }
   };
 

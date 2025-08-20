@@ -259,6 +259,12 @@ export async function addToCartServer(product: CartItem): Promise<void> {
     }
     
     console.log('Product added to cart successfully:', { productId: product.productId, quantity: product.quantity });
+    // Notify app that cart has been updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { type: 'add', productId: product.productId, quantity: product.quantity } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error adding to cart:', error);
     throw error;
@@ -313,6 +319,12 @@ export async function increaseCartItemQuantity(productId: string, quantity: numb
     }
     
     console.log('Cart item quantity increased successfully:', { productId, quantity });
+    // Notify app that cart has been updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { type: 'increase', productId, quantity } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error increasing cart item quantity:', error);
     throw error;
@@ -359,6 +371,12 @@ export async function removeFromCartServer(productId: string): Promise<void> {
     }
     
     console.log('Cart item removed successfully:', { productId });
+    // Notify app that cart has been updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { type: 'remove', productId } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error removing from cart:', error);
     throw error;
@@ -405,6 +423,12 @@ export async function reduceFromCartServer(productId: string): Promise<void> {
     }
     
     console.log('Cart item reduced successfully:', { productId });
+    // Notify app that cart has been updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { type: 'decrease', productId, quantity: 1 } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error reducing from cart:', error);
     throw error;
@@ -450,6 +474,12 @@ export async function clearCartServer(): Promise<void> {
     }
     
     console.log('Cart cleared successfully');
+    // Notify app that cart has been updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { type: 'clear' } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error clearing cart:', error);
     throw error;
@@ -617,6 +647,12 @@ export async function toggleWishlistProduct(productId: string): Promise<void> {
       
       throw new Error(errorData.message || 'Failed to toggle wishlist product');
     }
+    // Notify app wishlist updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: 'toggle', productId } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error toggling wishlist product:', error);
     throw error;
@@ -665,6 +701,12 @@ export async function addToWishlistServer(productId: string): Promise<void> {
       
       throw new Error(errorData.message || 'Failed to add product to wishlist');
     }
+    // Notify app wishlist updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: 'add', productId } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error adding to wishlist:', error);
     throw error;
@@ -712,6 +754,12 @@ export async function removeFromWishlistServer(productId: string): Promise<void>
       }
       
       throw new Error(errorData.message || 'Failed to remove product from wishlist');
+    }
+    // Notify app wishlist updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: 'remove', productId } }));
+      } catch {}
     }
   } catch (error) {
     console.error('Error removing from wishlist:', error);

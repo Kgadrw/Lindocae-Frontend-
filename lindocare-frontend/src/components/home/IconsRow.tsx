@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { normalizeImageUrl } from '../../utils/image';
 import OfflineError from '../OfflineError';
 
 interface Icon {
@@ -142,6 +143,7 @@ const IconsRow: React.FC<IconsRowProps> = ({ icons, iconsLoading, iconsError }) 
               let image = '';
               if (Array.isArray(icon.image) && icon.image.length > 0) image = icon.image[0];
               else if (typeof icon.image === 'string') image = icon.image;
+              image = normalizeImageUrl(image);
               
               return (
                 <Link

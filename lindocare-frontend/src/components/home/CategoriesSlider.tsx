@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { normalizeImageUrl } from '../../utils/image';
 
 interface Category {
   _id?: string;
@@ -123,6 +124,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
               let image = '';
               if (Array.isArray(cat.image) && cat.image.length > 0) image = cat.image[0];
               else if (typeof cat.image === 'string') image = cat.image;
+              image = normalizeImageUrl(image);
               // Edge-to-edge: Remove left margin for first, right margin for last
               const isFirstVisible = idx === originalLength;
               const isLastVisible = idx === originalLength * 2 - 1;

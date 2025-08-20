@@ -23,6 +23,8 @@ import IconsRow from '../components/home/IconsRow';
 import NewArrivalsSection from '../components/home/NewArrivalsSection';
 import SocialShareBar from '../components/SocialShareBar';
 import VideoSection from '../components/home/VideoSection';
+import Reveal from '../components/Reveal';
+import { normalizeImageUrl } from '../utils/image';
 
 // Note: Using imported functions from serverStorage.ts instead of local duplicates
 
@@ -198,13 +200,18 @@ export default function Home() {
   // Toggle wishlist handler
   async function toggleWishlist(id: string) {
     try {
+      const wasInWishlist = wishlist.includes(id);
+      // Optimistic UI update
+      const next = wasInWishlist ? wishlist.filter(x => x !== id) : [...wishlist, id];
+      setWishlist(next);
+      if (typeof window !== 'undefined') {
+        try { window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: wasInWishlist ? 'remove' : 'add', productId: id } })); } catch {}
+      }
+
       if (isUserLoggedIn()) {
         // Logged in: call server
         await toggleWishlistProduct(id);
-        // Refetch wishlist from server
-        const serverWishlist = await fetchUserWishlist();
-        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
-        setWishlist(wishlistIds);
+        // Do not immediately overwrite with a possibly empty server fetch; keep optimistic state
       } else {
         // Guest: update localStorage
         const localWishlist = getLocalWishlist();
@@ -218,10 +225,12 @@ export default function Home() {
         }
         
         saveLocalWishlist(updatedWishlist);
-        setWishlist(updatedWishlist);
+        // State already updated optimistically
       }
     } catch (err) {
       console.error('Error toggling wishlist:', err);
+      // Revert optimistic change on error
+      setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
       setToastMsg('Failed to update wishlist. Please try again.');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 1200);
@@ -297,29 +306,35 @@ export default function Home() {
             </div>
           </div>
         )}
-        {/* Hero Section (Banners) */}
-        <BannersSection banners={banners} bannerLoading={bannerLoading} bannerError={bannerError} />
-        {/* Category Icons Row */}
-        {/* Category Cards as Slider */}
-        <CategoriesSlider categories={categories} catLoading={catLoading} catError={catError} />
-        {/* Promo/Info Banners */}
-        <AdsSection ads={ads} adsLoading={adsLoading} adsError={adsError} />
-        {/* Product Grids */}
-        <NewArrivalsSection
-          filteredProducts={filteredProducts}
-          prodLoading={prodLoading}
-          prodError={prodError}
-          wishlist={wishlist}
-          toggleWishlist={toggleWishlist}
-          handleAddToCart={handleAddToCart}
-          iconsRow={<IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />}
-        />
-        {/* Wishlist Promo Banner */}
-        <PromoBanner categories={categories} catLoading={catLoading} />
-        {/* Video Section - Baby Care Tips & Vlogs */}
-        <VideoSection />
-        {/* Email Signup Banner */}
-        <EmailSignupBanner />
+        <Reveal direction="up" delayMs={40} durationMs={700} distancePx={28}>
+          <BannersSection banners={banners} bannerLoading={bannerLoading} bannerError={bannerError} />
+        </Reveal>
+        <Reveal direction="up" delayMs={80} durationMs={700} distancePx={28}>
+          <CategoriesSlider categories={categories} catLoading={catLoading} catError={catError} />
+        </Reveal>
+        <Reveal direction="up" delayMs={120} durationMs={700} distancePx={28}>
+          <AdsSection ads={ads} adsLoading={adsLoading} adsError={adsError} />
+        </Reveal>
+        <Reveal direction="up" delayMs={160} durationMs={700} distancePx={28}>
+          <NewArrivalsSection
+            filteredProducts={filteredProducts}
+            prodLoading={prodLoading}
+            prodError={prodError}
+            wishlist={wishlist}
+            toggleWishlist={toggleWishlist}
+            handleAddToCart={handleAddToCart}
+            iconsRow={<IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />}
+          />
+        </Reveal>
+        <Reveal direction="up" delayMs={200} durationMs={700} distancePx={28}>
+          <PromoBanner categories={categories} catLoading={catLoading} />
+        </Reveal>
+        <Reveal direction="up" delayMs={240} durationMs={700} distancePx={28}>
+          <VideoSection />
+        </Reveal>
+        <Reveal direction="up" delayMs={280} durationMs={700} distancePx={28}>
+          <EmailSignupBanner />
+        </Reveal>
       </div>
       {/* WhatsApp Support Button (only visible after hero, hidden on mobile) */}
       {showWhatsappBtn && (

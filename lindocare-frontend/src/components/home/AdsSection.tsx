@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { normalizeImageUrl } from '../../utils/image';
 
 interface Ad {
   _id?: string;
@@ -41,7 +42,7 @@ const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) =>
                   <div 
                     className="absolute inset-0 bg-cover bg-center"
                     style={{
-                      backgroundImage: `url(${Array.isArray(firstAd.image) ? firstAd.image[0] : firstAd.image})`
+                      backgroundImage: `url(${normalizeImageUrl(Array.isArray(firstAd.image) ? firstAd.image[0] : firstAd.image)})`
                     }}
                   />
                 )}
@@ -77,7 +78,7 @@ const AdsSection: React.FC<AdsSectionProps> = ({ ads, adsLoading, adsError }) =>
                   <div 
                     className="absolute inset-0 bg-cover bg-center"
                     style={{
-                      backgroundImage: `url(${Array.isArray(secondAd.image) ? secondAd.image[0] : secondAd.image})`
+                      backgroundImage: `url(${normalizeImageUrl(Array.isArray(secondAd.image) ? secondAd.image[0] : secondAd.image)})`
                     }}
                   />
                 )}

@@ -3,6 +3,7 @@ import { Heart, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import Image from 'next/image';
+import { normalizeImageUrl } from '../../utils/image';
 
 interface Product {
   _id?: string;
@@ -126,9 +127,9 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
             >
               <div className="relative">
                 {prod.image && (Array.isArray(prod.image) ? (
-                  <Image src={prod.image[0]} alt={prod.name} width={256} height={192} className="w-full h-48 object-cover rounded-t-2xl" />
+                  <Image src={normalizeImageUrl(typeof prod.image[0] === 'string' ? prod.image[0] : '')} alt={prod.name} width={256} height={192} className="w-full h-48 object-cover rounded-t-2xl" />
                 ) : (
-                  <Image src={prod.image} alt={prod.name} width={256} height={192} className="w-full h-48 object-cover rounded-t-2xl" />
+                  <Image src={normalizeImageUrl(typeof prod.image === 'string' ? prod.image : '')} alt={prod.name} width={256} height={192} className="w-full h-48 object-cover rounded-t-2xl" />
                 ))}
                 <button
                   className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition"
