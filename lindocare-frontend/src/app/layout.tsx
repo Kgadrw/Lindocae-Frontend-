@@ -68,6 +68,11 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin=""
         />
+        {/* Preconnect to API and image CDNs to speed up first requests */}
+        <link rel="dns-prefetch" href="https://lindo-project.onrender.com" />
+        <link rel="preconnect" href="https://lindo-project.onrender.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="" />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:wght@100..900&display=swap"
           rel="stylesheet"

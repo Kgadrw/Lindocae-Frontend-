@@ -200,7 +200,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     };
   }, []);
 
-  // Cart count effect
+  // Cart count effect - schedule after first paint for faster TTI
   useEffect(() => {
     async function updateCartCount() {
       if (typeof window !== 'undefined') {
@@ -208,9 +208,35 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         setCartCount(count);
       }
     }
-    updateCartCount();
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(updateCartCount, { timeout: 1000 });
+    } else {
+      setTimeout(updateCartCount, 150);
+    }
+    const handleCartUpdated = (evt: Event) => {
+      // Optimistic update for snappy UX
+      try {
+        const e = evt as CustomEvent;
+        const detail: any = e.detail || {};
+        if (detail?.type === 'add' || detail?.type === 'increase') {
+          const delta = Number(detail?.quantity || 1);
+          setCartCount(prev => Math.max(0, prev + (isFinite(delta) ? delta : 1)));
+        } else if (detail?.type === 'decrease') {
+          const delta = Number(detail?.quantity || 1);
+          setCartCount(prev => Math.max(0, prev - (isFinite(delta) ? delta : 1)));
+        } else if (detail?.type === 'remove' || detail?.type === 'clear') {
+          // We don't know exact delta; fall through to fetch
+        }
+      } catch {}
+      // Reconcile with backend shortly after
+      setTimeout(() => { updateCartCount(); }, 100);
+    };
     window.addEventListener('storage', updateCartCount);
-    return () => window.removeEventListener('storage', updateCartCount);
+    window.addEventListener('cart-updated', handleCartUpdated as EventListener);
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cart-updated', handleCartUpdated as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -226,7 +252,11 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         }
       }
     }
-    updateWishlistCount();
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(updateWishlistCount, { timeout: 1000 });
+    } else {
+      setTimeout(updateWishlistCount, 150);
+    }
     const handleWishlistUpdate = () => updateWishlistCount();
     window.addEventListener('storage', handleWishlistUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
@@ -236,24 +266,31 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     };
   }, []);
 
-  // Fetch all products and categories on mount
+  // Fetch all products and categories lazily to avoid blocking initial render
   useEffect(() => {
-    fetch('https://lindo-project.onrender.com/product/getAllProduct')
-      .then(res => res.json())
-      .then(data => {
-        let prods = [];
-        if (Array.isArray(data)) prods = data;
-        else if (data && Array.isArray(data.products)) prods = data.products;
-        setAllProducts(prods.map((p:any) => ({ id: p.id || p._id, name: p.name })));
-      });
-    fetch('https://lindo-project.onrender.com/category/getAllCategories')
-      .then(res => res.json())
-      .then(data => {
-        let cats = [];
-        if (Array.isArray(data)) cats = data;
-        else if (data && Array.isArray(data.categories)) cats = data.categories;
-        setAllCategories(cats.map((c:any) => ({ _id: c._id, name: c.name })));
-      });
+    const lazyFetch = () => {
+      fetch('https://lindo-project.onrender.com/product/getAllProduct')
+        .then(res => res.json())
+        .then(data => {
+          let prods = [];
+          if (Array.isArray(data)) prods = data;
+          else if (data && Array.isArray(data.products)) prods = data.products;
+          setAllProducts(prods.map((p:any) => ({ id: p.id || p._id, name: p.name })));
+        }).catch(() => {});
+      fetch('https://lindo-project.onrender.com/category/getAllCategories')
+        .then(res => res.json())
+        .then(data => {
+          let cats = [];
+          if (Array.isArray(data)) cats = data;
+          else if (data && Array.isArray(data.categories)) cats = data.categories;
+          setAllCategories(cats.map((c:any) => ({ _id: c._id, name: c.name })));
+        }).catch(() => {});
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(lazyFetch, { timeout: 1500 });
+    } else {
+      setTimeout(lazyFetch, 300);
+    }
   }, []);
 
   // Simulate user info after login/register
@@ -456,7 +493,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
-            <Image src="/lindo.png" alt="Lindo Logo" width={60} height={24} priority className="focus:outline-none" style={{ width: 'auto', height: 'auto' }} />
+            <Image src="/lindo.png" alt="Lindo Logo" width={60} height={24} className="focus:outline-none" style={{ width: 'auto', height: 'auto' }} />
           </Link>
           
           {/* Mobile Icons */}
@@ -690,6 +727,10 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                                 <div className="relative">
                                   <img 
                                     src={product.image} 
+                                    loading="lazy"
+                                  <img 
+                                    src={product.image} 
+                                    loading="lazy"
                                     alt={product.name}
                                     className="w-full h-16 object-cover rounded-lg border border-gray-200 group-hover:border-blue-300 transition-colors"
                                   />

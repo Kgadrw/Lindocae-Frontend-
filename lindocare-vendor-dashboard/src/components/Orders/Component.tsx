@@ -51,6 +51,7 @@ const OrdersComponent: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('all');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -140,6 +141,25 @@ const OrdersComponent: React.FC = () => {
 
   const getProductById = (productId: string) => {
     return products.find(product => product._id === productId);
+  };
+
+  const normalizeImageUrl = (src?: string) => {
+    if (!src) return '';
+    return src.startsWith('http') ? src : `https://lindo-project.onrender.com/${src}`;
+  };
+
+  const getItemProductImage = (item: OrderItem) => {
+    // Prefer embedded product image
+    if (item.product?.image && item.product.image.length > 0) {
+      return normalizeImageUrl(item.product.image[0]);
+    }
+    // Fallback to global products list
+    const pid = typeof (item as any).productId === 'string'
+      ? (item as any).productId
+      : ((item as any).productId?._id || (item as any).productId?.id || '');
+    const p = pid ? getProductById(pid) : undefined;
+    if (p?.image && p.image.length > 0) return normalizeImageUrl(p.image[0]);
+    return '';
   };
 
   const getStatusBadgeColor = (status: string) => {
@@ -535,6 +555,7 @@ const OrdersComponent: React.FC = () => {
                         <button
                           className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-1"
                           title="View Order Details"
+                          onClick={() => setSelectedOrder(order)}
                         >
                           <Eye size={12} /> View
                         </button>
@@ -558,6 +579,140 @@ const OrdersComponent: React.FC = () => {
           </div>
         )}
       </div>
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white w-full max-w-5xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="flex items-start justify-between p-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
+                <p className="text-sm text-gray-600 mt-1">Order ID: <span className="font-mono">{selectedOrder._id}</span></p>
+              </div>
+              <button
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                onClick={() => setSelectedOrder(null)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+              {/* Customer and Meta */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                      {selectedOrder.user?.image?.[0] ? (
+                        <img src={normalizeImageUrl(selectedOrder.user.image[0])} alt="Customer" className="h-10 w-10 object-cover" />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-600">
+                          {selectedOrder.user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{selectedOrder.user?.firstName} {selectedOrder.user?.lastName}</div>
+                      <div className="text-gray-600 text-sm">{selectedOrder.user?.email}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <div className="text-sm text-gray-600">Payment</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    {getPaymentMethodIcon(selectedOrder.paymentMethod)}
+                    <div className="text-gray-900 capitalize">{String(selectedOrder.paymentMethod || '').replace('_', ' ')}</div>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600">Status</div>
+                  <div className="mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize {getStatusBadgeColor(selectedOrder.status)}">
+                    {selectedOrder.status}
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <div className="text-sm text-gray-600">Placed</div>
+                  <div className="text-gray-900">{new Date(selectedOrder.createdAt).toLocaleString()}</div>
+                  <div className="mt-2 text-sm text-gray-600">Updated</div>
+                  <div className="text-gray-900">{new Date(selectedOrder.updatedAt).toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+                  <MapPin size={16} className="text-gray-500" />
+                  <h4 className="font-semibold text-gray-900">Shipping Address</h4>
+                </div>
+                <div className="px-4 py-4 text-gray-800 text-sm">
+                  {formatShippingAddress(selectedOrder.shippingAddress) || 'N/A'}
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+                  <Package size={16} className="text-gray-500" />
+                  <h4 className="font-semibold text-gray-900">Items ({selectedOrder.items.length})</h4>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {selectedOrder.items.map((item, idx) => {
+                    const pid = typeof (item as any).productId === 'string'
+                      ? (item as any).productId
+                      : ((item as any).productId?._id || (item as any).productId?.id || '');
+                    const product = pid ? getProductById(pid) : undefined;
+                    const name = item.product?.name || product?.name || `Product ${pid?.slice(-8)}`;
+                    const imageUrl = getItemProductImage(item);
+                    const unitPrice = item.price ?? product?.price ?? 0;
+                    const lineTotal = (item.quantity || 1) * (unitPrice || 0);
+                    return (
+                      <div key={idx} className="px-4 py-3 flex items-center gap-3">
+                        <div className="h-16 w-16 bg-gray-100 border border-gray-200 rounded overflow-hidden flex-shrink-0">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-gray-400">No Image</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 truncate">{name}</div>
+                          <div className="text-sm text-gray-600">Qty: {item.quantity} • Unit: ${unitPrice.toFixed(2)}</div>
+                        </div>
+                        <div className="text-right font-semibold text-gray-900">${lineTotal.toFixed(2)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="flex flex-col items-end">
+                <div className="w-full md:w-1/2 bg-white rounded-lg border border-gray-200">
+                  <div className="px-4 py-3 border-b border-gray-200 font-semibold text-gray-900">Summary</div>
+                  <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
+                    <span>Subtotal</span>
+                    <span>${selectedOrder.items.reduce((sum, it) => sum + (it.quantity || 1) * (it.price || 0), 0).toFixed(2)}</span>
+                  </div>
+                  <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
+                    <span>Shipping</span>
+                    <span>—</span>
+                  </div>
+                  <div className="px-4 py-3 text-base font-bold text-gray-900 flex items-center justify-between border-t border-gray-200">
+                    <span>Total</span>
+                    <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                  onClick={() => setSelectedOrder(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
