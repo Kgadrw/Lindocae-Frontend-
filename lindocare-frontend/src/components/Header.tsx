@@ -12,6 +12,7 @@ import {
   getLocalWishlist,
   isUserLoggedIn
 } from '../utils/serverStorage';
+import { normalizeImageUrl } from '../utils/image';
 
 // Move updateUser outside so it can be called from anywhere
 function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: string; avatar?: string }>>) {
@@ -581,7 +582,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 <li
                   key={s.type + '-' + s.id + '-' + s.name}
                   className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-900 flex items-center gap-2"
-                  onMouseDown={() => handleSuggestionClick(s.name, s.type)}
+                  onMouseDown={() => handleSuggestionClick(s.name, s.type, String(s.id || ''))}
                 >
                   <span className="inline-block w-2 h-2 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
                   <span>{s.name}</span>
@@ -647,7 +648,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                                 <div key={product._id} className="group cursor-pointer hover:bg-gray-50 rounded-lg p-1 transition-colors" onClick={() => router.push(`/product/${product._id}`)}>
                                   <div className="relative">
                                     <img 
-                                      src={product.image} 
+                                      src={normalizeImageUrl(product.image)} 
                                       alt={product.name}
                                       className="w-full h-16 object-cover rounded-lg border border-gray-200 group-hover:border-blue-300 transition-colors"
                                     />
@@ -725,11 +726,8 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                             {categoryProducts[cat._id || ''].map((product: any) => (
                               <div key={product._id} className="group cursor-pointer hover:bg-gray-50 rounded-lg p-1 transition-colors" onClick={() => router.push(`/product/${product._id}`)}>
                                 <div className="relative">
-                                  <img 
-                                    src={product.image} 
-                                    loading="lazy"
-                                  <img 
-                                    src={product.image} 
+                                  <img
+                                    src={normalizeImageUrl(product.image)}
                                     loading="lazy"
                                     alt={product.name}
                                     className="w-full h-16 object-cover rounded-lg border border-gray-200 group-hover:border-blue-300 transition-colors"
@@ -784,7 +782,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                   <li
                     key={s.type + '-' + s.id + '-' + s.name}
                     className="px-4 py-2 cursor-pointer hover:bg-yellow-600 text-gray-900 flex items-center gap-2"
-                    onMouseDown={() => handleSuggestionClick(s.name, s.type)}
+                    onMouseDown={() => handleSuggestionClick(s.name, s.type, String(s.id || ''))}
                   >
                     <span className="inline-block w-2 h-2 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
                     <span>{s.name}</span>

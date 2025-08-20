@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { getCurrentUserEmail } from '../../components/Header';
 import Image from 'next/image';
-import { addToCartServer, isUserLoggedIn, getUserEmail } from "../../utils/serverStorage";
+import { addToCartServer, isUserLoggedIn, getUserEmail, getLocalWishlist, saveLocalWishlist, fetchUserWishlist, toggleWishlistProduct } from "../../utils/serverStorage";
 
 // Remove template productsData. Use real products from backend.
 
@@ -22,7 +22,7 @@ const SearchPage = () => {
 
   // State for search history, wishlist, recommended, results
   const [searchHistory, setSearchHistory] = React.useState<string[]>([]);
-  const [wishlist, setWishlist] = React.useState<number[]>([]);
+  const [wishlist, setWishlist] = React.useState<string[]>([]);
   const [recommended, setRecommended] = React.useState<any[]>([]);
   const [results, setResults] = React.useState<any[]>([]);
   const [allProducts, setAllProducts] = React.useState<any[]>([]);
@@ -53,11 +53,23 @@ const SearchPage = () => {
     if (!isClient) return;
     // Get user email
     const userEmail = getCurrentUserEmail();
-    const wishlistKey = userEmail ? `wishlist_${userEmail}` : 'wishlist';
     const searchHistoryKey = userEmail ? `searchHistory_${userEmail}` : 'searchHistory';
-    // Get wishlist
-    const savedWishlist = localStorage.getItem(wishlistKey);
-    setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
+
+    // Get wishlist (server or local unified helper)
+    (async () => {
+      try {
+        if (isUserLoggedIn()) {
+          const serverWishlist = await fetchUserWishlist();
+          const ids = serverWishlist.map((p: any) => String(p._id || p.id));
+          setWishlist(ids);
+        } else {
+          setWishlist(getLocalWishlist());
+        }
+      } catch {
+        setWishlist([]);
+      }
+    })();
+
     // Get search history
     const savedHistory = localStorage.getItem(searchHistoryKey);
     const history = savedHistory ? JSON.parse(savedHistory) : [];
@@ -91,22 +103,31 @@ const SearchPage = () => {
       .map(([term]) => term)
       .slice(0, 2);
     let recommendedProducts = allProducts.filter(
-      p => favoriteTerms.some(term => p.name && p.name.toLowerCase().includes(term)) || (savedWishlist ? JSON.parse(savedWishlist).includes(p.id) : false)
+      p => favoriteTerms.some(term => p.name && p.name.toLowerCase().includes(term)) || (wishlist ? wishlist.includes(String(p.id || p._id)) : false)
     );
-    recommendedProducts = recommendedProducts.filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
+    recommendedProducts = recommendedProducts.filter((p, i, arr) => arr.findIndex(x => (x.id || x._id) === (p.id || p._id)) === i);
     setRecommended(recommendedProducts);
   }, [isClient, q, query, allProducts]);
 
-  const toggleWishlist = (id: number) => {
+  const toggleWishlist = async (id: number | string) => {
     if (!isClient) return;
-    const userEmail = getCurrentUserEmail();
-    const wishlistKey = userEmail ? `wishlist_${userEmail}` : 'wishlist';
-    setWishlist((prev) => {
-      const updated = prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id];
-      localStorage.setItem(wishlistKey, JSON.stringify(updated));
-      window.dispatchEvent(new StorageEvent('storage', { key: wishlistKey }));
-      return updated;
-    });
+    const strId = String(id);
+    const wasIn = wishlist.includes(strId);
+    // Optimistic
+    setWishlist(prev => wasIn ? prev.filter(x => x !== strId) : [...prev, strId]);
+    try { window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: wasIn ? 'remove' : 'add', productId: strId } })); } catch {}
+    try {
+      if (isUserLoggedIn()) {
+        await toggleWishlistProduct(strId);
+      } else {
+        const local = getLocalWishlist();
+        const updated = local.includes(strId) ? local.filter(x => x !== strId) : [...local, strId];
+        saveLocalWishlist(updated);
+      }
+    } catch (e) {
+      // Revert optimistic on error
+      setWishlist(prev => prev.includes(strId) ? prev.filter(x => x !== strId) : [...prev, strId]);
+    }
   };
 
   // Add to cart handler
@@ -221,13 +242,13 @@ const SearchPage = () => {
                     ))}
                     <button
                       className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                      onClick={() => toggleWishlist(product.id)}
+                      onClick={() => toggleWishlist(product.id || product._id)}
                       aria-label="Add to wishlist"
                     >
                       <Heart
                         size={20}
-                        color={wishlist.includes(product.id) ? '#F87171' : '#3B82F6'}
-                        fill={wishlist.includes(product.id) ? '#F87171' : 'none'}
+                        color={wishlist.includes(String(product.id || product._id)) ? '#F87171' : '#3B82F6'}
+                        fill={wishlist.includes(String(product.id || product._id)) ? '#F87171' : 'none'}
                         strokeWidth={2.2}
                       />
                     </button>
@@ -282,17 +303,17 @@ const SearchPage = () => {
                     height={160}
                   />
                   {(product.tags || []).map((tag: string) => (
-                    <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
+                    <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
                   ))}
                   <button
                     className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                    onClick={() => toggleWishlist(product.id)}
+                    onClick={() => toggleWishlist(product.id || product._id)}
                     aria-label="Add to wishlist"
                   >
                     <Heart
                       size={20}
-                      color={wishlist.includes(product.id) ? '#F87171' : '#3B82F6'}
-                      fill={wishlist.includes(product.id) ? '#F87171' : 'none'}
+                      color={wishlist.includes(String(product.id || product._id)) ? '#F87171' : '#3B82F6'}
+                      fill={wishlist.includes(String(product.id || product._id)) ? '#F87171' : 'none'}
                       strokeWidth={2.2}
                     />
                   </button>

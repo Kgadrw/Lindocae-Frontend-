@@ -250,30 +250,26 @@ function AllProductsContent() {
   // Enhanced toggleWishlist for guests: store full product object
   const toggleWishlist = async (id: number | string, product?: Product) => {
     try {
+      const strId = String(id);
+      const wasIn = wishlist.includes(strId);
+      // Optimistic update
+      setWishlist(prev => wasIn ? prev.filter(x => x !== strId) : [...prev, strId]);
+      if (typeof window !== 'undefined') {
+        try { window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: wasIn ? 'remove' : 'add', productId: strId } })); } catch {}
+      }
       if (isUserLoggedIn()) {
-        // Logged in: call server
-        await toggleWishlistProduct(String(id));
-        // Refetch wishlist from server
-        const serverWishlist = await fetchUserWishlist();
-        const wishlistIds = serverWishlist.map(product => String(product._id || product.id));
-        setWishlist(wishlistIds);
+        await toggleWishlistProduct(strId);
       } else {
-        // Guest: update localStorage
         const localWishlist = getLocalWishlist();
-        const isInWishlist = localWishlist.includes(String(id));
-        
-        let updatedWishlist: string[];
-        if (isInWishlist) {
-          updatedWishlist = localWishlist.filter(itemId => itemId !== String(id));
-        } else {
-          updatedWishlist = [...localWishlist, String(id)];
-        }
-        
-        saveLocalWishlist(updatedWishlist);
-        setWishlist(updatedWishlist);
+        const isInWishlist = localWishlist.includes(strId);
+        const updated = isInWishlist ? localWishlist.filter(itemId => itemId !== strId) : [...localWishlist, strId];
+        saveLocalWishlist(updated);
       }
     } catch (err) {
       console.error('Error toggling wishlist:', err);
+      // revert optimistic
+      const strId2 = String(id);
+      setWishlist(prev => prev.includes(strId2) ? prev.filter(x => x !== strId2) : [...prev, strId2]);
     }
   };
 

@@ -55,6 +55,7 @@ function getAccessToken(): string | null {
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<Product[]>([]);
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [userEmail, setUserEmail] = useState('');
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -242,34 +243,47 @@ export default function CartPage() {
 
     try {
       if (isUserLoggedIn() && getAccessToken()) {
+        // Optimistic UI update for snappy feedback
+        setCartItems(prev => prev.map(item =>
+          String(item.id) === String(id)
+            ? { ...item, quantity: newQuantity }
+            : item
+        ));
+        setUpdatingIds(prev => new Set(prev).add(String(id)));
         // Logged in: update on server using appropriate endpoints
-        if (delta > 0) {
-          // Increase quantity using increaseToCart endpoint
-          await increaseCartItemQuantity(String(id), delta);
-        } else {
-          // Decrease quantity using reduceFromCart endpoint
-          await reduceFromCartServer(String(id));
-        }
-        // Refresh cart with full product details after update
         try {
-          const updatedServerCart = await fetchUserCartWithProducts();
-          const updatedConvertedCart = updatedServerCart.map(item => ({
-            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            quantity: item.quantity,
-            category: item.category,
-          }));
-          setCartItems(updatedConvertedCart);
-        } catch (refreshError) {
-          console.warn('Failed to refresh cart with products, updating local state only:', refreshError);
-          // Fallback to local state update
-          setCartItems(prev => prev.map(item => 
-            String(item.id) === String(id) 
-              ? { ...item, quantity: newQuantity }
+          if (delta > 0) {
+            await increaseCartItemQuantity(String(id), delta);
+          } else {
+            await reduceFromCartServer(String(id));
+          }
+          // Optional: reconcile in background after a short delay
+          setTimeout(async () => {
+            try {
+              const updatedServerCart = await fetchUserCartWithProducts();
+              const updatedConvertedCart = updatedServerCart.map(item => ({
+                id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
+                name: item.name,
+                price: item.price,
+                image: item.image,
+                quantity: item.quantity,
+                category: item.category,
+              }));
+              setCartItems(updatedConvertedCart);
+            } catch {}
+          }, 250);
+        } catch (updateErr) {
+          // Revert optimistic change on failure
+          setCartItems(prev => prev.map(item =>
+            String(item.id) === String(id)
+              ? { ...item, quantity: Math.max(1, (currentItem.quantity || 1)) }
               : item
           ));
+          throw updateErr;
+        } finally {
+          setUpdatingIds(prev => {
+            const next = new Set(prev); next.delete(String(id)); return next;
+          });
         }
       } else {
         // Guest: update localStorage

@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import OfflineError from '../OfflineError';
+import { normalizeImageUrl } from '../../utils/image';
 
 interface Banner {
   _id?: string;
@@ -42,7 +43,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
   // Find the first banner not used in the grid for the large promo section
   const gridBannerIds = new Set(gridBanners.map(b => b._id));
   const promoBanner = bannerData.find(b => !gridBannerIds.has(b._id));
-  const promoImage = promoBanner?.images?.[0] || '/lindo.png';
+  const promoImage = normalizeImageUrl(promoBanner?.images?.[0] || '/lindo.png');
 
   // Handler for clicking a banner
   const handleBannerClick = async (banner: Banner, e: React.MouseEvent) => {
@@ -138,7 +139,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 {gridBanners[0]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <Image
-                      src={gridBanners[0].images[0]} 
+                      src={normalizeImageUrl(gridBanners[0].images[0])} 
                       alt={gridBanners[0].title} 
                       layout="fill"
                       objectFit="cover"
@@ -175,7 +176,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 {gridBanners[1]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <Image
-                      src={gridBanners[1].images[0]} 
+                      src={normalizeImageUrl(gridBanners[1].images[0])} 
                       alt={gridBanners[1].title} 
                       layout="fill"
                       objectFit="cover"
@@ -212,7 +213,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 {gridBanners[2]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <Image
-                      src={gridBanners[2].images[0]} 
+                      src={normalizeImageUrl(gridBanners[2].images[0])} 
                       alt={gridBanners[2].title} 
                       layout="fill"
                       objectFit="cover"
@@ -249,7 +250,7 @@ const BannersSection = ({ banners, bannerLoading, bannerError }: BannersSectionP
                 {gridBanners[3]?.images?.[0] ? (
                   <div className="aspect-[4/3] relative">
                     <Image
-                      src={gridBanners[3].images[0]} 
+                      src={normalizeImageUrl(gridBanners[3].images[0])} 
                       alt={gridBanners[3].title} 
                       layout="fill"
                       objectFit="cover"

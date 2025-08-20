@@ -12,6 +12,7 @@ import {
   isUserLoggedIn,
   saveLocalCart,
 } from "../../utils/serverStorage";
+import { normalizeImageUrl } from "../../utils/image";
 
 interface Product {
   id: string | number;
@@ -218,11 +219,14 @@ const CheckoutPage = () => {
 
       // First, create the order using required API format
       const orderData = {
-        paymentMethod: "dpo",
+        paymentMethod: paymentMethod || 'pesapal',
         shippingAddress: structuredShippingAddress,
         customerEmail: customerEmail,
         customerPhone: customerPhone,
         customerName: `${customerFirstName} ${customerLastName}`,
+        // Include items and totalAmount if backend expects them in the order payload
+        items: orderItems,
+        totalAmount: totalAmount,
       };
 
       // Validate required fields per API format
@@ -270,102 +274,78 @@ const CheckoutPage = () => {
 
         const orderId = orderResult.order?._id || orderResult.orderId;
 
-        // Try to initialize DPO payment immediately after order creation
-        const dpoInitBody = {
-          orderId: String(orderId || ""),
-          totalAmount: totalAmount,
-          currency: "RWF",
-          email: customerEmail,
-          phone: customerPhone,
-          firstName: customerFirstName,
-          lastName: customerLastName,
-          serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
-          callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
-        };
+        // Handle redirection/payment based on payment method
+        if (orderData.paymentMethod === 'dpo') {
+          // Initialize DPO
+          const dpoInitBody = {
+            orderId: String(orderId || ""),
+            totalAmount: totalAmount,
+            currency: "RWF",
+            email: customerEmail,
+            phone: customerPhone,
+            firstName: customerFirstName,
+            lastName: customerLastName,
+            serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
+            callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
+          };
 
-        console.log("Initializing DPO with:", dpoInitBody);
-        const dpoResponse = await fetch(
-          "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
-          {
-            method: "POST",
-            headers: {
-              accept: "application/json",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(dpoInitBody),
-          }
-        );
+          console.log("Initializing DPO with:", dpoInitBody);
+          const dpoResponse = await fetch(
+            "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
+            {
+              method: "POST",
+              headers: {
+                accept: "application/json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(dpoInitBody),
+            }
+          );
 
-        if (dpoResponse.ok) {
-          const dpoData = await dpoResponse.json();
-          console.log("DPO Response:", dpoData);
-
-          const redirectUrl = dpoData.redirectUrl || dpoData.paymentUrl;
-          if (redirectUrl) {
-            setPaymentRedirectUrl(redirectUrl);
-            setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-
-            // Clear cart
-            try {
-              if (isUserLoggedIn()) {
-                await clearCartServer();
-              } else {
-                saveLocalCart([]);
+          if (dpoResponse.ok) {
+            const dpoData = await dpoResponse.json();
+            const redirectUrl = dpoData.redirectUrl || dpoData.paymentUrl;
+            if (redirectUrl) {
+              setPaymentRedirectUrl(redirectUrl);
+              setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
+              try {
+                if (isUserLoggedIn()) await clearCartServer();
+                else saveLocalCart([]);
+                setCartItems([]);
+              } catch {}
+              if ((dpoData as any).token) {
+                localStorage.setItem("dpoPaymentToken", (dpoData as any).token);
+                localStorage.setItem("pendingOrderId", String(orderId || ""));
+                localStorage.setItem("pendingOrderAmount", String(totalAmount));
               }
-              setCartItems([]);
-            } catch (clearError) {
-              console.error("Error clearing cart:", clearError);
-              setCartItems([]);
+              setTimeout(() => { window.location.href = redirectUrl; }, 1500);
+            } else {
+              setOrderStatus({ success: "Order created successfully. Proceed to payment from your orders page." });
             }
-
-            // Store token if present
-            if ((dpoData as any).token) {
-              localStorage.setItem("dpoPaymentToken", (dpoData as any).token);
-              localStorage.setItem("pendingOrderId", String(orderId || ""));
-              localStorage.setItem("pendingOrderAmount", String(totalAmount));
-            }
-
-            setTimeout(() => {
-              window.location.href = redirectUrl;
-            }, 1500);
           } else {
-            // Fallback to any redirect returned by order creation, else just success
             const orderRedirectUrl = orderResult.pesapalRedirectUrl || orderResult.redirectUrl || orderResult.order?.redirectUrl;
             if (orderRedirectUrl) {
               setPaymentRedirectUrl(orderRedirectUrl);
               setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-              setTimeout(() => {
-                window.location.href = orderRedirectUrl;
-              }, 1500);
+              setTimeout(() => { window.location.href = orderRedirectUrl; }, 1500);
             } else {
-              setOrderStatus({ success: "Order created successfully. Proceed to payment from your orders page." });
+              setOrderStatus({ error: "Payment initialization failed. Please try again." });
             }
           }
         } else {
-          let errorData: any = {};
-          let responseText = '';
-          try {
-            responseText = await dpoResponse.text();
-            if (responseText) errorData = JSON.parse(responseText);
-          } catch {
-            errorData = { message: responseText || 'Unknown error' };
-          }
-          console.error("DPO init error:", {
-            status: dpoResponse.status,
-            statusText: dpoResponse.statusText,
-            errorData,
-          });
-
-          // If DPO init fails, fallback to any redirect returned by order creation
-          const orderRedirectUrl = orderResult.pesapalRedirectUrl || orderResult.redirectUrl || orderResult.order?.redirectUrl;
-          if (orderRedirectUrl) {
-            setPaymentRedirectUrl(orderRedirectUrl);
+          // Pesapal or other methods: rely on backend-provided redirect
+          const redirectUrl = orderResult.pesapalRedirectUrl || orderResult.redirectUrl || orderResult.order?.redirectUrl;
+          if (redirectUrl) {
+            setPaymentRedirectUrl(redirectUrl);
             setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-            setTimeout(() => {
-              window.location.href = orderRedirectUrl;
-            }, 1500);
+            try {
+              if (isUserLoggedIn()) await clearCartServer();
+              else saveLocalCart([]);
+              setCartItems([]);
+            } catch {}
+            setTimeout(() => { window.location.href = redirectUrl; }, 1500);
           } else {
-            setOrderStatus({ error: errorData.message || "Payment initialization failed. Please try again." });
+            setOrderStatus({ success: "Order created successfully." });
           }
         }
       } else if (orderResponse.status === 401) {
@@ -470,6 +450,7 @@ const CheckoutPage = () => {
                         let image = '';
                         if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
                         else if (typeof item.image === 'string') image = item.image;
+                        image = normalizeImageUrl(image);
                         
                         return image && image.trim().length > 0 ? (
                           <img

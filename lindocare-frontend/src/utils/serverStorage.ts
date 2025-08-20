@@ -647,6 +647,12 @@ export async function toggleWishlistProduct(productId: string): Promise<void> {
       
       throw new Error(errorData.message || 'Failed to toggle wishlist product');
     }
+    // Notify app wishlist updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: 'toggle', productId } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error toggling wishlist product:', error);
     throw error;
@@ -695,6 +701,12 @@ export async function addToWishlistServer(productId: string): Promise<void> {
       
       throw new Error(errorData.message || 'Failed to add product to wishlist');
     }
+    // Notify app wishlist updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: 'add', productId } }));
+      } catch {}
+    }
   } catch (error) {
     console.error('Error adding to wishlist:', error);
     throw error;
@@ -742,6 +754,12 @@ export async function removeFromWishlistServer(productId: string): Promise<void>
       }
       
       throw new Error(errorData.message || 'Failed to remove product from wishlist');
+    }
+    // Notify app wishlist updated
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wishlist-updated', { detail: { type: 'remove', productId } }));
+      } catch {}
     }
   } catch (error) {
     console.error('Error removing from wishlist:', error);

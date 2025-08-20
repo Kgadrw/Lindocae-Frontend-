@@ -166,6 +166,12 @@ const WishlistPage = () => {
     if (allProducts.length > 0) {
       fetchWishlist();
     }
+    // Listen for global wishlist updates to refresh UI immediately
+    const handleWishlistUpdated = () => {
+      if (allProducts.length > 0) fetchWishlist();
+    };
+    window.addEventListener('wishlist-updated', handleWishlistUpdated);
+    return () => window.removeEventListener('wishlist-updated', handleWishlistUpdated);
   }, [allProducts]);
 
   // Listen for login events to sync local wishlist to server
