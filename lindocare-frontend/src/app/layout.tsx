@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "Lindocare | Premium Baby Essentials & Diapers",
     description:
       "Shop premium quality diapers, wipes, and baby essentials from Lindocare. Fast delivery & trusted quality for your baby's needs.",
-    url: "https://www.lindocare.com",
+    url: "https://www.lindocare.store",
     siteName: "Lindocare",
     images: [
       {
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     images: ["/lindo.png"],
   },
   alternates: {
-    canonical: "https://www.lindocare.com",
+    canonical: "https://www.lindocare.store",
   },
 };
 
@@ -86,8 +86,8 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               name: "Lindocare Ltd",
-              url: "https://www.lindocare.com",
-              logo: "https://www.lindocare.com/lindo.png",
+              url: "https://www.lindocare.store",
+              logo: "https://www.lindocare.store/lindo.png",
               description:
                 "Supplier of premium baby essentials including diapers, wipes, and newborn care products.",
               sameAs: [
