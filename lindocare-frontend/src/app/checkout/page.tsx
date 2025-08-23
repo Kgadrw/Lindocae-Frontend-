@@ -215,25 +215,26 @@ const CheckoutPage = () => {
         cell: shippingCell,
         village: shippingVillage,
         street: shippingStreet,
-        customerEmail,   // moved inside shippingAddress
-        customerPhone,   // moved inside shippingAddress
-        customerName: `${customerFirstName} ${customerLastName}`, // moved inside
       };
-      
+
+      // First, create the order using required API format
       const orderData = {
         paymentMethod: paymentMethod || 'dpo',
         shippingAddress: structuredShippingAddress,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        customerName: `${customerFirstName} ${customerLastName}`,
+        // Include items and totalAmount if backend expects them in the order payload
         items: orderItems,
-        totalAmount,
+        totalAmount: totalAmount,
       };
 
       // Validate required fields per API format
-      if (!customerEmail || !customerPhone || !customerFirstName || !customerLastName) {
+      if (!orderData.customerEmail || !orderData.customerPhone || !customerFirstName || !customerLastName) {
         setOrderStatus({ error: "Please provide email, phone, first and last name." });
         setIsSubmitting(false);
         return;
       }
-      
 
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
