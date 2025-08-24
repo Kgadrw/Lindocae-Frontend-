@@ -30,7 +30,7 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("pesapal");
+  const [paymentMethod, setPaymentMethod] = useState("dpo");
   const [shippingProvince, setShippingProvince] = useState("");
   const [shippingDistrict, setShippingDistrict] = useState("");
   const [shippingSector, setShippingSector] = useState("");
