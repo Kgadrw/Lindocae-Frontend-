@@ -216,22 +216,20 @@ const CheckoutPage = () => {
       }));
 
       // ✅ shippingAddress now includes customer fields, matching your schema
-      const orderData = {
-        paymentMethod: paymentMethod || "dpo",
-        shippingAddress: {
-          province: shippingProvince,
-          district: shippingDistrict,
-          sector: shippingSector,
-          cell: shippingCell,
-          village: shippingVillage,
-          street: shippingStreet,
-          customerEmail: customerEmail,
-          customerPhone: customerPhone,
-          customerName: customerName,
-        },
-        items: orderItems,
-        totalAmount: totalAmount,
-      };
+     const orderData = {
+  paymentMethod: paymentMethod || "dpo",
+  province: shippingProvince,
+  district: shippingDistrict,
+  sector: shippingSector,
+  cell: shippingCell,
+  village: shippingVillage,
+  street: shippingStreet,
+  customerEmail,
+  customerPhone,
+  customerName,
+  items: orderItems,
+  totalAmount,
+};
 
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
