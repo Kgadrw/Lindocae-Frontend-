@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import HeaderWithCategories from '../components/HeaderWithCategories';
-import Footer from '../components/Footer';
+import HeaderWithCategories from "../components/HeaderWithCategories";
+import Footer from "../components/Footer";
 
+// ✅ Normal metadata
 export const metadata: Metadata = {
   title: "Lindocare | Baby Essentials & Diapers Supplier",
   description:
@@ -53,22 +54,54 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+// ✅ Fetch categories server-side
+async function getCategories() {
+  try {
+    const res = await fetch("https://lindo-project.onrender.com/category/getAllCategories", {
+      next: { revalidate: 3600 }, // revalidate every hour
+    });
+    const data = await res.json();
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.categories)) return data.categories;
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export default async function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
+  const categories = await getCategories();
+
+  // ✅ Build breadcrumb schema dynamically
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://www.lindocare.store",
+      },
+      ...categories.map((cat: any, idx: number) => ({
+        "@type": "ListItem",
+        position: idx + 2,
+        name: cat.name,
+        item: `https://www.lindocare.store/all-products?category=${encodeURIComponent(
+          cat.name
+        )}`,
+      })),
+    ],
+  };
+
   return (
     <html lang="en">
       <head>
         {/* Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        {/* Preconnect to API and image CDNs to speed up first requests */}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://lindo-project.onrender.com" />
         <link rel="preconnect" href="https://lindo-project.onrender.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
@@ -78,7 +111,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
 
-        {/* Structured Data for SEO */}
+        {/* Organization structured data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -95,6 +128,14 @@ export default function RootLayout({
                 "https://instagram.com/lindocare",
               ],
             }),
+          }}
+        />
+
+        {/* Dynamic breadcrumbs with categories */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(breadcrumbSchema),
           }}
         />
       </head>

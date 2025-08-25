@@ -200,11 +200,7 @@ const OrdersComponent: React.FC = () => {
     switch (method) {
       case 'card':
         return <CreditCard size={16} className="text-blue-600" />;
-      case 'cash':
-        return <span className="text-green-600 font-bold">$</span>;
-      case 'mobile_money':
-        return <span className="text-purple-600 font-bold">M</span>;
-      case 'pesapal':
+     
         return <CreditCard size={16} className="text-blue-600" />;
       default:
         return <CreditCard size={16} className="text-gray-600" />;
@@ -254,15 +250,13 @@ const OrdersComponent: React.FC = () => {
   const getStats = () => {
     const total = orders.length;
     const pending = orders.filter(order => order.status === 'pending').length;
-    const processing = orders.filter(order => order.status === 'processing').length;
-    const shipped = orders.filter(order => order.status === 'shipped').length;
     const delivered = orders.filter(order => order.status === 'delivered').length;
     const cancelled = orders.filter(order => order.status === 'cancelled').length;
     const totalRevenue = orders
       .filter(order => order.status === 'delivered')
       .reduce((sum, order) => sum + order.totalAmount, 0);
 
-    return { total, pending, processing, shipped, delivered, cancelled, totalRevenue };
+    return { total, pending, delivered, cancelled, totalRevenue };
   };
 
   const stats = getStats();
@@ -311,39 +305,6 @@ const OrdersComponent: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-3 align-middle text-center font-bold text-xl text-blue-600">{stats.total}</td>
-              </tr>
-              <tr className="even:bg-gray-50 hover:bg-gray-100 transition">
-                <td className="px-6 py-3 align-middle">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <Clock size={18} className="text-orange-600" />
-                    </div>
-                    <span className="font-semibold text-gray-900">Pending</span>
-                  </div>
-                </td>
-                <td className="px-6 py-3 align-middle text-center font-bold text-xl text-orange-600">{stats.pending}</td>
-              </tr>
-              <tr className="even:bg-gray-50 hover:bg-gray-100 transition">
-                <td className="px-6 py-3 align-middle">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Clock size={18} className="text-yellow-600" />
-                    </div>
-                    <span className="font-semibold text-gray-900">Processing</span>
-                  </div>
-                </td>
-                <td className="px-6 py-3 align-middle text-center font-bold text-xl text-yellow-600">{stats.processing}</td>
-              </tr>
-              <tr className="even:bg-gray-50 hover:bg-gray-100 transition">
-                <td className="px-6 py-3 align-middle">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Truck size={18} className="text-blue-600" />
-                    </div>
-                    <span className="font-semibold text-gray-900">Shipped</span>
-                  </div>
-                </td>
-                <td className="px-6 py-3 align-middle text-center font-bold text-xl text-blue-600">{stats.shipped}</td>
               </tr>
               <tr className="even:bg-gray-50 hover:bg-gray-100 transition">
                 <td className="px-6 py-3 align-middle">
@@ -425,10 +386,6 @@ const OrdersComponent: React.FC = () => {
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="shipped">Shipped</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
           </select>
 
           <label className="text-sm font-medium text-gray-700 ml-4">Payment Method:</label>
@@ -438,10 +395,8 @@ const OrdersComponent: React.FC = () => {
             className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 bg-white rounded-lg"
           >
             <option value="all">All Methods</option>
-            <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="mobile_money">Mobile Money</option>
-            <option value="pesapal">Pesapal</option>
           </select>
         </div>
       </div>
