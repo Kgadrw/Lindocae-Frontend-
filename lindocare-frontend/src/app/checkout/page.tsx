@@ -31,27 +31,28 @@ function formatRWF(amount: number | undefined | null) {
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("dpo");
+
+  // Shipping address fields
   const [shippingProvince, setShippingProvince] = useState("");
   const [shippingDistrict, setShippingDistrict] = useState("");
   const [shippingSector, setShippingSector] = useState("");
   const [shippingCell, setShippingCell] = useState("");
   const [shippingVillage, setShippingVillage] = useState("");
   const [shippingStreet, setShippingStreet] = useState("");
+
+  // Customer info (moved inside shippingAddress per your schema)
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [customerFirstName, setCustomerFirstName] = useState("");
-  const [customerLastName, setCustomerLastName] = useState("");
-  const [orderStatus, setOrderStatus] = useState<{
-    success?: string;
-    error?: string;
-  }>({});
+  const [customerName, setCustomerName] = useState("");
+
+  const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
-  const [users, setUsers] = useState<any[]>([]); // Store users for header
+  const [users, setUsers] = useState<any[]>([]); // optional (kept as in your original)
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const router = useRouter();
 
-  // Fetch users for header
+  // Fetch users for header (unchanged; safe to remove if unused)
   useEffect(() => {
     fetch("https://lindo-project.onrender.com/user/getAllUsers")
       .then((res) => res.json())
@@ -63,50 +64,57 @@ const CheckoutPage = () => {
       .catch(() => setUsers([]));
   }, []);
 
-  // No authentication required for checkout - users can checkout as guests
-
+  // Load cart
   useEffect(() => {
     async function loadCart() {
       try {
         if (isUserLoggedIn()) {
           // User is logged in, fetch from server
           console.log("Checkout: User logged in, fetching cart from server...");
-          
+
           let serverCart;
           try {
-            // Try to get cart with full product details first
             serverCart = await fetchUserCartWithProducts();
             console.log("Checkout: Server cart with products fetched successfully:", serverCart);
           } catch (productsError) {
             console.warn("Checkout: Failed to fetch cart with products, falling back to basic cart:", productsError);
-            // Fallback to basic cart if product details fetch fails
             serverCart = await fetchUserCart();
             console.log("Checkout: Basic server cart fetched as fallback:", serverCart);
           }
-          
+
           if (serverCart && serverCart.length > 0) {
-          const convertedCart = serverCart.map((item) => ({
-            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
-              name: item.name || 'Product',
+            const convertedCart = serverCart.map((item: any) => ({
+              id:
+                typeof item.productId === "object"
+                  ? (item.productId as any)._id ||
+                    (item.productId as any).id ||
+                    String(item.productId)
+                  : String(item.productId),
+              name: item.name || "Product",
               price: item.price || 0,
-              image: item.image || '/lindo.png',
+              image: item.image || "/lindo.png",
               quantity: item.quantity || 1,
-          }));
-          setCartItems(convertedCart);
+            }));
+            setCartItems(convertedCart);
             console.log("Checkout: Cart items set from server:", convertedCart);
           } else {
             setCartItems([]);
             console.log("Checkout: Server cart is empty");
           }
         } else {
-          // User not logged in, load from localStorage
+          // Guest: load from localStorage
           console.log("Checkout: User not logged in, loading cart from localStorage...");
           const localCart = getLocalCart();
-          const convertedCart = localCart.map((item) => ({
-            id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
-            name: item.name || 'Product',
+          const convertedCart = localCart.map((item: any) => ({
+            id:
+              typeof item.productId === "object"
+                ? (item.productId as any)._id ||
+                  (item.productId as any).id ||
+                  String(item.productId)
+                : String(item.productId),
+            name: item.name || "Product",
             price: item.price || 0,
-            image: item.image || '/lindo.png',
+            image: item.image || "/lindo.png",
             quantity: item.quantity || 1,
           }));
           setCartItems(convertedCart);
@@ -114,27 +122,30 @@ const CheckoutPage = () => {
         }
       } catch (err) {
         console.error("Error loading cart for checkout:", err);
-        
-        // If server fetch fails and user is logged in, try localStorage as fallback
+
         if (isUserLoggedIn()) {
           console.log("Checkout: Server fetch failed, trying localStorage fallback...");
           try {
-        const localCart = getLocalCart();
-        const convertedCart = localCart.map((item) => ({
-          id: typeof item.productId === 'object' ? (item.productId as any)._id || (item.productId as any).id || String(item.productId) : String(item.productId),
-              name: item.name || 'Product',
+            const localCart = getLocalCart();
+            const convertedCart = localCart.map((item: any) => ({
+              id:
+                typeof item.productId === "object"
+                  ? (item.productId as any)._id ||
+                    (item.productId as any).id ||
+                    String(item.productId)
+                  : String(item.productId),
+              name: item.name || "Product",
               price: item.price || 0,
-              image: item.image || '/lindo.png',
+              image: item.image || "/lindo.png",
               quantity: item.quantity || 1,
-        }));
-        setCartItems(convertedCart);
+            }));
+            setCartItems(convertedCart);
             console.log("Checkout: Fallback to localStorage successful:", convertedCart);
           } catch (localError) {
             console.error("Checkout: Both server and localStorage failed:", localError);
             setCartItems([]);
           }
         } else {
-          // User not logged in, just set empty cart
           setCartItems([]);
         }
       } finally {
@@ -155,12 +166,10 @@ const CheckoutPage = () => {
         name: cartItems[0].name,
         price: cartItems[0].price,
         image: cartItems[0].image,
-        quantity: cartItems[0].quantity
+        quantity: cartItems[0].quantity,
       });
     }
   }, [cartItems]);
-
-
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
@@ -172,7 +181,7 @@ const CheckoutPage = () => {
     setOrderStatus({});
     setIsSubmitting(true);
 
-    // Validate required fields
+    // ✅ Updated validation (uses customerName instead of first/last)
     if (
       !paymentMethod ||
       !shippingProvince ||
@@ -183,8 +192,7 @@ const CheckoutPage = () => {
       !shippingStreet ||
       !customerPhone ||
       !customerEmail ||
-      !customerFirstName ||
-      !customerLastName
+      !customerName
     ) {
       setOrderStatus({ error: "Please fill in all required fields." });
       setIsSubmitting(false);
@@ -207,34 +215,23 @@ const CheckoutPage = () => {
         price: item.price || 0,
       }));
 
-      // Create structured shipping address from separate fields
-      const structuredShippingAddress = {
-        province: shippingProvince,
-        district: shippingDistrict,
-        sector: shippingSector,
-        cell: shippingCell,
-        village: shippingVillage,
-        street: shippingStreet,
-      };
-
-      // First, create the order using required API format
+      // ✅ shippingAddress now includes customer fields, matching your schema
       const orderData = {
-        paymentMethod: paymentMethod || 'dpo',
-        shippingAddress: structuredShippingAddress,
-        customerEmail: customerEmail,
-        customerPhone: customerPhone,
-        customerName: `${customerFirstName} ${customerLastName}`,
-        // Include items and totalAmount if backend expects them in the order payload
+        paymentMethod: paymentMethod || "dpo",
+        shippingAddress: {
+          province: shippingProvince,
+          district: shippingDistrict,
+          sector: shippingSector,
+          cell: shippingCell,
+          village: shippingVillage,
+          street: shippingStreet,
+          customerEmail: customerEmail,
+          customerPhone: customerPhone,
+          customerName: customerName,
+        },
         items: orderItems,
         totalAmount: totalAmount,
       };
-
-      // Validate required fields per API format
-      if (!orderData.customerEmail || !orderData.customerPhone || !customerFirstName || !customerLastName) {
-        setOrderStatus({ error: "Please provide email, phone, first and last name." });
-        setIsSubmitting(false);
-        return;
-      }
 
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
@@ -248,7 +245,7 @@ const CheckoutPage = () => {
           const parsed = JSON.parse(stored);
           openLock = parsed?.user?.tokens?.accessToken || null;
         }
-      } catch (error) {
+      } catch {
         console.warn("Could not parse user token; proceeding without Authorization header.");
       }
       console.log("Access token present:", !!openLock);
@@ -274,17 +271,21 @@ const CheckoutPage = () => {
 
         const orderId = orderResult.order?._id || orderResult.orderId;
 
-        // Handle redirection/payment based on payment method
-        if (orderData.paymentMethod === 'dpo') {
-          // Initialize DPO
+        // Prepare name for DPO init from full name safely
+        const [firstNameRaw, ...restName] = customerName.trim().split(/\s+/);
+        const firstName = firstNameRaw || "Customer";
+        const lastName = restName.join(" ") || firstName;
+
+        if (paymentMethod === "dpo") {
+          // Initialize DPO with derived names
           const dpoInitBody = {
             orderId: String(orderId || ""),
             totalAmount: totalAmount,
             currency: "RWF",
             email: customerEmail,
             phone: customerPhone,
-            firstName: customerFirstName,
-            lastName: customerLastName,
+            firstName,
+            lastName,
             serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
             callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
           };
@@ -318,23 +319,35 @@ const CheckoutPage = () => {
                 localStorage.setItem("pendingOrderId", String(orderId || ""));
                 localStorage.setItem("pendingOrderAmount", String(totalAmount));
               }
-              setTimeout(() => { window.location.href = redirectUrl; }, 1500);
+              setTimeout(() => {
+                window.location.href = redirectUrl;
+              }, 1500);
             } else {
-              setOrderStatus({ success: "Order created successfully. Proceed to payment from your orders page." });
+              setOrderStatus({
+                success: "Order created successfully. Proceed to payment from your orders page.",
+              });
             }
           } else {
-            const orderRedirectUrl = orderResult.pesapalRedirectUrl || orderResult.redirectUrl || orderResult.order?.redirectUrl;
+            const orderRedirectUrl =
+              orderResult.pesapalRedirectUrl ||
+              orderResult.redirectUrl ||
+              orderResult.order?.redirectUrl;
             if (orderRedirectUrl) {
               setPaymentRedirectUrl(orderRedirectUrl);
               setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-              setTimeout(() => { window.location.href = orderRedirectUrl; }, 1500);
+              setTimeout(() => {
+                window.location.href = orderRedirectUrl;
+              }, 1500);
             } else {
               setOrderStatus({ error: "Payment initialization failed. Please try again." });
             }
           }
         } else {
-          // Pesapal or other methods: rely on backend-provided redirect
-          const redirectUrl = orderResult.pesapalRedirectUrl || orderResult.redirectUrl || orderResult.order?.redirectUrl;
+          // Other payment methods rely on backend-provided redirect
+          const redirectUrl =
+            orderResult.pesapalRedirectUrl ||
+            orderResult.redirectUrl ||
+            orderResult.order?.redirectUrl;
           if (redirectUrl) {
             setPaymentRedirectUrl(redirectUrl);
             setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
@@ -343,7 +356,9 @@ const CheckoutPage = () => {
               else saveLocalCart([]);
               setCartItems([]);
             } catch {}
-            setTimeout(() => { window.location.href = redirectUrl; }, 1500);
+            setTimeout(() => {
+              window.location.href = redirectUrl;
+            }, 1500);
           } else {
             setOrderStatus({ success: "Order created successfully." });
           }
@@ -352,27 +367,29 @@ const CheckoutPage = () => {
         const errorText = await orderResponse.text();
         console.error("Order creation 401 error response:", errorText);
         setOrderStatus({
-          error:
-            "Authorization failed. Please log in and try again.",
+          error: "Authorization failed. Please log in and try again.",
         });
       } else {
         // Enhanced error handling to see exact API response
         let errorData: any = {};
-        let responseText = '';
+        let responseText = "";
         try {
           responseText = await orderResponse.text();
           if (responseText) {
             errorData = JSON.parse(responseText);
           }
         } catch (parseError) {
-          errorData = { message: responseText || 'Unknown error' };
+          errorData = { message: responseText || "Unknown error" };
         }
-        
-        // Log detailed error information in multiple formats for reliability
-        console.error("Order creation error status:", orderResponse.status, orderResponse.statusText);
+
+        console.error(
+          "Order creation error status:",
+          orderResponse.status,
+          orderResponse.statusText
+        );
         console.error("Order creation error body (text):", responseText || "<empty body>");
         console.error("Order creation error parsed object:", errorData);
-        
+
         setOrderStatus({
           error:
             errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
@@ -420,64 +437,56 @@ const CheckoutPage = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-black font-medium">
-                    Estimated Shipping
-                  </span>
+                  <span className="text-black font-medium">Estimated Shipping</span>
                   <span className="text-black font-semibold">0 RWF</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-black font-medium">Taxes</span>
-                  <span className="text-gray-400 font-normal">
-                    Calculated at checkout
-                  </span>
+                  <span className="text-gray-400 font-normal">Calculated at checkout</span>
                 </div>
               </div>
               <div className="flex justify-between items-center text-lg font-bold mt-2 mb-4">
                 <span className="text-black">Total</span>
                 <span className="text-black">{formatRWF(subtotal)} RWF</span>
               </div>
-              <div className="font-semibold text-black mb-2">
-                Products to Checkout
-              </div>
+              <div className="font-semibold text-black mb-2">Products to Checkout</div>
               <div className="flex flex-col gap-3">
                 {cartItems.map((item, idx) => (
                   <div
-                    key={`cart-${String((item as any)?.id ?? '')}-${idx}`}
+                    key={`cart-${String((item as any)?.id ?? "")}-${idx}`}
                     className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0"
                   >
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                       {(() => {
-                        let image = '';
+                        let image = "";
                         if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
-                        else if (typeof item.image === 'string') image = item.image;
+                        else if (typeof item.image === "string") image = item.image;
                         image = normalizeImageUrl(image);
-                        
+
                         return image && image.trim().length > 0 ? (
                           <img
                             src={image}
-                          alt={item.name}
-                          className="object-cover w-full h-full"
-                              onError={(e) => {
-                              console.warn('Image failed to load:', image);
-                              }}
-                              onLoad={() => {
-                              console.log('Image loaded successfully:', image);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                              No Image
-                            </div>
+                            alt={item.name}
+                            className="object-cover w-full h-full"
+                            onError={() => {
+                              console.warn("Image failed to load:", image);
+                            }}
+                            onLoad={() => {
+                              console.log("Image loaded successfully:", image);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                            No Image
+                          </div>
                         );
                       })()}
                     </div>
                     <div className="flex-1">
                       <div className="font-medium text-black text-base">
-                        {item.name || 'Product'}
+                        {item.name || "Product"}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Qty: {item.quantity || 1}
-                      </div>
+                      <div className="text-xs text-gray-500">Qty: {item.quantity || 1}</div>
                     </div>
                     <div className="font-bold text-black text-base">
                       {formatRWF(item.price || 0)} RWF
@@ -488,44 +497,26 @@ const CheckoutPage = () => {
             </>
           )}
         </div>
+
         {/* Right: Address and payment method form */}
         <div className="flex-1 flex flex-col gap-4 justify-center">
           {cartItems.length > 0 && (
             <form onSubmit={handleCheckout} className="flex flex-col gap-4">
-              {/* Customer Information */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-700 mb-1">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={customerFirstName}
-                    onChange={(e) => setCustomerFirstName(e.target.value)}
-                    placeholder="John"
-                    required
-                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 mb-1">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={customerLastName}
-                    onChange={(e) => setCustomerLastName(e.target.value)}
-                    placeholder="Doe"
-                    required
-                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                  />
-                </div>
+              {/* Customer Information (single full name) */}
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                />
               </div>
 
               <div>
-                <label className="block text-xs text-gray-700 mb-1">
-                  Email Address *
-                </label>
+                <label className="block text-xs text-gray-700 mb-1">Email Address *</label>
                 <input
                   type="email"
                   value={customerEmail}
@@ -537,28 +528,22 @@ const CheckoutPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-gray-700 mb-1">
-                  Phone Number *
-                </label>
+                <label className="block text-xs text-gray-700 mb-1">Phone Number *</label>
                 <input
                   type="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="+254712345678"
+                  placeholder="+2507XXXXXXXX"
                   required
                   className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-gray-700 mb-1">
-                  Shipping Address *
-                </label>
+                <label className="block text-xs text-gray-700 mb-1">Shipping Address *</label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">
-                      Province
-                    </label>
+                    <label className="block text-xs text-gray-700 mb-1">Province</label>
                     <input
                       type="text"
                       value={shippingProvince}
@@ -569,9 +554,7 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">
-                      District
-                    </label>
+                    <label className="block text-xs text-gray-700 mb-1">District</label>
                     <input
                       type="text"
                       value={shippingDistrict}
@@ -582,9 +565,7 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">
-                      Sector
-                    </label>
+                    <label className="block text-xs text-gray-700 mb-1">Sector</label>
                     <input
                       type="text"
                       value={shippingSector}
@@ -595,9 +576,7 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">
-                      Cell
-                    </label>
+                    <label className="block text-xs text-gray-700 mb-1">Cell</label>
                     <input
                       type="text"
                       value={shippingCell}
@@ -608,9 +587,7 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">
-                      Village
-                    </label>
+                    <label className="block text-xs text-gray-700 mb-1">Village</label>
                     <input
                       type="text"
                       value={shippingVillage}
@@ -621,9 +598,7 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">
-                      Street
-                    </label>
+                    <label className="block text-xs text-gray-700 mb-1">Street</label>
                     <input
                       type="text"
                       value={shippingStreet}
@@ -638,6 +613,8 @@ const CheckoutPage = () => {
                   Please fill in all address fields for accurate delivery
                 </p>
               </div>
+
+              {/* Status messages */}
               {orderStatus.error && (
                 <div className="text-red-600 text-xs font-semibold mt-1">
                   {orderStatus.error}
