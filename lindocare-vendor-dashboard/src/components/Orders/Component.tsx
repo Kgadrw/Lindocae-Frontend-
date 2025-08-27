@@ -12,10 +12,10 @@ interface Product {
 }
 
 interface OrderItem {
-  productId: string;
+  productId?: string | { _id?: string };
   quantity: number;
   price: number;
-  product?: Product; // populated product info
+  product?: string | Product;
 }
 
 interface User {
@@ -66,7 +66,7 @@ const OrdersComponent: React.FC = () => {
     fetchProducts();
   }, []);
 
-  function getAccessToken(): string | null {
+  const getAccessToken = (): string | null => {
     try {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
       if (!stored) return null;
@@ -75,16 +75,13 @@ const OrdersComponent: React.FC = () => {
     } catch {
       return null;
     }
-  }
+  };
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'accept': 'application/json',
-      };
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', accept: 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       let response = await fetch('https://lindo-project.onrender.com/orders/getAllOrders', { headers });
@@ -94,25 +91,19 @@ const OrdersComponent: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data)) {
-          setOrders(data);
-        } else if (data && Array.isArray(data.orders)) {
-          setOrders(data.orders);
-        } else {
-          setOrders([]);
-        }
+        setOrders(Array.isArray(data) ? data : data?.orders || []);
         setErrorMessage('');
       } else if (response.status === 401) {
         setErrorMessage('Authentication required. Please log in.');
         setOrders([]);
       } else {
-        setOrders([]);
         setErrorMessage('Failed to fetch orders.');
+        setOrders([]);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      setOrders([]);
       setErrorMessage('Failed to fetch orders.');
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -123,13 +114,7 @@ const OrdersComponent: React.FC = () => {
       const response = await fetch('https://lindo-project.onrender.com/product/getAllProduct');
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else if (data && Array.isArray(data.products)) {
-          setProducts(data.products);
-        } else {
-          setProducts([]);
-        }
+        setProducts(Array.isArray(data) ? data : data?.products || []);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -137,129 +122,95 @@ const OrdersComponent: React.FC = () => {
     }
   };
 
-  const getProductById = (productId: string) => {
-    return products.find(product => product._id === productId);
-  };
+  const getProductById = (productId: string) => products.find(p => p._id === productId);
 
-  const normalizeImageUrl = (src?: string) => {
-    if (!src) return '';
-    return src.startsWith('http') ? src : `https://lindo-project.onrender.com/${src}`;
-  };
-
-  // Prefer backend-populated product, fallback to products list
-  const getItemProduct = (item: OrderItem): Product | undefined => {
-    if (item.product && item.product._id) return item.product;
-    return getProductById(item.productId);
-  };
+  const normalizeImageUrl = (src?: string) =>
+    !src ? '' : src.startsWith('http') ? src : `https://lindo-project.onrender.com/${src}`;
 
   const getItemProductName = (item: OrderItem): string => {
-    const product = getItemProduct(item);
-    return product?.name || `Product ${item.productId.slice(-8)}`;
+    if (typeof item.product === 'string') return item.product;
+    if (item.product && typeof item.product === 'object' && 'name' in item.product) return item.product.name;
+    const pid = typeof item.productId === 'string' ? item.productId : item.productId?._id || '';
+    const product = pid ? getProductById(pid) : undefined;
+    return product?.name || `Product ${pid.slice(-8)}`;
   };
 
   const getItemProductImage = (item: OrderItem): string => {
-    const product = getItemProduct(item);
-    if (product?.image && product.image.length > 0) {
-      return normalizeImageUrl(product.image[0]);
+    if (item.product && typeof item.product === 'object' && 'image' in item.product && item.product.image?.length) {
+      return normalizeImageUrl(item.product.image[0]);
     }
-    return '';
+    const pid = typeof item.productId === 'string' ? item.productId : item.productId?._id || '';
+    const product = pid ? getProductById(pid) : undefined;
+    return product?.image?.length ? normalizeImageUrl(product.image[0]) : '';
   };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'shipped':
-        return 'bg-blue-100 text-blue-800';
-      case 'processing':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'pending':
-        return 'bg-orange-100 text-orange-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'shipped': return 'bg-blue-100 text-blue-800';
+      case 'processing': return 'bg-yellow-100 text-yellow-800';
+      case 'pending': return 'bg-orange-100 text-orange-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'delivered':
-        return <CheckCircle size={16} className="text-green-600" />;
-      case 'shipped':
-        return <Truck size={16} className="text-blue-600" />;
-      case 'processing':
-        return <Clock size={16} className="text-yellow-600" />;
-      case 'pending':
-        return <Package size={16} className="text-orange-600" />;
-      case 'cancelled':
-        return <XCircle size={16} className="text-red-600" />;
-      default:
-        return <Clock size={16} className="text-gray-600" />;
+      case 'delivered': return <CheckCircle size={16} className="text-green-600" />;
+      case 'shipped': return <Truck size={16} className="text-blue-600" />;
+      case 'processing': return <Clock size={16} className="text-yellow-600" />;
+      case 'pending': return <Package size={16} className="text-orange-600" />;
+      case 'cancelled': return <XCircle size={16} className="text-red-600" />;
+      default: return <Clock size={16} className="text-gray-600" />;
     }
   };
 
-  const getPaymentMethodIcon = (method: string) => {
-    switch (method) {
-      case 'card':
-        return <CreditCard size={16} className="text-blue-600" />;
-      default:
-        return <CreditCard size={16} className="text-gray-600" />;
-    }
-  };
+  const getPaymentMethodIcon = (method: string) =>
+    <CreditCard size={16} className={method === 'card' ? 'text-blue-600' : 'text-gray-600'} />;
 
-  const formatShippingAddress = (addr: any) => {
+  const formatShippingAddress = (addr: ShippingAddress | string) => {
     if (!addr) return '';
     if (typeof addr === 'string') return addr;
-    const { province, district, sector, cell, village, street } = addr || {};
+    const { province, district, sector, cell, village, street } = addr;
     return [province, district, sector, cell, village, street].filter(Boolean).join(', ');
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-
       const response = await fetch(`https://lindo-project.onrender.com/orders/updateOrderStatus/${orderId}`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus }),
       });
-
       if (response.ok) {
         setSuccessMessage('Order status updated successfully!');
         fetchOrders();
         setTimeout(() => setSuccessMessage(''), 3000);
-      } else {
-        setErrorMessage('Error updating order status');
-      }
+      } else setErrorMessage('Error updating order status');
     } catch (error) {
       console.error('Error updating order status:', error);
       setErrorMessage('Error updating order status');
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    const statusMatch = selectedStatus === 'all' || order.status === selectedStatus;
-    const paymentMatch = selectedPaymentMethod === 'all' || order.paymentMethod === selectedPaymentMethod;
-    return statusMatch && paymentMatch;
-  });
+  const filteredOrders = orders.filter(order =>
+    (selectedStatus === 'all' || order.status === selectedStatus) &&
+    (selectedPaymentMethod === 'all' || order.paymentMethod === selectedPaymentMethod)
+  );
 
   const getStats = () => {
     const total = orders.length;
-    const pending = orders.filter(order => order.status === 'pending').length;
-    const delivered = orders.filter(order => order.status === 'delivered').length;
-    const cancelled = orders.filter(order => order.status === 'cancelled').length;
-    const totalRevenue = orders
-      .filter(order => order.status === 'delivered')
-      .reduce((sum, order) => sum + order.totalAmount, 0);
-
+    const pending = orders.filter(o => o.status === 'pending').length;
+    const delivered = orders.filter(o => o.status === 'delivered').length;
+    const cancelled = orders.filter(o => o.status === 'cancelled').length;
+    const totalRevenue = orders.filter(o => o.status === 'delivered')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
     return { total, pending, delivered, cancelled, totalRevenue };
   };
-
   const stats = getStats();
 
     return (
@@ -463,8 +414,8 @@ const OrdersComponent: React.FC = () => {
                       <div className="text-gray-900 font-semibold">{order.items.length} items</div>
                       <div className="text-gray-700 max-w-xs truncate">
                         {order.items.slice(0, 2).map(item => {
-                            const product = getItemProduct(item);
-                            if (product?.name) return product.name;
+                            const productName = getItemProductName(item);
+                            if (productName) return productName;
                             const pid = typeof item.productId === 'string' ? item.productId : '';
                             return `Product ${pid ? pid.slice(-8) : 'Unknown'}`;
                           }).join(', ')}
@@ -535,151 +486,143 @@ const OrdersComponent: React.FC = () => {
       </div>
           {/* Order Details Modal */}
           {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white w-full max-w-5xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-            <div className="flex items-start justify-between p-4 border-b border-gray-200">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="bg-white w-full max-w-5xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+      
+      {/* Header */}
+      <div className="flex items-start justify-between p-4 border-b border-gray-200">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Order ID: <span className="font-mono">{selectedOrder._id}</span>
+          </p>
+        </div>
+        <button
+          className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+          onClick={() => setSelectedOrder(null)}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+
+        {/* Customer and Meta */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                {selectedOrder.user?.image?.[0] ? (
+                  <img src={normalizeImageUrl(selectedOrder.user.image[0])} alt="Customer" className="h-10 w-10 object-cover" />
+                ) : (
+                  <span className="text-sm font-semibold text-gray-600">
+                    {selectedOrder.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                )}
+              </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
-                <p className="text-sm text-gray-600 mt-1">Order ID: <span className="font-mono">{selectedOrder._id}</span></p>
-              </div>
-              <button
-                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                onClick={() => setSelectedOrder(null)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-              {/* Customer and Meta */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                      {selectedOrder.user?.image?.[0] ? (
-                        <img src={normalizeImageUrl(selectedOrder.user.image[0])} alt="Customer" className="h-10 w-10 object-cover" />
-                      ) : (
-                        <span className="text-sm font-semibold text-gray-600">
-                          {selectedOrder.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">{selectedOrder.user?.name || 'Unknown'}</div>
-                      <div className="text-gray-600 text-sm">{selectedOrder.user?.email}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <div className="text-sm text-gray-600">Payment</div>
-                  <div className="mt-1 flex items-center gap-2">
-                    {getPaymentMethodIcon(selectedOrder.paymentMethod)}
-                    <div className="text-gray-900 capitalize">{String(selectedOrder.paymentMethod || '').replace('_', ' ')}</div>
-                  </div>
-                  <div className="mt-2 text-sm text-gray-600">Status</div>
-                  <div className={`mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${getStatusBadgeColor(selectedOrder.status)}`}>
-                    {selectedOrder.status}
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <div className="text-sm text-gray-600">Placed</div>
-                  <div className="text-gray-900">{new Date(selectedOrder.createdAt).toLocaleString()}</div>
-                  <div className="mt-2 text-sm text-gray-600">Updated</div>
-                  <div className="text-gray-900">{new Date(selectedOrder.updatedAt).toLocaleString()}</div>
-                </div>
-              </div>
-
-
-                  {/* Shipping Address */}
-                   <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-                  <MapPin size={16} className="text-gray-500" />
-                  <h4 className="font-semibold text-gray-900">Shipping Address</h4>
-                </div>
-                <div className="px-4 py-4 text-gray-800 text-sm space-y-1">
-                  <div>{formatShippingAddress(selectedOrder.shippingAddress) || 'N/A'}</div>
-                  {selectedOrder.shippingAddress?.customerName && (
-                    <div><span className="font-medium">Name:</span> {selectedOrder.shippingAddress.customerName}</div>
-                  )}
-                  {selectedOrder.shippingAddress?.customerPhone && (
-                    <div><span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.customerPhone}</div>
-                  )}
-                  {selectedOrder.shippingAddress?.customerEmail && (
-                    <div><span className="font-medium">Email:</span> {selectedOrder.shippingAddress.customerEmail}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Items */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-                  <Package size={16} className="text-gray-500" />
-                  <h4 className="font-semibold text-gray-900">Items ({selectedOrder.items.length})</h4>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {selectedOrder.items.map((item, idx) => {
-                    const product = getItemProduct(item);
-                    const name =
-                    product?.name ||
-                    (typeof item.productId === 'string'
-                      ? `Product ${item.productId.slice(-8)}`
-                      : 'Product Unknown');
-                    const imageUrl = getItemProductImage(item);
-                    const unitPrice = item.price ?? product?.price ?? 0;
-                    const lineTotal = (item.quantity || 1) * unitPrice;
-
-                    return (
-                      <div key={product?._id || item.productId || idx} className="px-4 py-3 flex items-center gap-3">
-                        <div className="h-16 w-16 bg-gray-100 border border-gray-200 rounded overflow-hidden flex-shrink-0">
-                          {imageUrl ? (
-                            <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-gray-400">No Image</div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{name}</div>
-                          <div className="text-sm text-gray-600">Qty: {item.quantity} • Unit: ${unitPrice.toFixed(2)}</div>
-                        </div>
-                        <div className="text-right font-semibold text-gray-900">${lineTotal.toFixed(2)}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Totals */}
-              <div className="flex flex-col items-end">
-                <div className="w-full md:w-1/2 bg-white rounded-lg border border-gray-200">
-                  <div className="px-4 py-3 border-b border-gray-200 font-semibold text-gray-900">Summary</div>
-                  <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
-                    <span>Subtotal</span>
-                    <span>${selectedOrder.items.reduce((sum, it) => sum + (it.quantity || 1) * (it.price || 0), 0).toFixed(2)}</span>
-                  </div>
-                  <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
-                    <span>Shipping</span>
-                    <span>—</span>
-                  </div>
-                  <div className="px-4 py-3 text-base font-bold text-gray-900 flex items-center justify-between border-t border-gray-200">
-                    <span>Total</span>
-                    <span>${selectedOrder.totalAmount.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
-                  onClick={() => setSelectedOrder(null)}
-                >
-                  Close
-                </button>
+                <div className="font-semibold text-gray-900">{selectedOrder.user?.name || 'Unknown'}</div>
+                <div className="text-gray-600 text-sm">{selectedOrder.user?.email}</div>
               </div>
             </div>
           </div>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <div className="text-sm text-gray-600">Payment</div>
+            <div className="mt-1 flex items-center gap-2">
+              {getPaymentMethodIcon(selectedOrder.paymentMethod)}
+              <div className="text-gray-900 capitalize">{String(selectedOrder.paymentMethod || '').replace('_', ' ')}</div>
+            </div>
+            <div className="mt-2 text-sm text-gray-600">Status</div>
+            <div className={`mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${getStatusBadgeColor(selectedOrder.status)}`}>
+              {selectedOrder.status}
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <div className="text-sm text-gray-600">Placed</div>
+            <div className="text-gray-900">{new Date(selectedOrder.createdAt).toLocaleString()}</div>
+            <div className="mt-2 text-sm text-gray-600">Updated</div>
+            <div className="text-gray-900">{new Date(selectedOrder.updatedAt).toLocaleString()}</div>
+          </div>
         </div>
-      )}
+
+        {/* Shipping Address */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+            <MapPin size={16} className="text-gray-500" />
+            <h4 className="font-semibold text-gray-900">Shipping Address</h4>
+          </div>
+          <div className="px-4 py-4 text-gray-800 text-sm space-y-1">
+            <div>{formatShippingAddress(selectedOrder.shippingAddress) || 'N/A'}</div>
+            {selectedOrder.shippingAddress?.customerName && (
+              <div><span className="font-medium">Name:</span> {selectedOrder.shippingAddress.customerName}</div>
+            )}
+            {selectedOrder.shippingAddress?.customerPhone && (
+              <div><span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.customerPhone}</div>
+            )}
+            {selectedOrder.shippingAddress?.customerEmail && (
+              <div><span className="font-medium">Email:</span> {selectedOrder.shippingAddress.customerEmail}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Items Section */}
+        <div className="bg-white rounded-lg shadow-lg w-full p-6">
+          <h4 className="text-lg font-semibold mb-4">Items</h4>
+          <div className="space-y-3">
+            {selectedOrder.items.map((item, index) => (
+              <div key={index} className="flex items-center gap-3 border-b border-gray-200 pb-2">
+                <img
+                  src={getItemProductImage(item)}
+                  alt={getItemProductName(item)}
+                  className="w-12 h-12 object-cover rounded"
+                />
+                <div>
+                  <div className="font-semibold">{getItemProductName(item)}</div>
+                  <div className="text-gray-700 text-sm">Quantity: {item.quantity}</div>
+                  <div className="text-gray-900 font-semibold">${item.price.toFixed(2)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Totals */}
+        <div className="flex flex-col items-end">
+          <div className="w-full md:w-1/2 bg-white rounded-lg border border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-200 font-semibold text-gray-900">Summary</div>
+            <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
+              <span>Subtotal</span>
+              <span>${selectedOrder.items.reduce((sum, it) => sum + (it.quantity || 1) * (it.price || 0), 0).toFixed(2)}</span>
+            </div>
+            <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
+              <span>Shipping</span>
+              <span>—</span>
+            </div>
+            <div className="px-4 py-3 text-base font-bold text-gray-900 flex items-center justify-between border-t border-gray-200">
+              <span>Total</span>
+              <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Close Button */}
+        <div className="flex justify-end gap-2">
+          <button
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+            onClick={() => setSelectedOrder(null)}
+          >
+            Close
+          </button>
+        </div>
+
+      </div>
     </div>
+  </div>
+)}
+</div>
+
+
   );
 };
 
