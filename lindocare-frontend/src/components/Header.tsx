@@ -490,7 +490,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
       {/* Mobile Header with Hamburger Menu */}
-      <div className="block md:hidden px-4 py-1 pb-0 bg-white border-b border-gray-100">
+      <div className="block md:hidden px-4 py-1 pb-0 bg-white ">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
@@ -543,22 +543,46 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             
             {/* Hamburger Menu */}
             <button
-              onClick={() => setNavOpen(true)}
-              className="p-1.5 hover:text-blue-600 transition-colors"
-              aria-label="Open navigation menu"
-            >
-              <svg width="18" height="18" fill="none" stroke="#3B82F6" strokeWidth="2" viewBox="0 0 24 24">
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
-            </button>
+  onClick={() => setNavOpen(true)}
+  className="group p-2 rounded-lg transition-colors"
+  aria-label="Open navigation menu"
+>
+  <svg
+    width="28"
+    height="28"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#3B82F6"   // Tailwind blue-600
+    strokeWidth="3"
+    className="block"
+  >
+    {/* Top (short, left) */}
+    <line
+      x1="4" y1="7" x2="14" y2="7"
+      strokeLinecap="round"
+      className="origin-left transition-transform group-hover:translate-x-0.5"
+    />
+    {/* Middle (full) */}
+    <line
+      x1="4" y1="12" x2="20" y2="12"
+      strokeLinecap="round"
+      className="transition-transform group-hover:scale-x-95"
+    />
+    {/* Bottom (short, right) */}
+    <line
+      x1="10" y1="17" x2="20" y2="17"
+      strokeLinecap="round"
+      className="origin-right transition-transform group-hover:-translate-x-0.5"
+    />
+  </svg>
+</button>
+
           </div>
         </div>
       </div>
       
       {/* Mobile Search Bar */}
-      <div className="block md:hidden px-4 py-1 pt-0 bg-white border-b border-gray-100">
+      <div className="block md:hidden px-4 py-1 pt-0 bg-white ">
         <div className="relative">
           <form onSubmit={handleSearch} autoComplete="off">
             <input
@@ -569,10 +593,10 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
               onBlur={handleBlur}
               ref={searchInputRef}
               placeholder="Find babycare essentials..."
-              className="w-full rounded-full border text-gray-900 border-[#FFE600] px-3 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-[#FFE600] text-sm shadow placeholder:text-[#2056A7]"
+              className="w-full rounded-full border text-gray-900 border-gray-500 px-3 py-1.5 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-700 text-sm shadow placeholder:text-gray-400"
               onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
             />
-            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#FFE600] text-white p-1 rounded-full cursor-pointer" aria-label="Search">
+            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-1 rounded-full cursor-pointer" aria-label="Search">
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
           </form>
@@ -769,7 +793,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 onBlur={handleBlur}
                 ref={searchInputRef}
                 placeholder="Find babycare essentials..."
-                className="w-full rounded-full border text-blue-700 border-gray-700 px-4 py-2 pr-12 focus:outline-none focus:ring-1 focus:ring-blue-700 text-base placeholder:text-gray-900"
+                className="w-full rounded-full border text-blue-700 border-gray-500 px-4 py-2 pr-12 focus:outline-none focus:ring-1 focus:ring-blue-700 text-base placeholder:text-gray-400"
                 onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
               />
               <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-1 rounded-full cursor-pointer" aria-label="Search">
