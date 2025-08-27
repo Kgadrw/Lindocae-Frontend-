@@ -14,18 +14,6 @@ import {
 } from "../../utils/serverStorage";
 import { normalizeImageUrl } from "../../utils/image";
 
-// Rwanda provinces and districts for suggestions
-const RWANDA_PROVINCES = [
-  "Kigali City", "Northern Province", "Southern Province", "Eastern Province", "Western Province"
-];
-const RWANDA_DISTRICTS = [
-  "Gasabo", "Kicukiro", "Nyarugenge",
-  "Burera", "Gakenke", "Gicumbi", "Musanze", "Rulindo",
-  "Gisagara", "Huye", "Kamonyi", "Muhanga", "Nyamagabe", "Nyanza", "Nyaruguru", "Ruhango",
-  "Bugesera", "Gatsibo", "Kayonza", "Kirehe", "Ngoma", "Nyagatare", "Rwamagana",
-  "Karongi", "Ngororero", "Nyabihu", "Nyamasheke", "Rubavu", "Rusizi", "Rutsiro"
-];
-
 interface Product {
   id: string | number;
   name: string;
@@ -34,6 +22,7 @@ interface Product {
   quantity?: number;
 }
 
+// Helper to format RWF with thousands separator
 function formatRWF(amount: number | undefined | null) {
   if (amount === undefined || amount === null) return "0";
   return amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -51,7 +40,7 @@ const CheckoutPage = () => {
   const [shippingVillage, setShippingVillage] = useState("");
   const [shippingStreet, setShippingStreet] = useState("");
 
-  // Customer info
+  // Customer info (moved inside shippingAddress per your schema)
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -59,10 +48,11 @@ const CheckoutPage = () => {
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]); // optional (kept as in your original)
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const router = useRouter();
 
+  // Fetch users for header (unchanged; safe to remove if unused)
   useEffect(() => {
     fetch("https://lindo-project.onrender.com/user/getAllUsers")
       .then((res) => res.json())
@@ -74,16 +64,24 @@ const CheckoutPage = () => {
       .catch(() => setUsers([]));
   }, []);
 
+  // Load cart
   useEffect(() => {
     async function loadCart() {
       try {
         if (isUserLoggedIn()) {
+          // User is logged in, fetch from server
+          console.log("Checkout: User logged in, fetching cart from server...");
+
           let serverCart;
           try {
             serverCart = await fetchUserCartWithProducts();
-          } catch {
+            console.log("Checkout: Server cart with products fetched successfully:", serverCart);
+          } catch (productsError) {
+            console.warn("Checkout: Failed to fetch cart with products, falling back to basic cart:", productsError);
             serverCart = await fetchUserCart();
+            console.log("Checkout: Basic server cart fetched as fallback:", serverCart);
           }
+
           if (serverCart && serverCart.length > 0) {
             const convertedCart = serverCart.map((item: any) => ({
               id:
@@ -98,10 +96,14 @@ const CheckoutPage = () => {
               quantity: item.quantity || 1,
             }));
             setCartItems(convertedCart);
+            console.log("Checkout: Cart items set from server:", convertedCart);
           } else {
             setCartItems([]);
+            console.log("Checkout: Server cart is empty");
           }
         } else {
+          // Guest: load from localStorage
+          console.log("Checkout: User not logged in, loading cart from localStorage...");
           const localCart = getLocalCart();
           const convertedCart = localCart.map((item: any) => ({
             id:
@@ -116,15 +118,58 @@ const CheckoutPage = () => {
             quantity: item.quantity || 1,
           }));
           setCartItems(convertedCart);
+          console.log("Checkout: Cart items set from localStorage:", convertedCart);
         }
-      } catch {
-        setCartItems([]);
+      } catch (err) {
+        console.error("Error loading cart for checkout:", err);
+
+        if (isUserLoggedIn()) {
+          console.log("Checkout: Server fetch failed, trying localStorage fallback...");
+          try {
+            const localCart = getLocalCart();
+            const convertedCart = localCart.map((item: any) => ({
+              id:
+                typeof item.productId === "object"
+                  ? (item.productId as any)._id ||
+                    (item.productId as any).id ||
+                    String(item.productId)
+                  : String(item.productId),
+              name: item.name || "Product",
+              price: item.price || 0,
+              image: item.image || "/lindo.png",
+              quantity: item.quantity || 1,
+            }));
+            setCartItems(convertedCart);
+            console.log("Checkout: Fallback to localStorage successful:", convertedCart);
+          } catch (localError) {
+            console.error("Checkout: Both server and localStorage failed:", localError);
+            setCartItems([]);
+          }
+        } else {
+          setCartItems([]);
+        }
       } finally {
         setIsLoadingCart(false);
       }
     }
+
     loadCart();
   }, []);
+
+  // Debug: Log cart items whenever they change
+  useEffect(() => {
+    console.log("Checkout: Cart items updated:", cartItems);
+    console.log("Checkout: Cart items length:", cartItems.length);
+    if (cartItems.length > 0) {
+      console.log("Checkout: First cart item details:", {
+        id: cartItems[0].id,
+        name: cartItems[0].name,
+        price: cartItems[0].price,
+        image: cartItems[0].image,
+        quantity: cartItems[0].quantity,
+      });
+    }
+  }, [cartItems]);
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
@@ -136,6 +181,7 @@ const CheckoutPage = () => {
     setOrderStatus({});
     setIsSubmitting(true);
 
+    // ✅ Updated validation (uses customerName instead of first/last)
     if (
       !paymentMethod ||
       !shippingProvince ||
@@ -155,32 +201,41 @@ const CheckoutPage = () => {
 
     try {
       const token = getAuthToken();
+
+      // Calculate total amount from cart items
       const totalAmount = cartItems.reduce((sum, item) => {
         const itemTotal = (item.price || 0) * (item.quantity || 1);
         return sum + itemTotal;
       }, 0);
 
+      // Prepare order items for the API
       const orderItems = cartItems.map((item) => ({
         productId: item.id,
         quantity: item.quantity || 1,
         price: item.price || 0,
       }));
 
-      const orderData = {
-        paymentMethod: paymentMethod || "dpo",
-        province: shippingProvince,
-        district: shippingDistrict,
-        sector: shippingSector,
-        cell: shippingCell,
-        village: shippingVillage,
-        street: shippingStreet,
-        customerEmail,
-        customerPhone,
-        customerName,
-        items: orderItems,
-        totalAmount,
-      };
+      // ✅ shippingAddress now includes customer fields, matching your schema
+     const orderData = {
+  paymentMethod: paymentMethod || "dpo",
+  province: shippingProvince,
+  district: shippingDistrict,
+  sector: shippingSector,
+  cell: shippingCell,
+  village: shippingVillage,
+  street: shippingStreet,
+  customerEmail,
+  customerPhone,
+  customerName,
+  items: orderItems,
+  totalAmount,
+};
 
+      console.log("Order data being sent to API (formatted):", orderData);
+      console.log("Cart items:", cartItems);
+      console.log("Total amount calculated:", totalAmount);
+
+      // Optional auth token from localStorage (include if present)
       let openLock: string | null = null;
       try {
         const stored = localStorage.getItem("userData");
@@ -188,7 +243,10 @@ const CheckoutPage = () => {
           const parsed = JSON.parse(stored);
           openLock = parsed?.user?.tokens?.accessToken || null;
         }
-      } catch {}
+      } catch {
+        console.warn("Could not parse user token; proceeding without Authorization header.");
+      }
+      console.log("Access token present:", !!openLock);
 
       const orderResponse = await fetch(
         "https://lindo-project.onrender.com/orders/createOrder",
@@ -203,14 +261,21 @@ const CheckoutPage = () => {
         }
       );
 
+      console.log("Order response status:", orderResponse.status);
+
       if (orderResponse.ok) {
         const orderResult = await orderResponse.json();
+        console.log("Order created:", orderResult);
+
         const orderId = orderResult.order?._id || orderResult.orderId;
+
+        // Prepare name for DPO init from full name safely
         const [firstNameRaw, ...restName] = customerName.trim().split(/\s+/);
         const firstName = firstNameRaw || "Customer";
         const lastName = restName.join(" ") || firstName;
 
         if (paymentMethod === "dpo") {
+          // Initialize DPO with derived names
           const dpoInitBody = {
             orderId: String(orderId || ""),
             totalAmount: totalAmount,
@@ -223,6 +288,7 @@ const CheckoutPage = () => {
             callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
           };
 
+          console.log("Initializing DPO with:", dpoInitBody);
           const dpoResponse = await fetch(
             "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
             {
@@ -260,16 +326,49 @@ const CheckoutPage = () => {
               });
             }
           } else {
-            setOrderStatus({ error: "Payment initialization failed. Please try again." });
+            const orderRedirectUrl =
+              orderResult.pesapalRedirectUrl ||
+              orderResult.redirectUrl ||
+              orderResult.order?.redirectUrl;
+            if (orderRedirectUrl) {
+              setPaymentRedirectUrl(orderRedirectUrl);
+              setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
+              setTimeout(() => {
+                window.location.href = orderRedirectUrl;
+              }, 1500);
+            } else {
+              setOrderStatus({ error: "Payment initialization failed. Please try again." });
+            }
           }
         } else {
-          setOrderStatus({ success: "Order created successfully." });
+          // Other payment methods rely on backend-provided redirect
+          const redirectUrl =
+            orderResult.pesapalRedirectUrl ||
+            orderResult.redirectUrl ||
+            orderResult.order?.redirectUrl;
+          if (redirectUrl) {
+            setPaymentRedirectUrl(redirectUrl);
+            setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
+            try {
+              if (isUserLoggedIn()) await clearCartServer();
+              else saveLocalCart([]);
+              setCartItems([]);
+            } catch {}
+            setTimeout(() => {
+              window.location.href = redirectUrl;
+            }, 1500);
+          } else {
+            setOrderStatus({ success: "Order created successfully." });
+          }
         }
       } else if (orderResponse.status === 401) {
+        const errorText = await orderResponse.text();
+        console.error("Order creation 401 error response:", errorText);
         setOrderStatus({
           error: "Authorization failed. Please log in and try again.",
         });
       } else {
+        // Enhanced error handling to see exact API response
         let errorData: any = {};
         let responseText = "";
         try {
@@ -277,15 +376,25 @@ const CheckoutPage = () => {
           if (responseText) {
             errorData = JSON.parse(responseText);
           }
-        } catch {
+        } catch (parseError) {
           errorData = { message: responseText || "Unknown error" };
         }
+
+        console.error(
+          "Order creation error status:",
+          orderResponse.status,
+          orderResponse.statusText
+        );
+        console.error("Order creation error body (text):", responseText || "<empty body>");
+        console.error("Order creation error parsed object:", errorData);
+
         setOrderStatus({
           error:
             errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
         });
       }
     } catch (err) {
+      console.error("Checkout error:", err);
       setOrderStatus({ error: "Network error. Please try again." });
     } finally {
       setIsSubmitting(false);
@@ -357,6 +466,12 @@ const CheckoutPage = () => {
                             src={image}
                             alt={item.name}
                             className="object-cover w-full h-full"
+                            onError={() => {
+                              console.warn("Image failed to load:", image);
+                            }}
+                            onLoad={() => {
+                              console.log("Image loaded successfully:", image);
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
@@ -385,7 +500,7 @@ const CheckoutPage = () => {
         <div className="flex-1 flex flex-col gap-4 justify-center">
           {cartItems.length > 0 && (
             <form onSubmit={handleCheckout} className="flex flex-col gap-4">
-              {/* Customer Information */}
+              {/* Customer Information (single full name) */}
               <div>
                 <label className="block text-xs text-gray-700 mb-1">Full Name *</label>
                 <input
@@ -434,13 +549,7 @@ const CheckoutPage = () => {
                       placeholder="Kigali City"
                       required
                       className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                      list="province-list"
                     />
-                    <datalist id="province-list">
-                      {RWANDA_PROVINCES.map((prov) => (
-                        <option key={prov} value={prov} />
-                      ))}
-                    </datalist>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">District</label>
@@ -451,13 +560,7 @@ const CheckoutPage = () => {
                       placeholder="Gasabo"
                       required
                       className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                      list="district-list"
                     />
-                    <datalist id="district-list">
-                      {RWANDA_DISTRICTS.map((dist) => (
-                        <option key={dist} value={dist} />
-                      ))}
-                    </datalist>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Sector</label>
@@ -509,6 +612,7 @@ const CheckoutPage = () => {
                 </p>
               </div>
 
+              {/* Status messages */}
               {orderStatus.error && (
                 <div className="text-red-600 text-xs font-semibold mt-1">
                   {orderStatus.error}
