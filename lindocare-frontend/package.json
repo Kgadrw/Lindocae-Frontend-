@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.7",
     "email-js": "^2.0.3",
     "emailjs-com": "^3.2.0",
     "lucide-react": "^0.525.0",

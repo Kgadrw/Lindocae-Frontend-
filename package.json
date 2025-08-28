@@ -2,7 +2,6 @@
   "name": "lindocae-frontend-",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,5 +15,8 @@
     "url": "https://github.com/Kgadrw/Lindocae-Frontend-/issues"
   },
   "homepage": "https://github.com/Kgadrw/Lindocae-Frontend-#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "lucide-react": "^0.542.0"
+  }
 }
