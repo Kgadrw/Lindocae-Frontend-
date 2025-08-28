@@ -1,573 +1,642 @@
-    "use client";
+"use client";
 
-    import React, { useEffect, useState } from "react";
-    import { useRouter } from "next/navigation";
-    import {
-      addToCartServer,
-      clearCartServer,
-      fetchUserCart,
-      fetchUserCartWithProducts,
-      getAuthToken,
-      getLocalCart,
-      isUserLoggedIn,
-      saveLocalCart,
-    } from "../../utils/serverStorage";
-    import { normalizeImageUrl } from "../../utils/image";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  addToCartServer,
+  clearCartServer,
+  fetchUserCart,
+  fetchUserCartWithProducts,
+  getAuthToken,
+  getLocalCart,
+  isUserLoggedIn,
+  saveLocalCart,
+} from "../../utils/serverStorage";
+import { normalizeImageUrl } from "../../utils/image";
 
-    import { Listbox } from "@headlessui/react";
-    import { Check, ChevronsUpDown } from "lucide-react";
+interface Product {
+  id: string | number;
+  name: string;
+  price: number;
+  image: string | string[];
+  quantity?: number;
+}
 
-    const RWANDA_PROVINCES = [
-      "Kigali City",
-      "Northern Province",
-      "Southern Province",
-      "Eastern Province",
-      "Western Province",
-    ];
-    const RWANDA_DISTRICTS = [
-      "Gasabo", "Kicukiro", "Nyarugenge",
-      "Burera", "Gakenke", "Gicumbi", "Musanze", "Rulindo",
-      "Gisagara", "Huye", "Kamonyi", "Muhanga", "Nyamagabe", "Nyanza", "Nyaruguru", "Ruhango",
-      "Bugesera", "Gatsibo", "Kayonza", "Kirehe", "Ngoma", "Nyagatare", "Rwamagana",
-      "Karongi", "Ngororero", "Nyabihu", "Nyamasheke", "Rubavu", "Rusizi", "Rutsiro"
-    ];
+// Helper to format RWF with thousands separator
+function formatRWF(amount: number | undefined | null) {
+  if (amount === undefined || amount === null) return "0";
+  return amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
 
+const CheckoutPage = () => {
+  const [cartItems, setCartItems] = useState<Product[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState("dpo");
 
-    interface Product {
-      id: string | number;
-      name: string;
-      price: number;
-      image: string | string[];
-      quantity?: number;
-    }
+  // Shipping address fields
+  const [shippingProvince, setShippingProvince] = useState("");
+  const [shippingDistrict, setShippingDistrict] = useState("");
+  const [shippingSector, setShippingSector] = useState("");
+  const [shippingCell, setShippingCell] = useState("");
+  const [shippingVillage, setShippingVillage] = useState("");
+  const [shippingStreet, setShippingStreet] = useState("");
 
-    function formatRWF(amount: number | undefined | null) {
-      if (amount === undefined || amount === null) return "0";
-      return amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
-    }
+  // Customer info (moved inside shippingAddress per your schema)
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerName, setCustomerName] = useState("");
 
-    const CheckoutPage = () => {
-      const [cartItems, setCartItems] = useState<Product[]>([]);
-      const [paymentMethod, setPaymentMethod] = useState("dpo");
+  const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
+  const [users, setUsers] = useState<any[]>([]); // optional (kept as in your original)
+  const [isLoadingCart, setIsLoadingCart] = useState(true);
+  const router = useRouter();
 
-      // Shipping address fields
-      const [shippingProvince, setShippingProvince] = useState("");
-      const [shippingDistrict, setShippingDistrict] = useState("");
-      const [shippingSector, setShippingSector] = useState("");
-      const [shippingCell, setShippingCell] = useState("");
-      const [shippingVillage, setShippingVillage] = useState("");
-      const [shippingStreet, setShippingStreet] = useState("");
+  // Fetch users for header (unchanged; safe to remove if unused)
+  useEffect(() => {
+    fetch("https://lindo-project.onrender.com/user/getAllUsers")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setUsers(data);
+        else if (data && Array.isArray(data.users)) setUsers(data.users);
+        else setUsers([]);
+      })
+      .catch(() => setUsers([]));
+  }, []);
 
-      // Customer info
-      const [customerPhone, setCustomerPhone] = useState("");
-      const [customerEmail, setCustomerEmail] = useState("");
-      const [customerName, setCustomerName] = useState("");
+  // Load cart
+  useEffect(() => {
+    async function loadCart() {
+      try {
+        if (isUserLoggedIn()) {
+          // User is logged in, fetch from server
+          console.log("Checkout: User logged in, fetching cart from server...");
 
-      const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
-      const [isSubmitting, setIsSubmitting] = useState(false);
-      const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
-      const [users, setUsers] = useState<any[]>([]);
-      const [isLoadingCart, setIsLoadingCart] = useState(true);
-      const router = useRouter();
-
-      useEffect(() => {
-        fetch("https://lindo-project.onrender.com/user/getAllUsers")
-          .then((res) => res.json())
-          .then((data) => {
-            if (Array.isArray(data)) setUsers(data);
-            else if (data && Array.isArray(data.users)) setUsers(data.users);
-            else setUsers([]);
-          })
-          .catch(() => setUsers([]));
-      }, []);
-
-      useEffect(() => {
-        async function loadCart() {
+          let serverCart;
           try {
-            if (isUserLoggedIn()) {
-              let serverCart;
-              try {
-                serverCart = await fetchUserCartWithProducts();
-              } catch {
-                serverCart = await fetchUserCart();
-              }
-              if (serverCart && serverCart.length > 0) {
-                const convertedCart = serverCart.map((item: any) => ({
-                  id:
-                    typeof item.productId === "object"
-                      ? (item.productId as any)._id ||
-                        (item.productId as any).id ||
-                        String(item.productId)
-                      : String(item.productId),
-                  name: item.name || "Product",
-                  price: item.price || 0,
-                  image: item.image || "/lindo.png",
-                  quantity: item.quantity || 1,
-                }));
-                setCartItems(convertedCart);
-              } else {
-                setCartItems([]);
-              }
-            } else {
-              const localCart = getLocalCart();
-              const convertedCart = localCart.map((item: any) => ({
-                id:
-                  typeof item.productId === "object"
-                    ? (item.productId as any)._id ||
-                      (item.productId as any).id ||
-                      String(item.productId)
-                    : String(item.productId),
-                name: item.name || "Product",
-                price: item.price || 0,
-                image: item.image || "/lindo.png",
-                quantity: item.quantity || 1,
-              }));
-              setCartItems(convertedCart);
-            }
-          } catch {
-            setCartItems([]);
-          } finally {
-            setIsLoadingCart(false);
+            serverCart = await fetchUserCartWithProducts();
+            console.log("Checkout: Server cart with products fetched successfully:", serverCart);
+          } catch (productsError) {
+            console.warn("Checkout: Failed to fetch cart with products, falling back to basic cart:", productsError);
+            serverCart = await fetchUserCart();
+            console.log("Checkout: Basic server cart fetched as fallback:", serverCart);
           }
-        }
-        loadCart();
-      }, []);
 
-      const subtotal = cartItems.reduce(
-        (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
-        0
+          if (serverCart && serverCart.length > 0) {
+            const convertedCart = serverCart.map((item: any) => ({
+              id:
+                typeof item.productId === "object"
+                  ? (item.productId as any)._id ||
+                    (item.productId as any).id ||
+                    String(item.productId)
+                  : String(item.productId),
+              name: item.name || "Product",
+              price: item.price || 0,
+              image: item.image || "/lindo.png",
+              quantity: item.quantity || 1,
+            }));
+            setCartItems(convertedCart);
+            console.log("Checkout: Cart items set from server:", convertedCart);
+          } else {
+            setCartItems([]);
+            console.log("Checkout: Server cart is empty");
+          }
+        } else {
+          // Guest: load from localStorage
+          console.log("Checkout: User not logged in, loading cart from localStorage...");
+          const localCart = getLocalCart();
+          const convertedCart = localCart.map((item: any) => ({
+            id:
+              typeof item.productId === "object"
+                ? (item.productId as any)._id ||
+                  (item.productId as any).id ||
+                  String(item.productId)
+                : String(item.productId),
+            name: item.name || "Product",
+            price: item.price || 0,
+            image: item.image || "/lindo.png",
+            quantity: item.quantity || 1,
+          }));
+          setCartItems(convertedCart);
+          console.log("Checkout: Cart items set from localStorage:", convertedCart);
+        }
+      } catch (err) {
+        console.error("Error loading cart for checkout:", err);
+
+        if (isUserLoggedIn()) {
+          console.log("Checkout: Server fetch failed, trying localStorage fallback...");
+          try {
+            const localCart = getLocalCart();
+            const convertedCart = localCart.map((item: any) => ({
+              id:
+                typeof item.productId === "object"
+                  ? (item.productId as any)._id ||
+                    (item.productId as any).id ||
+                    String(item.productId)
+                  : String(item.productId),
+              name: item.name || "Product",
+              price: item.price || 0,
+              image: item.image || "/lindo.png",
+              quantity: item.quantity || 1,
+            }));
+            setCartItems(convertedCart);
+            console.log("Checkout: Fallback to localStorage successful:", convertedCart);
+          } catch (localError) {
+            console.error("Checkout: Both server and localStorage failed:", localError);
+            setCartItems([]);
+          }
+        } else {
+          setCartItems([]);
+        }
+      } finally {
+        setIsLoadingCart(false);
+      }
+    }
+
+    loadCart();
+  }, []);
+
+  // Debug: Log cart items whenever they change
+  useEffect(() => {
+    console.log("Checkout: Cart items updated:", cartItems);
+    console.log("Checkout: Cart items length:", cartItems.length);
+    if (cartItems.length > 0) {
+      console.log("Checkout: First cart item details:", {
+        id: cartItems[0].id,
+        name: cartItems[0].name,
+        price: cartItems[0].price,
+        image: cartItems[0].image,
+        quantity: cartItems[0].quantity,
+      });
+    }
+  }, [cartItems]);
+
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
+    0
+  );
+
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOrderStatus({});
+    setIsSubmitting(true);
+
+    // ✅ Updated validation (uses customerName instead of first/last)
+    if (
+      !paymentMethod ||
+      !shippingProvince ||
+      !shippingDistrict ||
+      !shippingSector ||
+      !shippingCell ||
+      !shippingVillage ||
+      !shippingStreet ||
+      !customerPhone ||
+      !customerEmail ||
+      !customerName
+    ) {
+      setOrderStatus({ error: "Please fill in all required fields." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+
+      // Calculate total amount from cart items
+      const totalAmount = cartItems.reduce((sum, item) => {
+        const itemTotal = (item.price || 0) * (item.quantity || 1);
+        return sum + itemTotal;
+      }, 0);
+
+      // Prepare order items for the API
+      const orderItems = cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+      }));
+
+      // ✅ shippingAddress now includes customer fields, matching your schema
+     const orderData = {
+  paymentMethod: paymentMethod || "dpo",
+  province: shippingProvince,
+  district: shippingDistrict,
+  sector: shippingSector,
+  cell: shippingCell,
+  village: shippingVillage,
+  street: shippingStreet,
+  customerEmail,
+  customerPhone,
+  customerName,
+  items: orderItems,
+  totalAmount,
+};
+
+      console.log("Order data being sent to API (formatted):", orderData);
+      console.log("Cart items:", cartItems);
+      console.log("Total amount calculated:", totalAmount);
+
+      // Optional auth token from localStorage (include if present)
+      let openLock: string | null = null;
+      try {
+        const stored = localStorage.getItem("userData");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
+      } catch {
+        console.warn("Could not parse user token; proceeding without Authorization header.");
+      }
+      console.log("Access token present:", !!openLock);
+
+      const orderResponse = await fetch(
+        "https://lindo-project.onrender.com/orders/createOrder",
+        {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "Content-Type": "application/json",
+            ...(openLock ? { Authorization: `Bearer ${openLock}` } : {}),
+          },
+          body: JSON.stringify(orderData),
+        }
       );
 
-      const handleCheckout = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setOrderStatus({});
-        setIsSubmitting(true);
+      console.log("Order response status:", orderResponse.status);
 
-        if (
-          !paymentMethod ||
-          !shippingProvince ||
-          !shippingDistrict ||
-          !shippingSector ||
-          !shippingCell ||
-          !shippingVillage ||
-          !shippingStreet ||
-          !customerPhone ||
-          !customerEmail ||
-          !customerName
-        ) {
-          setOrderStatus({ error: "Please fill in all required fields." });
-          setIsSubmitting(false);
-          return;
-        }
+      if (orderResponse.ok) {
+        const orderResult = await orderResponse.json();
+        console.log("Order created:", orderResult);
 
-        try {
-          const token = getAuthToken();
-          const totalAmount = cartItems.reduce((sum, item) => {
-            const itemTotal = (item.price || 0) * (item.quantity || 1);
-            return sum + itemTotal;
-          }, 0);
+        const orderId = orderResult.order?._id || orderResult.orderId;
 
-          const orderItems = cartItems.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity || 1,
-            price: item.price || 0,
-          }));
+        // Prepare name for DPO init from full name safely
+        const [firstNameRaw, ...restName] = customerName.trim().split(/\s+/);
+        const firstName = firstNameRaw || "Customer";
+        const lastName = restName.join(" ") || firstName;
 
-          const orderData = {
-            paymentMethod: paymentMethod || "dpo",
-            province: shippingProvince,
-            district: shippingDistrict,
-            sector: shippingSector,
-            cell: shippingCell,
-            village: shippingVillage,
-            street: shippingStreet,
-            customerEmail,
-            customerPhone,
-            customerName,
-            items: orderItems,
-            totalAmount,
+        if (paymentMethod === "dpo") {
+          // Initialize DPO with derived names
+          const dpoInitBody = {
+            orderId: String(orderId || ""),
+            totalAmount: totalAmount,
+            currency: "RWF",
+            email: customerEmail,
+            phone: customerPhone,
+            firstName,
+            lastName,
+            serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
+            callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
           };
 
-          let openLock: string | null = null;
-          try {
-            const stored = localStorage.getItem("userData");
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              openLock = parsed?.user?.tokens?.accessToken || null;
-            }
-          } catch {}
-
-          const orderResponse = await fetch(
-            "https://lindo-project.onrender.com/orders/createOrder",
+          console.log("Initializing DPO with:", dpoInitBody);
+          const dpoResponse = await fetch(
+            "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
             {
               method: "POST",
               headers: {
                 accept: "application/json",
                 "Content-Type": "application/json",
-                ...(openLock ? { Authorization: `Bearer ${openLock}` } : {}),
               },
-              body: JSON.stringify(orderData),
+              body: JSON.stringify(dpoInitBody),
             }
           );
 
-          if (orderResponse.ok) {
-            const orderResult = await orderResponse.json();
-            const orderId = orderResult.order?._id || orderResult.orderId;
-            const [firstNameRaw, ...restName] = customerName.trim().split(/\s+/);
-            const firstName = firstNameRaw || "Customer";
-            const lastName = restName.join(" ") || firstName;
-
-            if (paymentMethod === "dpo") {
-              const dpoInitBody = {
-                orderId: String(orderId || ""),
-                totalAmount: totalAmount,
-                currency: "RWF",
-                email: customerEmail,
-                phone: customerPhone,
-                firstName,
-                lastName,
-                serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
-                callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
-              };
-
-              const dpoResponse = await fetch(
-                "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
-                {
-                  method: "POST",
-                  headers: {
-                    accept: "application/json",
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify(dpoInitBody),
-                }
-              );
-
-              if (dpoResponse.ok) {
-                const dpoData = await dpoResponse.json();
-                const redirectUrl = dpoData.redirectUrl || dpoData.paymentUrl;
-                if (redirectUrl) {
-                  setPaymentRedirectUrl(redirectUrl);
-                  setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-                  try {
-                    if (isUserLoggedIn()) await clearCartServer();
-                    else saveLocalCart([]);
-                    setCartItems([]);
-                  } catch {}
-                  if ((dpoData as any).token) {
-                    localStorage.setItem("dpoPaymentToken", (dpoData as any).token);
-                    localStorage.setItem("pendingOrderId", String(orderId || ""));
-                    localStorage.setItem("pendingOrderAmount", String(totalAmount));
-                  }
-                  setTimeout(() => {
-                    window.location.href = redirectUrl;
-                  }, 1500);
-                } else {
-                  setOrderStatus({
-                    success: "Order created successfully. Proceed to payment from your orders page.",
-                  });
-                }
-              } else {
-                setOrderStatus({ error: "Payment initialization failed. Please try again." });
+          if (dpoResponse.ok) {
+            const dpoData = await dpoResponse.json();
+            const redirectUrl = dpoData.redirectUrl || dpoData.paymentUrl;
+            if (redirectUrl) {
+              setPaymentRedirectUrl(redirectUrl);
+              setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
+              try {
+                if (isUserLoggedIn()) await clearCartServer();
+                else saveLocalCart([]);
+                setCartItems([]);
+              } catch {}
+              if ((dpoData as any).token) {
+                localStorage.setItem("dpoPaymentToken", (dpoData as any).token);
+                localStorage.setItem("pendingOrderId", String(orderId || ""));
+                localStorage.setItem("pendingOrderAmount", String(totalAmount));
               }
+              setTimeout(() => {
+                window.location.href = redirectUrl;
+              }, 1500);
             } else {
-              setOrderStatus({ success: "Order created successfully." });
+              setOrderStatus({
+                success: "Order created successfully. Proceed to payment from your orders page.",
+              });
             }
-          } else if (orderResponse.status === 401) {
-            setOrderStatus({
-              error: "Authorization failed. Please log in and try again.",
-            });
           } else {
-            let errorData: any = {};
-            let responseText = "";
-            try {
-              responseText = await orderResponse.text();
-              if (responseText) {
-                errorData = JSON.parse(responseText);
-              }
-            } catch {
-              errorData = { message: responseText || "Unknown error" };
+            const orderRedirectUrl =
+              orderResult.pesapalRedirectUrl ||
+              orderResult.redirectUrl ||
+              orderResult.order?.redirectUrl;
+            if (orderRedirectUrl) {
+              setPaymentRedirectUrl(orderRedirectUrl);
+              setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
+              setTimeout(() => {
+                window.location.href = orderRedirectUrl;
+              }, 1500);
+            } else {
+              setOrderStatus({ error: "Payment initialization failed. Please try again." });
             }
-            setOrderStatus({
-              error:
-                errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
-            });
           }
-        } catch (err) {
-          setOrderStatus({ error: "Network error. Please try again." });
-        } finally {
-          setIsSubmitting(false);
+        } else {
+          // Other payment methods rely on backend-provided redirect
+          const redirectUrl =
+            orderResult.pesapalRedirectUrl ||
+            orderResult.redirectUrl ||
+            orderResult.order?.redirectUrl;
+          if (redirectUrl) {
+            setPaymentRedirectUrl(redirectUrl);
+            setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
+            try {
+              if (isUserLoggedIn()) await clearCartServer();
+              else saveLocalCart([]);
+              setCartItems([]);
+            } catch {}
+            setTimeout(() => {
+              window.location.href = redirectUrl;
+            }, 1500);
+          } else {
+            setOrderStatus({ success: "Order created successfully." });
+          }
         }
-      };
+      } else if (orderResponse.status === 401) {
+        const errorText = await orderResponse.text();
+        console.error("Order creation 401 error response:", errorText);
+        setOrderStatus({
+          error: "Authorization failed. Please log in and try again.",
+        });
+      } else {
+        // Enhanced error handling to see exact API response
+        let errorData: any = {};
+        let responseText = "";
+        try {
+          responseText = await orderResponse.text();
+          if (responseText) {
+            errorData = JSON.parse(responseText);
+          }
+        } catch (parseError) {
+          errorData = { message: responseText || "Unknown error" };
+        }
 
-      return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-2">
-          <div className="w-full max-w-4xl bg-white rounded-xl shadow p-6 flex flex-col md:flex-row gap-8">
-            {/* Left: Checkout summary and products */}
-            <div className="flex-1 flex flex-col gap-4 border-r border-gray-200 pr-0 md:pr-8">
-              <div className="flex justify-between items-center mb-2">
-                <h1 className="text-2xl font-bold text-black">Checkout</h1>
-              </div>
-              {isLoadingCart ? (
-                <div className="text-center text-gray-500 font-semibold mb-4">
-                  Loading your cart...
-                </div>
-              ) : cartItems.length === 0 ? (
-                <>
-                  <div className="text-center text-gray-500 font-semibold mb-4">
-                    Your cart is empty.
-                  </div>
-                  <button
-                    className="w-full rounded border border-black text-black py-2 font-bold text-base bg-white hover:bg-gray-100 transition-colors"
-                    onClick={() => router.push("/all-products")}
-                  >
-                    Continue Shopping
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex flex-col gap-2 text-sm mb-4">
-                    <div className="flex justify-between">
-                      <span className="text-black font-medium">Subtotal</span>
-                      <span className="text-black font-semibold">
-                        {formatRWF(subtotal)} RWF
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-black font-medium">Estimated Shipping</span>
-                      <span className="text-black font-semibold">0 RWF</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-black font-medium">Taxes</span>
-                      <span className="text-gray-400 font-normal">Calculated at checkout</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center text-lg font-bold mt-2 mb-4">
-                    <span className="text-black">Total</span>
-                    <span className="text-black">{formatRWF(subtotal)} RWF</span>
-                  </div>
-                  <div className="font-semibold text-black mb-2">Products to Checkout</div>
-                  <div className="flex flex-col gap-3">
-                    {cartItems.map((item, idx) => (
-                      <div
-                        key={`cart-${String((item as any)?.id ?? "")}-${idx}`}
-                        className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0"
-                      >
-                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                          {(() => {
-                            let image = "";
-                            if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
-                            else if (typeof item.image === "string") image = item.image;
-                            image = normalizeImageUrl(image);
+        console.error(
+          "Order creation error status:",
+          orderResponse.status,
+          orderResponse.statusText
+        );
+        console.error("Order creation error body (text):", responseText || "<empty body>");
+        console.error("Order creation error parsed object:", errorData);
 
-                            return image && image.trim().length > 0 ? (
-                              <img
-                                src={image}
-                                alt={item.name}
-                                className="object-cover w-full h-full"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                                No Image
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-black text-base">
-                            {item.name || "Product"}
-                          </div>
-                          <div className="text-xs text-gray-500">Qty: {item.quantity || 1}</div>
-                        </div>
-                        <div className="font-bold text-black text-base">
-                          {formatRWF(item.price || 0)} RWF
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+        setOrderStatus({
+          error:
+            errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
+        });
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      setOrderStatus({ error: "Network error. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-2">
+      <div className="w-full max-w-4xl bg-white rounded-xl shadow p-6 flex flex-col md:flex-row gap-8">
+        {/* Left: Checkout summary and products */}
+        <div className="flex-1 flex flex-col gap-4 border-r border-gray-200 pr-0 md:pr-8">
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-2xl font-bold text-black">Checkout</h1>
+          </div>
+          {isLoadingCart ? (
+            <div className="text-center text-gray-500 font-semibold mb-4">
+              Loading your cart...
             </div>
+          ) : cartItems.length === 0 ? (
+            <>
+              <div className="text-center text-gray-500 font-semibold mb-4">
+                Your cart is empty.
+              </div>
+              <button
+                className="w-full rounded border border-black text-black py-2 font-bold text-base bg-white hover:bg-gray-100 transition-colors"
+                onClick={() => router.push("/all-products")}
+              >
+                Continue Shopping
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2 text-sm mb-4">
+                <div className="flex justify-between">
+                  <span className="text-black font-medium">Subtotal</span>
+                  <span className="text-black font-semibold">
+                    {formatRWF(subtotal)} RWF
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-black font-medium">Estimated Shipping</span>
+                  <span className="text-black font-semibold">0 RWF</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-black font-medium">Taxes</span>
+                  <span className="text-gray-400 font-normal">Calculated at checkout</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-lg font-bold mt-2 mb-4">
+                <span className="text-black">Total</span>
+                <span className="text-black">{formatRWF(subtotal)} RWF</span>
+              </div>
+              <div className="font-semibold text-black mb-2">Products to Checkout</div>
+              <div className="flex flex-col gap-3">
+                {cartItems.map((item, idx) => (
+                  <div
+                    key={`cart-${String((item as any)?.id ?? "")}-${idx}`}
+                    className="flex items-center gap-3 border-b border-gray-100 pb-2 last:border-b-0"
+                  >
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      {(() => {
+                        let image = "";
+                        if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
+                        else if (typeof item.image === "string") image = item.image;
+                        image = normalizeImageUrl(image);
 
-            {/* Right: Address and payment method form */}
-            <div className="flex-1 flex flex-col gap-4 justify-center">
-              {cartItems.length > 0 && (
-                <form onSubmit={handleCheckout} className="flex flex-col gap-4">
-                  {/* Customer Information */}
+                        return image && image.trim().length > 0 ? (
+                          <img
+                            src={image}
+                            alt={item.name}
+                            className="object-cover w-full h-full"
+                            onError={() => {
+                              console.warn("Image failed to load:", image);
+                            }}
+                            onLoad={() => {
+                              console.log("Image loaded successfully:", image);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                            No Image
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-black text-base">
+                        {item.name || "Product"}
+                      </div>
+                      <div className="text-xs text-gray-500">Qty: {item.quantity || 1}</div>
+                    </div>
+                    <div className="font-bold text-black text-base">
+                      {formatRWF(item.price || 0)} RWF
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right: Address and payment method form */}
+        <div className="flex-1 flex flex-col gap-4 justify-center">
+          {cartItems.length > 0 && (
+            <form onSubmit={handleCheckout} className="flex flex-col gap-4">
+              {/* Customer Information (single full name) */}
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="customer@example.com"
+                  required
+                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="+2507XXXXXXXX"
+                  required
+                  className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-700 mb-1">Shipping Address *</label>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">Full Name *</label>
+                    <label className="block text-xs text-gray-700 mb-1">Province</label>
                     <input
                       type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="John Doe"
+                      value={shippingProvince}
+                      onChange={(e) => setShippingProvince(e.target.value)}
+                      placeholder="Kigali City"
                       required
                       className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">Email Address *</label>
+                    <label className="block text-xs text-gray-700 mb-1">District</label>
                     <input
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      placeholder="customer@example.com"
+                      type="text"
+                      value={shippingDistrict}
+                      onChange={(e) => setShippingDistrict(e.target.value)}
+                      placeholder="Gasabo"
                       required
                       className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">Phone Number *</label>
+                    <label className="block text-xs text-gray-700 mb-1">Sector</label>
                     <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="+2507XXXXXXXX"
+                      type="text"
+                      value={shippingSector}
+                      onChange={(e) => setShippingSector(e.target.value)}
+                      placeholder="Kimironko"
                       required
                       className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">Shipping Address *</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-      <label className="block text-xs text-gray-700 mb-1">Province *</label>
-      <Listbox value={shippingProvince} onChange={setShippingProvince}>
-        <div className="relative">
-          <Listbox.Button className="w-full border border-gray-300 rounded px-3 py-2 text-xs font-medium text-gray-900 flex justify-between items-center">
-            <span>{shippingProvince || "Select a province"}</span>
-            <ChevronsUpDown className="h-4 w-4 text-gray-500" />
-          </Listbox.Button>
-          <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-sm">
-            {RWANDA_PROVINCES.map((prov) => (
-              <Listbox.Option
-                key={prov}
-                value={prov}
-                className={({ active }) =>
-                  `cursor-pointer select-none px-4 py-2 ${
-                    active ? "bg-green-100 text-green-700" : "text-gray-900"
-                  }`
-                }
-              >
-                {({ selected }) => (
-                  <span className={`flex items-center gap-2 ${selected ? "font-semibold" : ""}`}>
-                    {selected && <Check className="h-4 w-4 text-green-600" />}
-                    {prov}
-                  </span>
-                )}
-              </Listbox.Option>
-            ))}
-          </Listbox.Options>
-        </div>
-      </Listbox>
-    </div>
-                      <div>
-      <label className="block text-xs text-gray-700 mb-1">District *</label>
-      <Listbox value={shippingDistrict} onChange={setShippingDistrict}>
-        <div className="relative">
-          <Listbox.Button className="w-full border border-gray-300 rounded px-3 py-2 text-xs font-medium text-gray-900 flex justify-between items-center">
-            <span>{shippingDistrict || "Select a district"}</span>
-            <ChevronUpDown className="h-4 w-4 text-gray-500" />
-          </Listbox.Button>
-          <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-sm">
-            {RWANDA_DISTRICTS.map((dist) => (
-              <Listbox.Option
-                key={dist}
-                value={dist}
-                className={({ active }) =>
-                  `cursor-pointer select-none px-4 py-2 ${
-                    active ? "bg-green-100 text-green-700" : "text-gray-900"
-                  }`
-                }
-              >
-                {({ selected }) => (
-                  <span className={`flex items-center gap-2 ${selected ? "font-semibold" : ""}`}>
-                    {selected && <Check className="h-4 w-4 text-green-600" />}
-                    {dist}
-                  </span>
-                )}
-              </Listbox.Option>
-            ))}
-          </Listbox.Options>
-        </div>
-      </Listbox>
-    </div>
-                      <div>
-                        <label className="block text-xs text-gray-700 mb-1">Sector</label>
-                        <input
-                          type="text"
-                          value={shippingSector}
-                          onChange={(e) => setShippingSector(e.target.value)}
-                          placeholder="Kimironko"
-                          required
-                          className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-700 mb-1">Cell</label>
-                        <input
-                          type="text"
-                          value={shippingCell}
-                          onChange={(e) => setShippingCell(e.target.value)}
-                          placeholder="Kicukiro"
-                          required
-                          className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-700 mb-1">Village</label>
-                        <input
-                          type="text"
-                          value={shippingVillage}
-                          onChange={(e) => setShippingVillage(e.target.value)}
-                          placeholder="Nyabisindu"
-                          required
-                          className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-700 mb-1">Street</label>
-                        <input
-                          type="text"
-                          value={shippingStreet}
-                          onChange={(e) => setShippingStreet(e.target.value)}
-                          placeholder="Main Street"
-                          required
-                          className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Please fill in all address fields for accurate delivery
-                    </p>
+                    <label className="block text-xs text-gray-700 mb-1">Cell</label>
+                    <input
+                      type="text"
+                      value={shippingCell}
+                      onChange={(e) => setShippingCell(e.target.value)}
+                      placeholder="Kicukiro"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
                   </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Village</label>
+                    <input
+                      type="text"
+                      value={shippingVillage}
+                      onChange={(e) => setShippingVillage(e.target.value)}
+                      placeholder="Nyabisindu"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Street</label>
+                    <input
+                      type="text"
+                      value={shippingStreet}
+                      onChange={(e) => setShippingStreet(e.target.value)}
+                      placeholder="Main Street"
+                      required
+                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 rounded"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Please fill in all address fields for accurate delivery
+                </p>
+              </div>
 
-                  {orderStatus.error && (
-                    <div className="text-red-600 text-xs font-semibold mt-1">
-                      {orderStatus.error}
-                    </div>
-                  )}
-                  {orderStatus.success && (
-                    <div className="text-green-600 text-xs font-semibold mt-1">
-                      {orderStatus.success}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="w-full rounded bg-green-600 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
-                    disabled={cartItems.length === 0 || isSubmitting}
-                  >
-                    {isSubmitting ? "Initializing Payment..." : "Checkout"}
-                  </button>
-                </form>
+              {/* Status messages */}
+              {orderStatus.error && (
+                <div className="text-red-600 text-xs font-semibold mt-1">
+                  {orderStatus.error}
+                </div>
               )}
-            </div>
-          </div>
-        </div>
-      );
-    };
+              {orderStatus.success && (
+                <div className="text-green-600 text-xs font-semibold mt-1">
+                  {orderStatus.success}
+                </div>
+              )}
 
-    export default CheckoutPage;
+              <button
+                type="submit"
+                className="w-full rounded bg-green-600 text-white py-2 font-bold text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+                disabled={cartItems.length === 0 || isSubmitting}
+              >
+                {isSubmitting ? "Initializing Payment..." : "Checkout"}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CheckoutPage;
