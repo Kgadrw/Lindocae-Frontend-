@@ -465,12 +465,9 @@ const CheckoutPage = () => {
       <div className="w-full max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Secure Checkout</h1>
+          <h1 className="text-3xl font-bold text-blue-700 mb-2">Secure Checkout</h1>
           <p className="text-gray-600">Complete your order in 3 simple steps</p>
           {/* Debug info - remove in production */}
-          <div className="mt-2 text-xs text-gray-500">
-            Current Step: {currentStep} | Customer: {customerName ? '✓' : '✗'} | Email: {customerEmail ? '✓' : '✗'} | Phone: {customerPhone ? '✓' : '✗'}
-          </div>
         </div>
         
         {/* Progress Steps */}
@@ -489,7 +486,7 @@ const CheckoutPage = () => {
                       ${isCompleted 
                         ? 'bg-blue-600 text-white' 
                         : isActive 
-                          ? 'bg-yellow-400 text-blue-600 border-2 border-blue-600' 
+                          ? 'bg-blue-700 text-white border-2 border-blue-700' 
                           : 'bg-gray-200 text-gray-500'
                       }
                     `}>
@@ -502,7 +499,7 @@ const CheckoutPage = () => {
                       )}
                     </div>
                     <span className={`mt-2 text-sm font-medium ${
-                      isActive ? 'text-blue-600' : isCompleted ? 'text-blue-600' : 'text-gray-500'
+                      isActive ? 'text-white' : isCompleted ? 'text-blue-600' : 'text-gray-500'
                     }`}>
                       {stepNames[step - 1]}
                     </span>
@@ -518,11 +515,11 @@ const CheckoutPage = () => {
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="bg-white rounded-2xl  overflow-hidden">
           <div className="flex flex-col lg:flex-row">
             {/* Left: Order Summary */}
             <div className="lg:w-2/5 bg-gray-50 p-6 border-r border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
+              <h2 className="text-xl font-bold text-blue-700 mb-4">Order Summary</h2>
               {isLoadingCart ? (
                 <div className="text-center text-gray-500 py-8">
                   <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
@@ -543,7 +540,7 @@ const CheckoutPage = () => {
                   {/* Order Items */}
                   <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
                     {cartItems.map((item, idx) => (
-                      <div key={`cart-${String((item as any)?.id ?? "")}-${idx}`} className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                      <div key={`cart-${String((item as any)?.id ?? "")}-${idx}`} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-700">
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           {(() => {
                             let image = "";
@@ -572,16 +569,16 @@ const CheckoutPage = () => {
                   </div>
                   
                   {/* Price Summary */}
-                  <div className="border-t pt-4 space-y-2">
+                  <div className="border-t border-blue-700 pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-medium">{formatRWF(subtotal)} RWF</span>
+                      <span className="font-medium text-gray-600">{formatRWF(subtotal)} RWF</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Shipping</span>
                       <span className="font-medium text-green-600">Free</span>
                     </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <div className="flex justify-between text-lg font-bold border-t border-blue-700 pt-2">
                       <span className="text-gray-900">Total</span>
                       <span className="text-blue-600">{formatRWF(subtotal)} RWF</span>
                     </div>
@@ -591,14 +588,14 @@ const CheckoutPage = () => {
             </div>
 
             {/* Right: Step Content */}
-            <div className="lg:w-3/5 p-6">
+            <div className="lg:w-3/5 p-6 bg-gray-50">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout}>
                   {/* Step 1: Customer Information */}
                   {currentStep === 1 && (
                     <div className="space-y-6">
                       <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Customer Information</h2>
+                        <h2 className="text-2xl font-bold text-blue-700 mb-2">Customer Information</h2>
                         <p className="text-gray-600">Let us know how to contact you</p>
                       </div>
                       
@@ -691,7 +688,7 @@ const CheckoutPage = () => {
                   {currentStep === 2 && (
                     <div className="space-y-6">
                       <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping Address</h2>
+                        <h2 className="text-2xl font-bold text-blue-700 mb-2">Delivery  Address</h2>
                         <p className="text-gray-600">Where should we deliver your order?</p>
                       </div>
                       
@@ -771,7 +768,7 @@ const CheckoutPage = () => {
                   )}
                   
                   {/* Navigation Buttons */}
-                  <div className="flex justify-between items-center pt-6 border-t mt-8">
+                  <div className="flex justify-between items-center pt-6  mt-8">
                     <button
                       type="button"
                       onClick={handlePrevStep}

@@ -180,15 +180,15 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
           <LocationIcon />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Shipping Address</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Delivery Address</h3>
           <p className="text-sm text-gray-600">Select your complete address for accurate delivery</p>
         </div>
       </div>
 
       {/* Address selection grid */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-300 ${isAnimating ? 'opacity-95' : 'opacity-100'}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-4   transition-all duration-300 ${isAnimating ? 'opacity-95' : 'opacity-100'}`}>
         {/* Province */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 ">
           <Select
             label="Province"
             options={provinces.map(p => ({ id: p.id, name: p.name }))}
@@ -304,7 +304,7 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
       </div>
 
       {/* Progress indicator */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+      <div className="mt-4 p-3 bg-gray-50 rounded-lg border-blue-600 border">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">Address Completion</span>
           <span className="text-sm text-gray-500">
