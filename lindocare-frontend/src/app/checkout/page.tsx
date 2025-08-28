@@ -461,7 +461,7 @@ const CheckoutPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen bg-white py-6 px-4">
       <div className="w-full max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
@@ -499,7 +499,7 @@ const CheckoutPage = () => {
                       )}
                     </div>
                     <span className={`mt-2 text-sm font-medium ${
-                      isActive ? 'text-white' : isCompleted ? 'text-blue-600' : 'text-gray-500'
+                      isActive ? 'text-blue-700' : isCompleted ? 'text-blue-600' : 'text-gray-500'
                     }`}>
                       {stepNames[step - 1]}
                     </span>
@@ -518,7 +518,7 @@ const CheckoutPage = () => {
         <div className="bg-white rounded-2xl  overflow-hidden">
           <div className="flex flex-col lg:flex-row">
             {/* Left: Order Summary */}
-            <div className="lg:w-2/5 bg-gray-50 p-6 border-r border-gray-200">
+            <div className="lg:w-2/5 bg-white p-6 border-r border-gray-200">
               <h2 className="text-xl font-bold text-blue-700 mb-4">Order Summary</h2>
               {isLoadingCart ? (
                 <div className="text-center text-gray-500 py-8">
@@ -588,7 +588,7 @@ const CheckoutPage = () => {
             </div>
 
             {/* Right: Step Content */}
-            <div className="lg:w-3/5 p-6 bg-gray-50">
+            <div className="lg:w-3/5 p-6 bg-white">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout}>
                   {/* Step 1: Customer Information */}
