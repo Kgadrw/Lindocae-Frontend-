@@ -2,10 +2,10 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 
 interface VideoSectionProps {
-  videos?: string[]; // array of Instagram reel URLs
+  videos?: string[];
 }
 
-const SCROLL_SPEED = 0.5;
+const SCROLL_SPEED = 0.3; // slower for smoothness
 
 const VideoSkeleton = () => (
   <section className="relative w-full mb-8 p-0 animate-pulse">
@@ -13,8 +13,7 @@ const VideoSkeleton = () => (
       <div className="flex flex-row gap-4 pb-2 w-max">
         {Array.from({ length: 5 }).map((_, idx) => (
           <div key={idx} className="flex flex-col items-center">
-           <div className="bg-gray-200 rounded-xl w-[90vw] max-w-xs md:w-80 h-[450px]" />
-
+            <div className="bg-gray-200 rounded-xl w-[90vw] max-w-xs md:w-80 h-[450px]" />
           </div>
         ))}
       </div>
@@ -33,22 +32,21 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
   const [isInView, setIsInView] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Default Instagram reels if none provided
   const defaultVideos = [
-    "https://www.instagram.com/reel/DNQYNBHIgya/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
-    "https://www.instagram.com/reel/DNC7nm9sUXO/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
-    "https://www.instagram.com/reel/DM-DLHetOhw/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
-    "https://www.instagram.com/reel/DLVIessNYiN/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
-    "https://www.instagram.com/reel/DKzp-qbtEZ4/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
+    "https://www.instagram.com/reel/DNQYNBHIgya/",
+    "https://www.instagram.com/reel/DNC7nm9sUXO/",
+    "https://www.instagram.com/reel/DM-DLHetOhw/",
+    "https://www.instagram.com/reel/DLVIessNYiN/",
+    "https://www.instagram.com/reel/DKzp-qbtEZ4/",
   ];
 
   const videoList = videos || defaultVideos;
   const displayVideos = [...videoList, ...videoList, ...videoList];
   const originalLength = videoList.length;
 
+  // Load IG script once
   useEffect(() => {
     setMounted(true);
-    // Load Instagram embed script
     const script = document.createElement("script");
     script.src = "https://www.instagram.com/embed.js";
     script.async = true;
@@ -58,9 +56,9 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
     };
   }, []);
 
+  // Measure row width
   useLayoutEffect(() => {
     if (!rowRef.current || videoList.length === 0 || !mounted) return;
-
     const timer = setTimeout(() => {
       if (rowRef.current) {
         const width = rowRef.current.scrollWidth / 3;
@@ -68,10 +66,10 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
         setTranslateX(-width);
       }
     }, 500);
-
     return () => clearTimeout(timer);
   }, [videoList, mounted]);
 
+  // Observe visibility
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -83,15 +81,9 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
     return () => observer.disconnect();
   }, []);
 
+  // Auto-scroll
   useEffect(() => {
-    if (
-      !rowRef.current ||
-      videoList.length === 0 ||
-      !isInView ||
-      isHovered ||
-      rowWidth === 0 ||
-      !mounted
-    )
+    if (!rowRef.current || !isInView || isHovered || rowWidth === 0 || !mounted)
       return;
 
     let x = translateX;
@@ -100,8 +92,18 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
     const animate = () => {
       if (!isMounted) return;
       x += SCROLL_SPEED;
-      if (x >= 0) x = -rowWidth;
-      setTranslateX(x);
+      if (x >= 0) {
+        // reset instantly without transition
+        x = -rowWidth;
+        rowRef.current!.style.transition = "none";
+        setTranslateX(x);
+        requestAnimationFrame(() => {
+          rowRef.current!.style.transition =
+            "transform 0.3s linear"; // restore smooth
+        });
+      } else {
+        setTranslateX(x);
+      }
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -111,12 +113,7 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
       isMounted = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [rowWidth, videoList, isInView, isHovered, mounted, translateX]);
-
-  const handleViewMore = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
-  };
+  }, [rowWidth, isInView, isHovered, mounted, translateX]);
 
   return (
     <section ref={containerRef} className="relative w-full mb-8 p-0">
@@ -135,10 +132,9 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
         <div className="w-full overflow-hidden select-none">
           <div
             ref={rowRef}
-            className="flex flex-row gap-4 pb-2 w-max"
+            className="flex flex-row gap-4 pb-2 w-max transition-transform duration-300 ease-linear"
             style={{
               transform: `translateX(${translateX}px)`,
-              transition: "none",
               willChange: "transform",
             }}
           >
@@ -155,18 +151,17 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
                   }}
                 >
                   <div
-  className="bg-gray-50 border border-gray-200 hover:border-gray-400 transition flex flex-col h-[450px] overflow-hidden flex-shrink-0 cursor-pointer w-[90vw] max-w-xs md:w-80"
-  onMouseEnter={() => setIsHovered(true)}
-  onMouseLeave={() => setIsHovered(false)}
->
-  <blockquote
-    className="instagram-media w-full h-full"
-    data-instgrm-permalink={video}
-    data-instgrm-version="14"
-    style={{ background: "#fff", minHeight: "100%" }}
-  ></blockquote>
-</div>
-
+                    className="bg-gray-50 border border-gray-200 hover:border-gray-400 transition flex flex-col h-[450px] overflow-hidden flex-shrink-0 cursor-pointer w-[90vw] max-w-xs md:w-80"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                  >
+                    <blockquote
+                      className="instagram-media w-full h-full"
+                      data-instgrm-permalink={video}
+                      data-instgrm-version="14"
+                      style={{ background: "#fff", minHeight: "100%" }}
+                    ></blockquote>
+                  </div>
                 </div>
               );
             })}
@@ -174,16 +169,16 @@ const VideoSection: React.FC<VideoSectionProps> = ({ videos }) => {
         </div>
       )}
 
-<div className="text-center mt-6">
-  <a
-    href="https://www.instagram.com/lindocare/"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 inline-block"
-  >
-    View More Videos
-  </a>
-</div>
+      <div className="text-center mt-6">
+        <a
+          href="https://www.instagram.com/lindocare/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 inline-block"
+        >
+          View More Videos
+        </a>
+      </div>
     </section>
   );
 };
