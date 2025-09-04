@@ -14,6 +14,9 @@ import {
 } from '../utils/serverStorage';
 import { normalizeImageUrl } from '../utils/image';
 
+
+
+
 // Move updateUser outside so it can be called from anywhere
 function updateUser(setUser: React.Dispatch<React.SetStateAction<null | { name: string; avatar?: string }>>) {
   if (typeof window !== 'undefined') {
@@ -456,6 +459,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     }, 200);
   };
   
+  
   const handleCategoryLeave = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -476,6 +480,8 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     setHoveredCategory(null);
     setShowCategoryDropdown(null);
   };
+
+  
   
   useEffect(() => {
     return () => {
@@ -487,7 +493,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   
 
   return (
-    <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="w-full bg-white border-b px-4 border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
       {/* Mobile Header with Hamburger Menu */}
       <div className="block md:hidden px-4 py-1 pb-0 bg-white ">
@@ -633,7 +639,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                   ...propCategories.slice(0, 4).map(cat => (
                     <div key={cat._id || cat.name} className="relative">
                       <button
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${highlightActive && selectedCategoryId === cat._id ? 'text-yellow-600 underline' : 'text-gray-700 hover:text-blue-700'}`}
+                        className={`px-3 py-2 rounded-md text-sm font-medium  transition-colors duration-200 cursor-pointer ${highlightActive && selectedCategoryId === cat._id ? 'text-yellow-600 underline' : 'text-gray-700 hover:text-blue-700'}`}
                         onClick={() => onCategoryClick && onCategoryClick(cat)}
                         onMouseEnter={() => cat._id && handleCategoryHover(cat._id)}
                         onMouseLeave={handleCategoryLeave}
@@ -781,25 +787,56 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             )}
           </nav>
         )}
+
+        
         {/* Search Bar (desktop only) */}
         <div className="hidden md:flex flex-1 justify-center max-w-xl w-full">
           <div className="relative w-full">
-            <form onSubmit={handleSearch} autoComplete="off">
-              <input
-                type="text"
-                value={search}
-                onChange={handleInputChange}
-                onFocus={() => { if (search) setShowSuggestions(true); }}
-                onBlur={handleBlur}
-                ref={searchInputRef}
-                placeholder="Find babycare essentials..."
-                className="w-full rounded-full border text-blue-700 border-gray-500 px-4 py-2 pr-12 focus:outline-none focus:ring-1 focus:ring-blue-700 text-base placeholder:text-gray-400"
-                onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
-              />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-1 rounded-full cursor-pointer" aria-label="Search">
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              </button>
-            </form>
+            <form onSubmit={handleSearch} autoComplete="off" className="relative">
+  {/* Gradient border: blue shades */}
+  <div className="p-[1px] rounded-full bg-gradient-to-r from-blue-500 via-blue-700 to-blue-500">
+    <div className="relative flex items-center bg-white rounded-full">
+      <input
+        type="text"
+        value={search}
+        onChange={handleInputChange}
+        onFocus={() => { if (search) setShowSuggestions(true); }}
+        onBlur={handleBlur}
+        ref={searchInputRef}
+        placeholder="Find babycare essentials..."
+        className="w-full rounded-full bg-white text-blue-700 px-4 py-2 pr-28 focus:outline-none text-base
+                   placeholder:text-gray-500 bg-clip-text"
+        style={{
+          backgroundImage: 'linear-gradient(to right, #3B82F6, #1D4ED8, #3B82F6)' // blue-500 → blue-700 → blue-500
+        }}
+        onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
+      />
+
+      <button
+        type="submit"
+        className="absolute right-1 top-1/2 -translate-y-1/2 bg-blue-700 text-white px-3 py-1 rounded-full cursor-pointer flex items-center space-x-1 transition-all duration-300 overflow-hidden max-w-[40px] hover:max-w-[120px]"
+        aria-label="Search"
+      >
+        <svg
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+          className="flex-shrink-0"
+        >
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <span className="opacity-0 hover:opacity-100 whitespace-nowrap transition-opacity duration-300">
+          Search
+        </span>
+      </button>
+    </div>
+  </div>
+</form>
+
             {showSuggestions && (
               <ul className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                 {suggestions.map(s => (
@@ -820,59 +857,82 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         {/* Icons (desktop only) */}
         <div className="hidden md:flex items-center gap-2 text-xl px-4 relative">
           {/* Location */}
-          <div className="flex items-center gap-1 text-black text-sm font-medium">
-            <MapPin size={16} color="#000000" className="cursor-pointer" />
-            <span>Rwanda</span>
-          </div>
-          {/* Currency */}
-          <div className="text-black text-sm font-medium">
-            RWF
-          </div>
+          <div className="flex items-center gap-1 text-sm font-medium text-black group cursor-pointer">
+  <MapPin
+    size={16}
+    className="stroke-white fill-blue-600 transition-colors group-hover:stroke-white group-hover:fill-blue-800"
+  />
+  <span className="transition-colors cursor-pointer">Rwanda</span>
+</div>
+
+{/* Currency */}
+<div className="text-black text-sm font-medium">RWF</div>
+
           {/* Wishlist */}
-          <Link href="/wishlist">
-            <button
-              aria-label="Wishlist"
-              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center relative cursor-pointer`}
-            >
-              <Heart size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600] cursor-pointer" strokeWidth={2.5} />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
-                  {wishlistCount}
-                </span>
-              )}
-              {pathname === '/wishlist' && (
-                <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
-              )}
-            </button>
-          </Link>
-          {/* Cart */}
-          <Link href="/cart">
-            <button
-              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center relative cursor-pointer`}
-            >
-              <ShoppingCart size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600] cursor-pointer" strokeWidth={2.5} />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
-                  {cartCount}
-                </span>
-              )}
-              {pathname === '/cart' && (
-                <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
-              )}
-            </button>
-          </Link>
-          {/* Checkout */}
-          <Link href="/checkout">
-            <button
-              aria-label="Checkout"
-              className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center cursor-pointer`}
-            >
-              <Lock size={22} className="stroke-black group-hover:stroke-[#FFE600] group-focus:stroke-[#FFE600] fill-none group-hover:fill-[#FFE600] group-focus:fill-[#FFE600] cursor-pointer" strokeWidth={2.5} />
-              {pathname === '/checkout' && (
-              <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
-              )}
-            </button>
-          </Link>
+          {/* Wishlist */}
+<Link href="/wishlist">
+  <button
+    aria-label="Wishlist"
+    className="rounded-full p-2 transition-colors flex flex-col items-center relative cursor-pointer group"
+  >
+    <Heart
+      size={22}
+      strokeWidth={2.5}
+      className={`cursor-pointer transition-colors ${
+        pathname === '/wishlist'
+          ? 'stroke-blue-600 fill-blue-600'
+          : 'stroke-black fill-none group-hover:stroke-blue-600 group-hover:fill-blue-600'
+      }`}
+    />
+    {wishlistCount > 0 && (
+      <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+        {wishlistCount}
+      </span>
+    )}
+  </button>
+</Link>
+
+{/* Cart */}
+<Link href="/cart">
+  <button
+    aria-label="Cart"
+    className="rounded-full p-2 transition-colors flex flex-col items-center relative cursor-pointer group"
+  >
+    <ShoppingCart
+      size={22}
+      strokeWidth={2.5}
+      className={`cursor-pointer transition-colors ${
+        pathname === '/cart'
+          ? 'stroke-blue-600 fill-blue-600'
+          : 'stroke-black fill-none group-hover:stroke-blue-600 group-hover:fill-blue-600'
+      }`}
+    />
+    {cartCount > 0 && (
+      <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+        {cartCount}
+      </span>
+    )}
+  </button>
+</Link>
+
+{/* Checkout */}
+<Link href="/checkout">
+  <button
+    aria-label="Checkout"
+    className="rounded-full p-2 transition-colors flex flex-col items-center cursor-pointer group"
+  >
+    <Lock
+      size={22}
+      strokeWidth={2.5}
+      className={`cursor-pointer transition-colors ${
+        pathname === '/checkout'
+          ? 'stroke-blue-600 fill-blue-600'
+          : 'stroke-black fill-none group-hover:stroke-blue-600 group-hover:fill-blue-600'
+      }`}
+    />
+  </button>
+</Link>
+
           {/* User */}
           <div className="relative">
             {user ? (
@@ -1147,6 +1207,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   );
 };
 
+
 export default Header;
 
 // Helper to get current user email
@@ -1156,3 +1217,4 @@ export function getCurrentUserEmail() {
   }
   return '';
 } 
+

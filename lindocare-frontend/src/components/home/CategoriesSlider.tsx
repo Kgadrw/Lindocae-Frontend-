@@ -1,12 +1,11 @@
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import { normalizeImageUrl } from '../../utils/image';
 
 interface Category {
   _id?: string;
   name: string;
-  image?: string;
+  image?: string | string[];
   description?: string;
 }
 
@@ -16,21 +15,21 @@ interface CategoriesSliderProps {
   catError: string;
 }
 
-const SCROLL_SPEED = 0.5; // pixels per frame (adjust for slower/faster)
-
 const CategoriesSliderSkeleton = () => (
-  <section className="relative w-full mb-8 p-0 animate-pulse">
-    <div className="w-full overflow-hidden select-none">
-      <div className="flex flex-row gap-4 pb-2 w-max">
-        {Array.from({ length: 8 }).map((_, idx) => (
-          <div key={idx} className="flex flex-col items-center">
-            <div className="bg-gray-200 rounded-xl w-[90vw] max-w-[200px] h-[200px]" />
-            <div className="flex flex-col items-center mt-3 w-full max-w-[200px] text-center">
-              <div className="bg-gray-200 h-4 w-1/2 mb-1 rounded" />
-              <div className="bg-gray-200 h-3 w-2/3 rounded" />
-            </div>
-          </div>
+  <section className="relative w-full mb-8 animate-pulse">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="hidden lg:block lg:col-span-3 space-y-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-10 bg-gray-200 rounded-lg" />
         ))}
+      </div>
+      <div className="col-span-1 lg:col-span-6 flex gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="w-[200px] h-[240px] bg-gray-200 rounded-2xl" />
+        ))}
+      </div>
+      <div className="hidden lg:block lg:col-span-3">
+        <div className="h-[240px] bg-gray-200 rounded-2xl" />
       </div>
     </div>
   </section>
@@ -41,136 +40,146 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
   catLoading,
   catError,
 }) => {
-  const rowRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLElement>(null);
-  const [translateX, setTranslateX] = useState(0);
-  const animationRef = useRef<number | null>(null);
-  const [rowWidth, setRowWidth] = useState(0);
-  const [isInView, setIsInView] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [promoIndex, setPromoIndex] = useState(0);
+  const promoInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Duplicate categories 3 times for seamless infinite scroll
-  const displayCategories = [...categories, ...categories, ...categories];
-  const originalLength = categories.length;
-
+  // Auto-rotate promo
   useEffect(() => {
-    if (!rowRef.current || categories.length === 0) return;
-    setRowWidth(rowRef.current.scrollWidth / 3); // width of one set
-    setTranslateX(-rowWidth); // Start at the first full set for seamless loop
+    if (!categories || categories.length === 0) return;
+    promoInterval.current = setInterval(() => {
+      setPromoIndex((prev) => (prev + 1) % categories.slice(0, 5).length);
+    }, 4000);
+    return () => {
+      if (promoInterval.current) clearInterval(promoInterval.current);
+    };
   }, [categories]);
 
-  // Intersection Observer to detect if slider is in view
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new window.IntersectionObserver(
-      ([entry]) => setIsInView(entry.isIntersecting),
-      { threshold: 0.2 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // Animation effect: only run when in view and not hovered
-  useEffect(() => {
-    if (!rowRef.current || categories.length === 0 || !isInView || isHovered) return;
-    let frameId: number;
-    let x = translateX;
-    let isMounted = true;
-    const animate = () => {
-      if (!isMounted) return;
-      x -= SCROLL_SPEED; // Move left
-      if (Math.abs(x) >= rowWidth * 2) {
-        // If we've scrolled past the second set, reset to the start of the first set
-        x = -rowWidth;
-      }
-      setTranslateX(x);
-      frameId = requestAnimationFrame(animate);
-    };
-    frameId = requestAnimationFrame(animate);
-    animationRef.current = frameId;
-    return () => {
-      isMounted = false;
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, [rowWidth, categories, isInView, isHovered, translateX]);
+  const monthName = new Date().toLocaleString('en-US', { month: 'long' });
+  const topCategories = categories.slice(0, 3);
 
   return (
-    <section ref={containerRef} className="relative w-full mb-8 p-0">
-      {/* Section Title */}
+    <section className="relative w-full mb-12">
       {catLoading ? (
         <CategoriesSliderSkeleton />
       ) : catError ? (
         <div className="text-center text-red-500 py-8">{catError}</div>
       ) : categories.length === 0 ? (
-        <div className="text-center text-gray-500 py-8"></div>
+        <div className="text-center text-gray-500 py-8">No categories available</div>
       ) : (
-        <div
-          className="w-full overflow-hidden select-none"
-          style={{ pointerEvents: 'auto' }}
-        >
-          <div
-            ref={rowRef}
-            className="flex flex-row gap-4 pb-2 w-max"
-            style={{
-              width: 'max-content',
-              minWidth: '100vw',
-              transform: `translateX(${translateX}px)`,
-              transition: 'none',
-              willChange: 'transform',
-            }}
-          >
-            {displayCategories.map((cat, idx) => {
-              let image = '';
-              if (Array.isArray(cat.image) && cat.image.length > 0) image = cat.image[0];
-              else if (typeof cat.image === 'string') image = cat.image;
-              image = normalizeImageUrl(image);
-              // Edge-to-edge: Remove left margin for first, right margin for last
-              const isFirstVisible = idx === originalLength;
-              const isLastVisible = idx === originalLength * 2 - 1;
-              return (
-                <div
-                  key={cat._id ? `${cat._id}-${idx}` : idx}
-                  className="flex flex-col items-center"
-                  style={{ marginLeft: isFirstVisible ? 0 : undefined, marginRight: isLastVisible ? 0 : undefined }}
-                >
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT SIDEBAR */}
+          <aside className="hidden lg:flex lg:col-span-3 flex-col gap-2">
+            <h3 className="font-semibold text-gray-800 mb-3">Categories for you</h3>
+            {categories.slice(0, 6).map((cat) => (
+              <Link
+                key={cat._id}
+                href={`/all-products?category=${encodeURIComponent(cat.name)}`}
+                className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-indigo-400 transition"
+              >
+                <span className="text-sm font-medium text-gray-700 truncate">{cat.name}</span>
+                <span className="text-gray-400">›</span>
+              </Link>
+            ))}
+          </aside>
+
+          {/* CENTER SECTION */}
+          <div className="col-span-1 lg:col-span-6">
+            <div className="flex justify-between items-center mb-3">
+  <h3 className="font-semibold text-gray-800">Frequently searched</h3>
+  <Link
+    href="/all-products"
+    className="text-sm font-medium text-indigo-600 hover:underline ml-4" // added ml-4
+  >
+    View all
+  </Link>
+</div>
+
+            <div className="flex gap-6">
+              {topCategories.map((cat, idx) => {
+                const img = Array.isArray(cat.image) ? cat.image[0] : cat.image;
+                const image = normalizeImageUrl(img || '');
+                return (
                   <Link
-                    href="/all-products"
-                    className="bg-gray-50 border border-gray-200 hover:border-gray-400 transition flex flex-col h-[200px] w-[200px] overflow-hidden flex-shrink-0 cursor-pointer pointer-events-auto rounded-xl relative group"
-                    onClick={e => {
-                      if (typeof window !== 'undefined' && cat._id) {
-                        e.preventDefault();
-                        // Navigate to all-products with category filtering using URL parameters
-                        window.location.href = `/all-products?category=${encodeURIComponent(cat.name)}`;
-                      }
-                    }}
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
-                    tabIndex={0}
+                    key={cat._id || idx}
+                    href={`/all-products?category=${encodeURIComponent(cat.name)}`}
+                    className="group bg-white border border-gray-200 hover:border-indigo-400 hover:shadow-md transition flex flex-col w-[200px] h-[240px] rounded-2xl overflow-hidden"
                   >
-                    <div className="relative w-full h-full overflow-hidden rounded-xl">
+                    <div className="relative w-full h-[140px] bg-gray-50">
                       {image ? (
-                        <Image
-                          src={image}
-                          alt={cat.name}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                          style={{ objectFit: 'cover', objectPosition: 'center' }}
-                          className="rounded-xl"
+                        <div
+                          className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-300"
+                          style={{ backgroundImage: `url(${image})` }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-4xl rounded-xl">🖼️</div>
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-3xl">
+                          🖼️
+                        </div>
                       )}
                     </div>
+                    <div className="flex flex-col items-center justify-center flex-1 px-3 py-2 text-center">
+                      <span className="font-semibold text-gray-800 text-sm mb-1 truncate">
+                        {cat.name}
+                      </span>
+                      <span className="text-xs text-gray-600 line-clamp-2">
+                        {cat.description}
+                      </span>
+                    </div>
                   </Link>
-                  <div className="flex flex-col items-center mt-3 w-full max-w-[200px] text-center">
-                    <span className="font-bold text-blue-700 text-sm mb-1">{cat.name}</span>
-                    <span className="text-xs text-gray-600 line-clamp-2">{cat.description}</span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
+          {/* RIGHT PROMO BANNER */}
+          <aside className="hidden lg:flex lg:col-span-3">
+            <div className="relative flex flex-col justify-end p-6 rounded-2xl overflow-hidden shadow-sm w-full h-[300px] bg-gray-100">
+              {/* Background slideshow */}
+              {categories.slice(0, 5).map((cat, index) => {
+                const img = Array.isArray(cat.image) ? cat.image[0] : cat.image;
+                return (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 transition-opacity duration-700 ${
+                      index === promoIndex ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    style={{
+                      backgroundImage: `url(${normalizeImageUrl(img || '')})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                );
+              })}
+              {/* Gradient overlay (instead of black) */}
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-700/40 via-blue-500/20 to-transparent rounded-2xl" />
+
+              {/* Content */}
+              <div className="relative z-10 text-white">
+  <h3 className="text-lg font-semibold">
+    Super {monthName} exclusives
+  </h3>
+  <p className="text-sm mt-1">Don’t miss out on seasonal deals!</p>
+  <Link href="/all-products">
+    <button className="mt-2 px-4 py-2 rounded-full bg-yellow-500 text-white text-sm font-medium  cursor-pointer  hover:bg-blue-700 transition">
+      View more
+    </button>
+  </Link>
+</div>
+
+              {/* Dots */}
+              <div className="relative z-10 flex justify-center mt-3 gap-2">
+                {categories.slice(0, 5).map((_, i) => (
+                  <button
+                    key={i}
+                    className={`w-2 h-2 rounded-full transition ${
+                      i === promoIndex ? 'bg-white' : 'bg-white/50'
+                    }`}
+                    onClick={() => setPromoIndex(i)}
+                  />
+                ))}
+              </div>
+            </div>
+          </aside>
         </div>
       )}
     </section>

@@ -331,7 +331,7 @@ function AllProductsContent() {
 
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 pb-16 px-2 md:px-4 lg:px-8 font-sans flex items-center justify-center">
+    <div className="min-h-screen bg-white pb-16 px-2 md:px-4 lg:px-8 font-sans flex items-center justify-center">
       <div className="max-w-7xl w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-10">
         {Array.from({ length: 8 }).map((_, idx) => <ProductSkeleton key={idx} />)}
       </div>
@@ -361,7 +361,7 @@ function AllProductsContent() {
   const filteredProducts = sortedProducts;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-2 font-sans">
+    <div className="min-h-screen bg-white p-2 font-sans">
       <div className="max-w-7xl mx-auto pt-10 pb-16">
         {/* Icons Row at the top */}
  

@@ -13,7 +13,6 @@ import AdsSection from "../components/home/AdsSection";
 import IconsRow from "../components/home/IconsRow";
 import NewArrivalsSection from "../components/home/NewArrivalsSection";
 import SocialShareBar from "../components/SocialShareBar";
-import VideoSection from "../components/home/VideoSection";
 import { motion } from "framer-motion";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -209,12 +208,13 @@ export default function Home() {
 
   return (
     <>
+    <div className="bg-white px-0 md:px-4 lg:px-8 py-2 md:py-2 flex flex-col gap-4">
       <SocialShareBar />
       <div className="px-2 md:px-4 lg:px-8 py-4 md:py-6 flex flex-col gap-6">
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
         {showToast && (
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center pointer-events-none">
-            <div className="bg-lindo-blue text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
+            <div className="bg-white text-white px-4 py-2 rounded-full shadow-lg font-semibold animate-fade-in text-center max-w-xs w-full">
               {toastMsg}
             </div>
           </div>
@@ -249,9 +249,6 @@ export default function Home() {
           <PromoBanner categories={categories} catLoading={catLoading} />
         </motion.div>
 
-        <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0.6}>
-          <VideoSection />
-        </motion.div>
 
         <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0.7}>
           <EmailSignupBanner />
@@ -275,6 +272,7 @@ export default function Home() {
           </svg>
         </a>
       )}
+      </div>
     </>
   );
 }
