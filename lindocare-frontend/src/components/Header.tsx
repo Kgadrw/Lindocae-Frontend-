@@ -1111,94 +1111,95 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             </div>
             
             {/* Footer Links Section */}
-            <div className="border-t border-gray-100">
-              <div className="p-4 space-y-4">
-                {/* Customer Service */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Customer Service</h3>
-                  <div className="space-y-1">
-                    <Link href="/returns-exchanges" onClick={() => setNavOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
-                      Returns & Exchanges
-                    </Link>
-                    <Link href="/faqs" onClick={() => setNavOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
-                      FAQs
-                    </Link>
-                  </div>
-                </div>
-                
-                {/* Company */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Company</h3>
-                  <div className="space-y-1">
-                    <Link href="/about-us" onClick={() => setNavOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
-                      About Us
-                    </Link>
-                    <Link href="/careers" onClick={() => setNavOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
-                      Careers
-                    </Link>
-                    <Link href="/sustainability" onClick={() => setNavOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
-                      Sustainability
-                    </Link>
-                  </div>
-                </div>
-                
-                {/* Social Media */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Follow Us</h3>
-                  <div className="flex gap-3 px-4">
-                    <a href="https://www.instagram.com/lindocare/" className="text-gray-600 hover:text-[#FFE600] transition-colors">
-                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                      </svg>
-                    </a>
-                    <a href="https://www.facebook.com/lindocare/" className="text-gray-600 hover:text-[#FFE600] transition-colors">
-                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-                      </svg>
-                    </a>
-                    <a href="https://www.youtube.com/lindocare/" className="text-gray-600 hover:text-[#FFE600] transition-colors">
-                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-1.94C19.56 4 12 4 12 4s-7.56 0-9.6.48a2.78 2.78 0 0 0-1.94 1.94A29 29 0 0 0 0 12.25a29 29 0 0 0 .46 5.77A2.78 2.78 0 0 0 2.4 19.9c2.04.48 9.6.48 9.6.48s7.56 0 9.6-.48a2.78 2.78 0 0 0 1.94-1.94 29 29 0 0 0 .46-5.77 29 29 0 0 0-.46-5.77z"/>
-                        <polygon points="10,15 15,12 10,9"/>
-                      </svg>
-                    </a>
-                  </div>
-                </div>
-                
-                {/* Contact Info */}
-                <div className="px-4">
-                  <div className="space-y-1 text-xs text-gray-600">
-                    <div className="flex gap-2">
-                      <span>📞</span>
-                      <a href="tel:+250785064255" className="hover:underline">+250 785 064 255</a>
-                    </div>
-                    <div className="flex gap-2">
-                      <span>📧</span>
-                      <a href="mailto:hello@lindocare.com" className="hover:underline">hello@lindocare.com</a>
-                    </div>
-                    <div className="flex gap-2">
-                      <span>📍</span>
-                      <span>Unify Buildings, Behind T 2000 Hotel<br />Kigali, Rwanda</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Legal Links */}
-                <div className="px-4 pt-2 border-t border-gray-100">
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div>© 2025 Lindocare. All rights reserved.</div>
-                    <div className="flex gap-2">
-                      <Link href="/terms-of-use" onClick={() => setNavOpen(false)} className="hover:underline">Privacy Policy</Link>
-                      <span>|</span>
-                      <Link href="/terms-of-use" onClick={() => setNavOpen(false)} className="hover:underline">Terms of Use</Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            <div className="backdrop-blur-md bg-white/90 rounded-t-2xl shadow-lg">
+  <div className="p-5 space-y-5">
+
+    {/* Customer Service */}
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 mb-2">Customer Service</h3>
+      <div className="space-y-2">
+        <Link
+          href="/returns-exchanges"
+          onClick={() => setNavOpen(false)}
+          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
+        >
+          Returns & Exchanges
+        </Link>
+        <Link
+          href="/faqs"
+          onClick={() => setNavOpen(false)}
+          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
+        >
+          FAQs
+        </Link>
+      </div>
+    </div>
+
+    {/* Company */}
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 mb-2">Company</h3>
+      <div className="space-y-2">
+        <Link
+          href="/about-us"
+          onClick={() => setNavOpen(false)}
+          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
+        >
+          About Us
+        </Link>
+        <Link
+          href="/careers"
+          onClick={() => setNavOpen(false)}
+          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
+        >
+          Careers
+        </Link>
+        <Link
+          href="/sustainability"
+          onClick={() => setNavOpen(false)}
+          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
+        >
+          Sustainability
+        </Link>
+      </div>
+    </div>
+
+    {/* Social Media */}
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 mb-2">Follow Us</h3>
+      <div className="flex gap-4 px-2">
+        <a
+          href="https://www.instagram.com/lindocare/"
+          className="text-gray-500 hover:text-[#FFE600] transition-colors"
+        >
+          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+        </a>
+        <a
+          href="https://www.facebook.com/lindocare/"
+          className="text-gray-500 hover:text-[#FFE600] transition-colors"
+        >
+          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+          </svg>
+        </a>
+        <a
+          href="https://www.youtube.com/lindocare/"
+          className="text-gray-500 hover:text-[#FFE600] transition-colors"
+        >
+          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-1.94C19.56 4 12 4 12 4s-7.56 0-9.6.48a2.78 2.78 0 0 0-1.94 1.94A29 29 0 0 0 0 12.25a29 29 0 0 0 .46 5.77A2.78 2.78 0 0 0 2.4 19.9c2.04.48 9.6.48 9.6.48s7.56 0 9.6-.48a2.78 2.78 0 0 0 1.94-1.94 29 29 0 0 0 .46-5.77 29 29 0 0 0-.46-5.77z"/>
+            <polygon points="10,15 15,12 10,9"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+</div>
+  </div>
+</div>
+
         </div>
       </nav>
       {/* Bottom Navigation Bar for Mobile */}
