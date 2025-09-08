@@ -96,7 +96,7 @@
               <div className="text-center lg:text-left space-y-4">
                 <div className="space-y-3">
                   <h1
-                    className="text-3xl lg:text-4xl font-bold leading-tight transition-transform duration-500 group-hover:-translate-y-1"
+                    className="text-6xl lg:text-4xl font-bold leading-tight transition-transform duration-500 group-hover:-translate-y-1"
                     style={{
                       color: '#3267bdff', // Tailwind blue-500
                       WebkitTextStroke: '0.5px white', // white stroke
@@ -115,15 +115,15 @@
                 <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mt-4">
                   <Link 
                     href="/all-products"
-                    className="bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-full font-bold text-base transition-all duration-300 transform hover:bg-blue-600 hover:text-white hover:scale-105"
+                    className="bg-blue-600 hover:text-white px-6 py-3 rounded-full font-bold text-base transition-all duration-300 transform hover:bg-white/20 backdrop-blur-md text-white hover:scale-105"
                   >
-                    Shop Now
+                    Shop Now 
                   </Link>
                   <Link 
                     href="/all-products"
-                    className="bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-full font-semibold text-base transition-all duration-300 transform hover:bg-yellow-400 hover:text-black hover:scale-105"
+                    className="bg-yellow-400 hover:text-white px-6 py-3 rounded-full font-semibold text-base transition-all duration-300 transform hover:bg-white/20 backdrop-blur-md text-white hover:scale-105"
                   >
-                    View Categories
+                    View Categories 
                   </Link>
                 </div>
               </div>
