@@ -467,7 +467,7 @@ const OrdersComponent: React.FC = () => {
                         <select
                           value={order.status}
                           onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                          className="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm"
+                          className="text-xs border border-gray-300 text-blue-700 rounded-lg px-3 py-2 bg-white shadow-sm"
                         >
                           <option value="pending">Pending</option>
                           <option value="processing">Processing</option>
@@ -567,20 +567,16 @@ const OrdersComponent: React.FC = () => {
         </div>
 
         {/* Items Section */}
-        <div className="bg-white rounded-lg shadow-lg w-full p-6">
-          <h4 className="text-lg font-semibold mb-4">Items</h4>
+        <div className="bg-white rounded-lg border border-gray-200 w-full p-6">
+          <h4 className="text-lg font-semibold mb-4 text-gray-700">Items</h4>
           <div className="space-y-3">
             {selectedOrder.items.map((item, index) => (
               <div key={index} className="flex items-center gap-3 border-b border-gray-200 pb-2">
-                <img
-                  src={getItemProductImage(item)}
-                  alt={getItemProductName(item)}
-                  className="w-12 h-12 object-cover rounded"
-                />
+                
                 <div>
-                  <div className="font-semibold">{getItemProductName(item)}</div>
+                  <div className="font-semibold text-blue-700">{getItemProductName(item)}</div>
                   <div className="text-gray-700 text-sm">Quantity: {item.quantity}</div>
-                  <div className="text-gray-900 font-semibold">${item.price.toFixed(2)}</div>
+                  <div className="text-gray-900 font-semibold">Price : {item.price} Frw</div>
                 </div>
               </div>
             ))}
@@ -599,9 +595,9 @@ const OrdersComponent: React.FC = () => {
               <span>Shipping</span>
               <span>—</span>
             </div>
-            <div className="px-4 py-3 text-base font-bold text-gray-900 flex items-center justify-between border-t border-gray-200">
+            <div className="px-4 py-3 text-base font-bold text-green-600 flex items-center justify-between border-t border-gray-200">
               <span>Total</span>
-              <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+              <span>{selectedOrder.totalAmount} Frw</span>
             </div>
           </div>
         </div>
@@ -609,7 +605,7 @@ const OrdersComponent: React.FC = () => {
         {/* Close Button */}
         <div className="flex justify-end gap-2">
           <button
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-red-600 hover:text-white rounded-lg"
             onClick={() => setSelectedOrder(null)}
           >
             Close

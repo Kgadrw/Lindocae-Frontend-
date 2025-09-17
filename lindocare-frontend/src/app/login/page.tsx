@@ -356,11 +356,11 @@ const LoginPage: React.FC = () => {
                 )}
               </button>
 
-              <div className="flex items-center my-4">
+              {/* <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-gray-200"></div>
                 <span className="mx-3 text-gray-400 text-sm">or</span>
                 <div className="flex-grow border-t border-gray-200"></div>
-              </div>
+              </div> */}
 {/*
               <button
                 type="button"
@@ -467,11 +467,11 @@ const LoginPage: React.FC = () => {
                 )}
               </button>
 
-              <div className="flex items-center my-4">
+              {/*<div className="flex items-center my-4">
                 <div className="flex-grow border-t border-gray-200"></div>
                 <span className="mx-3 text-gray-400 text-sm">or</span>
                 <div className="flex-grow border-t border-gray-200"></div>
-              </div>
+              </div> */}
 {/*
               <button
                 type="button"
