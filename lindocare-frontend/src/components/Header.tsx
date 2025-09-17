@@ -493,93 +493,102 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   
 
   return (
-    <header className="w-full bg-white border-b px-4 border-gray-200 sticky top-0 z-50">
+    <header className="w-full bg-white border-b px-4 py-2 border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
       {/* Mobile Header with Hamburger Menu */}
-      <div className="block md:hidden px-4 py-1 pb-0 bg-white ">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <Image src="/lindo.png" alt="Lindo Logo" width={60} height={24} className="focus:outline-none" style={{ width: 'auto', height: 'auto' }} />
-          </Link>
-          
-          {/* Mobile Icons */}
-          <div className="flex items-center gap-2">
-            {/* Wishlist */}
-            <Link href="/wishlist">
-              <button className="relative p-1.5 hover:text-[#FFE600] transition-colors">
-                <Heart size={18} className="stroke-black" strokeWidth={2.5} />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center border-2 border-white shadow">
-                    {wishlistCount}
-                  </span>
-                )}
-              </button>
-            </Link>
-            
-            {/* Cart */}
-            <Link href="/cart">
-              <button className="relative p-1.5 hover:text-[#FFE600] transition-colors">
-                <ShoppingCart size={18} className="stroke-black" strokeWidth={2.5} />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center border-2 border-white shadow">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-            </Link>
-            
-            {/* User */}
-            {user ? (
-              <button
-                onClick={() => setDropdownOpen(v => !v)}
-                className="p-1.5 hover:text-[#FFE600] transition-colors"
-              >
-                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold border border-gray-200">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-              </button>
-            ) : (
-              <Link href="/login">
-                <button className="px-2.5 py-1 rounded-md bg-[#FFE600] text-[#2056A7] text-xs font-semibold hover:shadow transition">
-                  Sign In
-                </button>
-              </Link>
-            )}
-            
-            {/* Hamburger Menu */}
-            <button
-  onClick={() => setNavOpen(true)}
-  className="group p-2 rounded-lg transition-colors"
-  aria-label="Open navigation menu"
->
+      <div className="block md:hidden px-4 py-2 pb-2 bg-white ">
+  <div className="flex items-center justify-between">
+    {/* Logo */}
+    <Link href="/" className="flex-shrink-0">
+      <Image
+        src="/lindo.png"
+        alt="Lindo Logo"
+        width={90} // increased from 60
+        height={36} // increased from 24
+        className="focus:outline-none"
+        style={{ width: 'auto', height: 'auto' }}
+      />
+    </Link>
+    
+    {/* Mobile Icons */}
+    <div className="flex items-center gap-3">
+      {/* Wishlist */}
+      <Link href="/wishlist">
+        <button className="relative p-2 hover:text-[#FFE600] transition-colors">
+          <Heart size={24} className="stroke-black" strokeWidth={2.5} /> {/* bigger */}
+          {wishlistCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center border-2 border-white shadow">
+              {wishlistCount}
+            </span>
+          )}
+        </button>
+      </Link>
+      
+      {/* Cart */}
+      <Link href="/cart">
+        <button className="relative p-2 hover:text-[#FFE600] transition-colors">
+          <ShoppingCart size={24} className="stroke-black" strokeWidth={2.5} /> {/* bigger */}
+          {cartCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center border-2 border-white shadow">
+              {cartCount}
+            </span>
+          )}
+        </button>
+      </Link>
+      
+      {/* User */}
+      {user ? (
+        <button
+          onClick={() => setDropdownOpen(v => !v)}
+          className="p-2 hover:text-[#FFE600] transition-colors"
+        >
+          <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border border-gray-200">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+        </button>
+      ) : (
+        <Link href="/login">
+          <button className="px-3 py-1.5 rounded-md bg-[#FFE600] text-[#2056A7] text-sm font-semibold hover:shadow transition">
+            Sign In
+          </button>
+        </Link>
+      )}
+      
+      {/* Hamburger Menu */}
+      <button
+        onClick={() => setNavOpen(true)}
+        className="group p-3 rounded-lg transition-colors"
+        aria-label="Open navigation menu"
+      >
   <svg
-    width="28"
-    height="28"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#3B82F6"   // Tailwind blue-600
-    strokeWidth="3"
-    className="block"
+     xmlns="http://www.w3.org/2000/svg"
+  width="28"
+  height="28"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.5"
+  className="stroke-blue-700"
   >
     {/* Top (short, left) */}
-    <line
-      x1="4" y1="7" x2="14" y2="7"
-      strokeLinecap="round"
-      className="origin-left transition-transform group-hover:translate-x-0.5"
-    />
-    {/* Middle (full) */}
-    <line
-      x1="4" y1="12" x2="20" y2="12"
-      strokeLinecap="round"
-      className="transition-transform group-hover:scale-x-95"
-    />
-    {/* Bottom (short, right) */}
-    <line
-      x1="10" y1="17" x2="20" y2="17"
-      strokeLinecap="round"
-      className="origin-right transition-transform group-hover:-translate-x-0.5"
-    />
+      {/* Top Line */}
+  <line
+    x1="4"
+    y1="7"
+    x2="20"
+    y2="7"
+    strokeLinecap="round"
+    className="transition-transform group-hover:translate-x-0.5"
+  />
+  {/* Bottom Line */}
+  <line
+    x1="4"
+    y1="17"
+    x2="20"
+    y2="17"
+    strokeLinecap="round"
+    className="transition-transform group-hover:-translate-x-0.5"
+  />
   </svg>
 </button>
 
@@ -588,41 +597,57 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       </div>
       
       {/* Mobile Search Bar */}
-      <div className="block md:hidden px-4 py-1 pt-0 bg-white ">
-        <div className="relative">
-          <form onSubmit={handleSearch} autoComplete="off">
-            <input
-              type="text"
-              value={search}
-              onChange={handleInputChange}
-              onFocus={() => { if (search) setShowSuggestions(true); }}
-              onBlur={handleBlur}
-              ref={searchInputRef}
-              placeholder="Find babycare essentials..."
-              className="w-full rounded-full border text-gray-900 border-gray-500 px-3 py-1.5 pr-8 focus:outline-none focus:ring-1 focus:ring-blue-700 text-sm shadow placeholder:text-gray-400"
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
-            />
-            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-1 rounded-full cursor-pointer" aria-label="Search">
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            </button>
-          </form>
-          {showSuggestions && (
-            <ul className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-              {suggestions.map(s => (
-                <li
-                  key={s.type + '-' + s.id + '-' + s.name}
-                  className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-900 flex items-center gap-2"
-                  onMouseDown={() => handleSuggestionClick(s.name, s.type, String(s.id || ''))}
-                >
-                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
-                  <span>{s.name}</span>
-                  <span className="text-xs text-gray-400 ml-auto">{s.type === 'category' ? 'Category' : 'Product'}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+      <div className="block md:hidden px-4 py-2 pt-0 bg-white">
+  <div className="relative">
+    <form onSubmit={handleSearch} autoComplete="off">
+      <input
+        type="text"
+        value={search}
+        onChange={handleInputChange}
+        onFocus={() => { if (search) setShowSuggestions(true); }}
+        onBlur={handleBlur}
+        ref={searchInputRef}
+        placeholder="Find babycare essentials..."
+        className="w-full rounded-full border text-gray-900 border-gray-500 px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-700 text-base shadow placeholder:text-gray-400"
+        onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
+      />
+      <button 
+        type="submit" 
+        className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-2 rounded-full cursor-pointer"
+        aria-label="Search"
+      >
+        <svg 
+          width="18" 
+          height="18" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2.5" 
+          viewBox="0 0 24 24"
+        >
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+      </button>
+    </form>
+
+    {showSuggestions && (
+      <ul className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+        {suggestions.map(s => (
+          <li
+            key={s.type + '-' + s.id + '-' + s.name}
+            className="px-4 py-3 cursor-pointer hover:bg-gray-100 text-gray-900 flex items-center gap-2"
+            onMouseDown={() => handleSuggestionClick(s.name, s.type, String(s.id || ''))}
+          >
+            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
+            <span>{s.name}</span>
+            <span className="text-xs text-gray-400 ml-auto">{s.type === 'category' ? 'Category' : 'Product'}</span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>
+
       {/* Main Nav (logo, icons, search for desktop) */}
       <div className="hidden md:flex items-center justify-between px-2 py-1 gap-2 md:px-4 md:py-1">
         {/* Logo */}
@@ -1111,100 +1136,15 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             </div>
             
             {/* Footer Links Section */}
-            <div className="backdrop-blur-md bg-white/90 rounded-t-2xl shadow-lg">
-  <div className="p-5 space-y-5">
+            
+            
+          </div>
+          </div>
+   
 
-    {/* Customer Service */}
-    <div>
-      <h3 className="text-sm font-semibold text-gray-900 mb-2">Customer Service</h3>
-      <div className="space-y-2">
-        <Link
-          href="/returns-exchanges"
-          onClick={() => setNavOpen(false)}
-          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
-        >
-          Returns & Exchanges
-        </Link>
-        <Link
-          href="/faqs"
-          onClick={() => setNavOpen(false)}
-          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
-        >
-          FAQs
-        </Link>
-      </div>
-    </div>
-
-    {/* Company */}
-    <div>
-      <h3 className="text-sm font-semibold text-gray-900 mb-2">Company</h3>
-      <div className="space-y-2">
-        <Link
-          href="/about-us"
-          onClick={() => setNavOpen(false)}
-          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
-        >
-          About Us
-        </Link>
-        <Link
-          href="/careers"
-          onClick={() => setNavOpen(false)}
-          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
-        >
-          Careers
-        </Link>
-        <Link
-          href="/sustainability"
-          onClick={() => setNavOpen(false)}
-          className="block px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-700 text-sm"
-        >
-          Sustainability
-        </Link>
-      </div>
-    </div>
-
-    {/* Social Media */}
-    <div>
-      <h3 className="text-sm font-semibold text-gray-900 mb-2">Follow Us</h3>
-      <div className="flex gap-4 px-2">
-        <a
-          href="https://www.instagram.com/lindocare/"
-          className="text-gray-500 hover:text-[#FFE600] transition-colors"
-        >
-          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-          </svg>
-        </a>
-        <a
-          href="https://www.facebook.com/lindocare/"
-          className="text-gray-500 hover:text-[#FFE600] transition-colors"
-        >
-          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-          </svg>
-        </a>
-        <a
-          href="https://www.youtube.com/lindocare/"
-          className="text-gray-500 hover:text-[#FFE600] transition-colors"
-        >
-          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-1.94C19.56 4 12 4 12 4s-7.56 0-9.6.48a2.78 2.78 0 0 0-1.94 1.94A29 29 0 0 0 0 12.25a29 29 0 0 0 .46 5.77A2.78 2.78 0 0 0 2.4 19.9c2.04.48 9.6.48 9.6.48s7.56 0 9.6-.48a2.78 2.78 0 0 0 1.94-1.94 29 29 0 0 0 .46-5.77 29 29 0 0 0-.46-5.77z"/>
-            <polygon points="10,15 15,12 10,9"/>
-          </svg>
-        </a>
-      </div>
-    </div>
-</div>
-  </div>
-</div>
-
-        </div>
-      </nav>
-      {/* Bottom Navigation Bar for Mobile */}
-      {/* This section is removed as per the edit hint. */}
-    </header>
+                
+              </nav>
+            </header>
   );
 };
 
