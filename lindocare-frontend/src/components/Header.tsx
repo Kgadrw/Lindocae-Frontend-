@@ -496,7 +496,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
     <header className="w-full bg-white border-b px-2  border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
       {/* Mobile Header with Hamburger Menu */}
-      <div className="block md:hidden px-2 py-2 pb-2 bg-white ">
+      <div className="block md:hidden px-2 py-2  bg-white ">
   <div className="flex items-center justify-between">
     {/* Logo */}
     <Link href="/" className="flex-shrink-0">
