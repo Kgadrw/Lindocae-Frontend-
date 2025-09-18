@@ -261,7 +261,7 @@ const SearchPage = () => {
                     </div>
                     <div className="font-bold text-blue-900 mb-1">{product.name}</div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg font-bold text-blue-900">${product.price.toFixed(2)}</span>
+                      <span className="text-lg font-bold text-blue-900">{product.price} frw</span>
                       {product.oldPrice && <span className="text-sm line-through text-blue-400">${product.oldPrice}</span>}
                     </div>
                     <button 
@@ -286,60 +286,8 @@ const SearchPage = () => {
         )}
         {results.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {results.map((product, idx) => (
-              <div key={product.id || product._id || idx} className="bg-white rounded-2xl shadow p-4 flex flex-col">
-                <div className="relative mb-3">
-                  <Image
-                    src={
-                      Array.isArray(product.image) && product.image.length > 0
-                        ? product.image[0]
-                        : (typeof product.image === 'string' && product.image.trim() !== ''
-                            ? product.image
-                            : '/lindo.png')
-                    }
-                    alt={product.name}
-                    className="w-full h-40 object-cover rounded-xl"
-                    width={160}
-                    height={160}
-                  />
-                  {(product.tags || []).map((tag: string) => (
-                    <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
-                  ))}
-                  <button
-                    className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                    onClick={() => toggleWishlist(product.id || product._id)}
-                    aria-label="Add to wishlist"
-                  >
-                    <Heart
-                      size={20}
-                      color={wishlist.includes(String(product.id || product._id)) ? '#F87171' : '#3B82F6'}
-                      fill={wishlist.includes(String(product.id || product._id)) ? '#F87171' : 'none'}
-                      strokeWidth={2.2}
-                    />
-                  </button>
-                </div>
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="text-yellow-400">★</span>
-                    <span className="text-sm font-semibold text-blue-900">{product.rating}</span>
-                    <span className="text-xs text-blue-500">({product.reviews} reviews)</span>
-                  </div>
-                  <div className="font-bold text-blue-900 mb-1">{product.name}</div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg font-bold text-blue-900">${product.price.toFixed(2)}</span>
-                    {product.oldPrice && <span className="text-sm line-through text-blue-400">${product.oldPrice}</span>}
-                  </div>
-                  <button 
-                    className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition" 
-                    onClick={() => handleAddToCart(product)}
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+           </div>
+        )} 
       </div>
     </div>
   );
