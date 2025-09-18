@@ -16,20 +16,20 @@ interface CategoriesSliderProps {
 }
 
 const CategoriesSliderSkeleton = () => (
-  <section className="relative w-full mb-8 animate-pulse">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div className="hidden lg:block lg:col-span-3 space-y-4">
+  <section className="relative w-full mb-8 md:mb-12 animate-pulse">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-6">
+      <div className="hidden lg:block lg:col-span-3 space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-10 bg-gray-200 rounded-lg" />
+          <div key={i} className="h-8 md:h-10 bg-gray-200 rounded-lg" />
         ))}
       </div>
-      <div className="col-span-1 lg:col-span-6 flex gap-4">
+      <div className="col-span-1 lg:col-span-6 flex gap-3 md:gap-4 overflow-x-auto pb-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="w-[200px] h-[240px] bg-gray-200 rounded-2xl" />
+          <div key={i} className="w-[160px] md:w-[200px] h-[200px] md:h-[240px] bg-gray-200 rounded-2xl flex-shrink-0" />
         ))}
       </div>
       <div className="hidden lg:block lg:col-span-3">
-        <div className="h-[240px] bg-gray-200 rounded-2xl" />
+        <div className="h-[200px] md:h-[240px] bg-gray-200 rounded-2xl" />
       </div>
     </div>
   </section>
@@ -58,7 +58,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
   const topCategories = categories.slice(0, 3);
 
   return (
-    <section className="relative w-full mb-12">
+    <section className="relative w-full mb-8 md:mb-12">
       {catLoading ? (
         <CategoriesSliderSkeleton />
       ) : catError ? (
@@ -66,7 +66,7 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
       ) : categories.length === 0 ? (
         <div className="text-center text-gray-500 py-8">No categories available</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-6">
           {/* LEFT SIDEBAR */}
           <aside className="hidden lg:flex lg:col-span-3 flex-col gap-2">
             <h3 className="font-semibold text-gray-800 mb-3">Categories for you</h3>
@@ -84,17 +84,18 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
 
           {/* CENTER SECTION */}
           <div className="col-span-1 lg:col-span-6">
-            <div className="flex justify-between items-center mb-3">
-  <h3 className="font-semibold text-gray-800">Frequently searched</h3>
-  <Link
-    href="/all-products"
-    className="text-sm font-medium text-indigo-600 hover:underline ml-4" // added ml-4
-  >
-    View all
-  </Link>
-</div>
+            <div className="flex justify-between items-center mb-3 md:mb-4">
+              <h3 className="font-semibold text-gray-800 text-lg md:text-xl">Frequently searched</h3>
+              <Link
+                href="/all-products"
+                className="text-sm font-medium text-indigo-600 hover:underline flex-shrink-0"
+              >
+                View all
+              </Link>
+            </div>
 
-            <div className="flex gap-6">
+            {/* Mobile horizontal scroll, desktop flex */}
+            <div className="flex gap-3 md:gap-6 overflow-x-auto pb-2 md:pb-0 -mx-1 px-1 md:mx-0 md:px-0 smooth-scroll mobile-scroll scrollbar-hide">
               {topCategories.map((cat, idx) => {
                 const img = Array.isArray(cat.image) ? cat.image[0] : cat.image;
                 const image = normalizeImageUrl(img || '');
@@ -102,22 +103,22 @@ const CategoriesSlider: React.FC<CategoriesSliderProps> = ({
                   <Link
                     key={cat._id || idx}
                     href={`/all-products?category=${encodeURIComponent(cat.name)}`}
-                    className="group bg-white border border-gray-200 hover:border-indigo-400 hover:shadow-md transition flex flex-col w-[200px] h-[240px] rounded-2xl overflow-hidden"
+                    className="group bg-white border border-gray-200 hover:border-indigo-400 hover:shadow-md transition flex flex-col w-[160px] md:w-[200px] h-[200px] md:h-[240px] rounded-2xl overflow-hidden flex-shrink-0"
                   >
-                    <div className="relative w-full h-[140px] bg-gray-50">
+                    <div className="relative w-full h-[100px] md:h-[140px] bg-gray-50">
                       {image ? (
                         <div
                           className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-300"
                           style={{ backgroundImage: `url(${image})` }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-3xl">
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-2xl md:text-3xl">
                           🖼️
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col items-center justify-center flex-1 px-3 py-2 text-center">
-                      <span className="font-semibold text-gray-800 text-sm mb-1 truncate">
+                    <div className="flex flex-col items-center justify-center flex-1 px-2 md:px-3 py-2 text-center">
+                      <span className="font-semibold text-gray-800 text-xs md:text-sm mb-1 truncate w-full">
                         {cat.name}
                       </span>
                       <span className="text-xs text-gray-600 line-clamp-2">

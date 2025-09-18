@@ -159,15 +159,34 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   const [loadingCategoryProducts, setLoadingCategoryProducts] = useState<{[key: string]: boolean}>({});
   const [showCategoryDropdown, setShowCategoryDropdown] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Mobile scroll behavior states
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [hideNavbar, setHideNavbar] = useState(false);
 
-  // Scroll detection
+  // Professional mobile scroll detection - simpler and cleaner
   React.useEffect(() => {
     const handleScroll = () => {
-      // setIsScrolled(window.scrollY > 50); // This line was removed as per the edit hint.
+      const currentScrollY = window.scrollY;
+      
+      // Basic scroll state
+      setIsScrolled(currentScrollY > 10);
+      
+      // Professional header behavior - always show search when scrolled
+      if (currentScrollY > 80) {
+        setShowMobileSearch(true);
+      } else {
+        setShowMobileSearch(false);
+      }
+      
+      setLastScrollY(currentScrollY);
     };
-    window.addEventListener('scroll', handleScroll);
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [lastScrollY]);
 
   // Close dropdown on outside click
   React.useEffect(() => {
@@ -495,158 +514,128 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   return (
     <header className="w-full bg-white border-b px-2  border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
-      {/* Mobile Header with Hamburger Menu */}
-      <div className="block md:hidden px-2 py-2  bg-white ">
-  <div className="flex items-center justify-between">
-    {/* Logo */}
-    <Link href="/" className="flex-shrink-0">
-      <Image
-        src="/lindo.png"
-        alt="Lindo Logo"
-        width={90} // increased from 60
-        height={36} // increased from 24
-        className="focus:outline-none"
-        style={{ width: 'auto', height: 'auto' }}
-      />
-    </Link>
-    
-    {/* Mobile Icons */}
-    <div className="flex items-center gap-3">
-      {/* Wishlist */}
-      <Link href="/wishlist">
-        <button className="relative p-2 hover:text-[#FFE600] transition-colors">
-          <Heart size={24} className="stroke-black" strokeWidth={2.5} /> {/* bigger */}
-          {wishlistCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center border-2 border-white shadow">
-              {wishlistCount}
-            </span>
-          )}
-        </button>
-      </Link>
-      
-      {/* Cart */}
-      <Link href="/cart">
-        <button className="relative p-2 hover:text-[#FFE600] transition-colors">
-          <ShoppingCart size={24} className="stroke-black" strokeWidth={2.5} /> {/* bigger */}
-          {cartCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center border-2 border-white shadow">
-              {cartCount}
-            </span>
-          )}
-        </button>
-      </Link>
-      
-      {/* User */}
-      {user ? (
-        <button
-          onClick={() => setDropdownOpen(v => !v)}
-          className="p-2 hover:text-[#FFE600] transition-colors"
-        >
-          <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border border-gray-200">
-            {user.name.charAt(0).toUpperCase()}
-          </div>
-        </button>
-      ) : (
-        <Link href="/login">
-          <button className="px-3 py-1.5 rounded-md bg-[#FFE600] text-[#2056A7] text-sm font-semibold hover:shadow transition">
-            Sign In
-          </button>
-        </Link>
-      )}
-      
-      {/* Hamburger Menu */}
-      <button
-        onClick={() => setNavOpen(true)}
-        className="group p-3 rounded-lg transition-colors"
-        aria-label="Open navigation menu"
-      >
-  <svg
-     xmlns="http://www.w3.org/2000/svg"
-  width="28"
-  height="28"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.5"
-  className="stroke-blue-700"
-  >
-    {/* Top (short, left) */}
-      {/* Top Line */}
-  <line
-    x1="4"
-    y1="7"
-    x2="20"
-    y2="7"
-    strokeLinecap="round"
-    className="transition-transform group-hover:translate-x-0.5"
-  />
-  {/* Bottom Line */}
-  <line
-    x1="4"
-    y1="17"
-    x2="20"
-    y2="17"
-    strokeLinecap="round"
-    className="transition-transform group-hover:-translate-x-0.5"
-  />
-  </svg>
-</button>
-
+      {/* Simple Modern Mobile Header - Fixed */}
+      <div className="block md:hidden bg-white border-b border-gray-100">
+        {/* Main Header Row */}
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <Image
+              src="/lindo.png"
+              alt="Lindo Logo"
+              width={100}
+              height={40}
+              className="focus:outline-none hover:opacity-80 transition-opacity"
+              style={{ width: 'auto', height: 'auto' }}
+            />
+          </Link>
+          
+          {/* Action Icons */}
+          <div className="flex items-center gap-2">
+            {/* Wishlist */}
+            <Link href="/wishlist">
+              <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                <Heart size={22} className="stroke-gray-600" strokeWidth={2} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                    {wishlistCount > 99 ? '99+' : wishlistCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+            
+            {/* Cart */}
+            <Link href="/cart">
+              <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                <ShoppingCart size={22} className="stroke-gray-600" strokeWidth={2} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+            
+            {/* User */}
+            {user ? (
+              <button
+                onClick={() => setDropdownOpen(v => !v)}
+                className="p-1 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              </button>
+            ) : (
+              <Link href="/login">
+                <button className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+                  Login
+                </button>
+              </Link>
+            )}
+            
+            {/* Menu */}
+            <button
+              onClick={() => setNavOpen(true)}
+              className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+              aria-label="Menu"
+            >
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-600">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
           </div>
         </div>
-      </div>
-      
-      {/* Mobile Search Bar */}
-      <div className="block md:hidden px-4 py-2 pt-0 bg-white">
-  <div className="relative">
-    <form onSubmit={handleSearch} autoComplete="off">
-      <input
-        type="text"
-        value={search}
-        onChange={handleInputChange}
-        onFocus={() => { if (search) setShowSuggestions(true); }}
-        onBlur={handleBlur}
-        ref={searchInputRef}
-        placeholder="Find babycare essentials..."
-        className="w-full rounded-full border text-gray-900 border-gray-500 px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-700 text-base shadow placeholder:text-gray-400"
-        onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
-      />
-      <button 
-        type="submit" 
-        className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-700 text-white p-2 rounded-full cursor-pointer"
-        aria-label="Search"
-      >
-        <svg 
-          width="18" 
-          height="18" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2.5" 
-          viewBox="0 0 24 24"
-        >
-          <circle cx="11" cy="11" r="8"/>
-          <path d="M21 21l-4.35-4.35"/>
-        </svg>
-      </button>
-    </form>
 
-    {showSuggestions && (
-      <ul className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-        {suggestions.map(s => (
-          <li
-            key={s.type + '-' + s.id + '-' + s.name}
-            className="px-4 py-3 cursor-pointer hover:bg-gray-100 text-gray-900 flex items-center gap-2"
-            onMouseDown={() => handleSuggestionClick(s.name, s.type, String(s.id || ''))}
-          >
-            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: s.type === 'category' ? '#F4E029' : '#3B82F6' }}></span>
-            <span>{s.name}</span>
-            <span className="text-xs text-gray-400 ml-auto">{s.type === 'category' ? 'Category' : 'Product'}</span>
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-</div>
+        {/* Fixed Search Bar */}
+        <div className="px-4 pb-3">
+          <form onSubmit={handleSearch} autoComplete="off">
+            <div className="relative flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
+              <input
+                type="text"
+                value={search}
+                onChange={handleInputChange}
+                onFocus={() => { if (search) setShowSuggestions(true); }}
+                onBlur={handleBlur}
+                ref={searchInputRef}
+                placeholder="Search for baby products..."
+                className="w-full bg-transparent text-gray-900 px-4 py-3 pr-12 focus:outline-none text-sm placeholder:text-gray-500 rounded-xl"
+                onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
+              />
+              <button 
+                type="submit" 
+                className="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+                aria-label="Search"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                </svg>
+              </button>
+            </div>
+          </form>
+
+          {showSuggestions && (
+            <ul className="absolute left-4 right-4 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+              {suggestions.map(s => (
+                <li
+                  key={s.type + '-' + s.id + '-' + s.name}
+                  className="px-4 py-3 cursor-pointer hover:bg-gray-50 text-gray-900 flex items-center gap-3 border-b border-gray-50 last:border-b-0"
+                  onMouseDown={() => handleSuggestionClick(s.name, s.type, String(s.id || ''))}
+                >
+                  <div className={`w-2 h-2 rounded-full ${s.type === 'category' ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">{s.name}</span>
+                    <div className="text-xs text-gray-400">{s.type === 'category' ? 'Category' : 'Product'}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
 
       {/* Main Nav (logo, icons, search for desktop) */}
       <div className="hidden md:flex items-center justify-between px-2 py-1 gap-2 md:px-4 md:py-1">

@@ -21,8 +21,8 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="hidden md:block bg-white py-10 px-6 text-gray-700 border-t border-gray-300">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-white py-6 md:py-10 px-4 md:px-6 text-gray-700 border-t border-gray-200">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
         {/* Customer Service */}
         <div>
           <h3 className="font-bold text-lg mb-3">Customer Service</h3>

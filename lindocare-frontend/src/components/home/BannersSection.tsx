@@ -20,14 +20,14 @@
           }
 
           const BannerSkeleton = () => (
-            <section className="w-full mb-8 animate-pulse">
-              <div className="grid grid-cols-1 lg:grid-cols-9 gap-8">
+            <section className="w-full mb-6 md:mb-8 animate-pulse">
+              <div className="grid grid-cols-1 lg:grid-cols-9 gap-3 md:gap-6">
                 {/* Large promo skeleton */}
-                <div className="lg:col-span-4 relative  p-6 flex flex-col justify-end pb-10 overflow-hidden bg-gray-200 h-80" />
+                <div className="lg:col-span-4 relative p-4 md:p-6 flex flex-col justify-end pb-6 md:pb-10 overflow-hidden bg-gray-200 h-64 md:h-80 rounded-2xl" />
                 {/* 2x2 grid skeleton */}
-                <div className="lg:col-span-5 grid grid-cols-2 gap-3">
+                <div className="lg:col-span-5 grid grid-cols-2 gap-2 md:gap-3">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="bg-gray-200  h-48" />
+                    <div key={i} className="bg-gray-200 h-32 md:h-48 rounded-xl" />
                   ))}
                 </div>
               </div>
@@ -68,7 +68,7 @@
             };
 
             return (
-              <section className="w-full mb-8  ">
+              <section className="w-full mb-6 md:mb-8">
                 {bannerLoading ? (
                   <BannerSkeleton />
                 ) : bannerError ? (
@@ -76,9 +76,9 @@
                 ) : bannerData.length === 0 ? (
                   <div className="text-center text-gray-500 py-8"></div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-9 gap-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-9 gap-3 md:gap-6">
                     {/* Large promotional section on the left */}
-                    <div className="lg:col-span-4 relative rounded-xl p-6 flex flex-col justify-end pb-10 overflow-hidden group cursor-pointer">
+                    <div className="lg:col-span-4 relative rounded-2xl p-4 md:p-6 flex flex-col justify-end pb-6 md:pb-10 overflow-hidden group cursor-pointer min-h-[280px] md:min-h-[320px]">
             {/* Background image */}
             <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
               <Image
@@ -96,7 +96,7 @@
               <div className="text-center lg:text-left space-y-4">
                 <div className="space-y-3">
                   <h1
-                    className="text-6xl lg:text-4xl font-bold leading-tight transition-transform duration-500 group-hover:-translate-y-1"
+                    className="text-3xl sm:text-4xl md:text-5xl lg:text-4xl font-bold leading-tight transition-transform duration-500 group-hover:-translate-y-1"
                     style={{
                       color: '#3267bdff', // Tailwind blue-500
                       WebkitTextStroke: '0.5px white', // white stroke
@@ -104,10 +104,10 @@
                   >
                     Up to 30% Off
                   </h1>
-                  <h2 className="text-xl lg:text-2xl font-semibold text-yellow-500 transition-transform duration-500 group-hover:-translate-y-1">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-2xl font-semibold text-yellow-500 transition-transform duration-500 group-hover:-translate-y-1">
                     Newborn-Ready Nursery
                   </h2>
-                  <p className="text-base text-white leading-relaxed transition-opacity duration-500 group-hover:opacity-95">
+                  <p className="text-sm sm:text-base text-white leading-relaxed transition-opacity duration-500 group-hover:opacity-95 max-w-md">
                     Everything you need to create the perfect nursery for your little one. Quality products, soft materials, and peace of mind.
                   </p>
                 </div>
@@ -132,7 +132,7 @@
 
                     
                     {/* 2x2 grid of baby product images on the right */}
-                    <div className="lg:col-span-5 grid grid-cols-2 gap-3">
+                    <div className="lg:col-span-5 grid grid-cols-2 gap-2 md:gap-3">
                       {/* Top-left: First banner */}
                       <a
             href="#"

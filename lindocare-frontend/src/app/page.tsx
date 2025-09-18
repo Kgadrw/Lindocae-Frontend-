@@ -208,9 +208,9 @@ export default function Home() {
 
   return (
     <>
-    <div className="bg-white px-0 md:px-4 lg:px-8 py-2 md:py-2 flex flex-col gap-4">
+    <div className="bg-white px-0 md:px-4 lg:px-8 py-2 md:py-2 flex flex-col gap-3 md:gap-4">
       <SocialShareBar />
-      <div className="px-2 md:px-4 lg:px-8 py-4 md:py-6 flex flex-col gap-6">
+      <div className="px-3 md:px-4 lg:px-8 py-4 md:py-6 flex flex-col gap-4 md:gap-6">
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
         {showToast && (
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center pointer-events-none">
