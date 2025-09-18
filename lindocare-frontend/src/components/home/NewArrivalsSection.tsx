@@ -74,7 +74,7 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({
     <section className="mb-8 px-4 md:px-6 lg:px-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-700 mb-3">
           New Arrivals
         </h2>
         <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
