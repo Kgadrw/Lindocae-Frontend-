@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
-import { Heart } from "lucide-react";
-import Image from "next/image";
-import IconsRow from '../../components/home/IconsRow'; // using the provided sliding/animated version
 import Link from 'next/link'; // Added for Next.js Link
 import { useSearchParams } from 'next/navigation';
 import OfflineError from '../../components/OfflineError';
+import ProductCard from '../../components/shared/ProductCard';
+import ProductCardSkeleton from '../../components/shared/ProductCardSkeleton';
 import {
   addToCartServer,
   toggleWishlistProduct,
@@ -69,17 +68,8 @@ function formatRWF(amount: number) {
   return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-const ProductSkeleton = () => (
-  <div className="bg-white rounded-2xl shadow p-4 flex flex-col animate-pulse">
-    <div className="relative mb-3 w-full h-40 bg-gray-200 rounded-xl" />
-    <div className="flex-1 flex flex-col">
-      <div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
-      <div className="h-3 w-1/2 bg-gray-200 rounded mb-1" />
-      <div className="h-3 w-1/3 bg-gray-200 rounded mb-2" />
-      <div className="h-8 w-full bg-gray-200 rounded mt-auto" />
-    </div>
-  </div>
-);
+// Format price function for ProductCard
+const formatPrice = (amount: number) => `${formatRWF(amount)} RWF`;
 
 function AllProductsContent() {
   const searchParams = useSearchParams();
@@ -332,8 +322,8 @@ function AllProductsContent() {
 
   if (loading) return (
     <div className="min-h-screen bg-white pb-16 px-2 md:px-4 lg:px-8 font-sans flex items-center justify-center">
-      <div className="max-w-7xl w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-10">
-        {Array.from({ length: 8 }).map((_, idx) => <ProductSkeleton key={idx} />)}
+      <div className="max-w-7xl w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 pt-10">
+        {Array.from({ length: 10 }).map((_, idx) => <ProductCardSkeleton key={idx} />)}
       </div>
     </div>
   );
@@ -454,59 +444,17 @@ function AllProductsContent() {
             </div>
           </div>
         )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.filter(prod => validProductIds.includes(prod._id)).map((prod, idx) => {
-                  let image = '';
-                  if (Array.isArray(prod.image) && prod.image.length > 0) image = prod.image[0];
-                  else if (typeof prod.image === 'string') image = prod.image;
-                  return (
-                    <Link
-                      key={prod._id || prod.id || idx}
-                      href={`/product/${prod._id}`}
-                      className="bg-white rounded-2xl shadow p-4 flex flex-col hover:shadow-xl transition-shadow"
-                    >
-                      <div className="relative mb-3">
-                        {image && (
-                          <Image src={image} alt={prod.name} width={300} height={160} className="w-full h-40 object-cover rounded-xl" />
-                        )}
-                        {prod.tags && Array.isArray(prod.tags) && prod.tags.map((tag: string) => (
-                          <span key={tag} className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${tag === 'Sale' ? 'bg-red-100 text-red-500' : tag === 'New' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{tag}</span>
-                        ))}
-                        <button
-                          className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-                          onClick={e => { e.preventDefault(); toggleWishlist(String(prod._id), prod); }}
-                          aria-label="Add to wishlist"
-                        >
-                          <Heart
-                            size={20}
-                            color={wishlist.includes(String(prod._id)) ? '#F87171' : '#2563eb'}
-                            fill={wishlist.includes(String(prod._id)) ? '#F87171' : 'none'}
-                            strokeWidth={2.2}
-                          />
-                        </button>
-                      </div>
-                      <div className="flex-1 flex flex-col">
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-yellow-300">★</span>
-                          <span className="text-sm font-semibold text-blue-900">{prod.rating || 4.7}</span>
-                          <span className="text-xs text-blue-500">({prod.reviews || 12} reviews)</span>
-                        </div>
-                        <div className="font-bold text-blue-900 mb-1">{prod.name}</div>
-                        <div className="text-sm text-blue-700 mb-1 line-clamp-2">{prod.description}</div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg font-bold text-blue-900">{formatRWF(prod.price)} RWF</span>
-                          {prod.oldPrice && <span className="text-sm line-through text-blue-200">{formatRWF(prod.oldPrice)} RWF</span>}
-                        </div>
-                        <button
-                          className="mt-auto rounded-full bg-blue-600 text-white font-bold py-2 text-sm shadow hover:bg-blue-700 transition"
-                          onClick={e => { e.preventDefault(); handleAddToCart(prod); }}
-                        >
-                          Add to Cart
-                        </button>
-                      </div>
-                    </Link>
-                  );
-                })}
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+          {filteredProducts.filter(prod => validProductIds.includes(prod._id)).map((prod, idx) => (
+              <ProductCard
+                key={prod._id || prod.id || idx}
+                product={prod}
+                wishlist={wishlist}
+                onToggleWishlist={(id) => toggleWishlist(id, prod)}
+                onAddToCart={handleAddToCart}
+                formatPrice={formatPrice}
+              />
+            ))}
               </div>
         {/* If no products at all */}
         {filteredProducts.length === 0 && (
