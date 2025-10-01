@@ -55,14 +55,13 @@ const CheckoutPage = () => {
   
   // Payment confirmation info
   const [senderName, setSenderName] = useState("");
-  const [senderPhone, setSenderPhone] = useState("");
-  const [paymentReference, setPaymentReference] = useState("");
+  const [senderAddress, setSenderAddress] = useState("");
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   
   // Form validation errors
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [customerErrors, setCustomerErrors] = useState<{name?: string, email?: string, phone?: string}>({});
-  const [paymentErrors, setPaymentErrors] = useState<{senderName?: string, senderPhone?: string, paymentReference?: string}>({});
+  const [paymentErrors, setPaymentErrors] = useState<{senderName?: string, senderAddress?: string}>({});
 
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -258,11 +257,10 @@ const CheckoutPage = () => {
   };
 
   const validatePaymentInfo = () => {
-    const errors: {senderName?: string, senderPhone?: string, paymentReference?: string} = {};
+    const errors: {senderName?: string, senderAddress?: string} = {};
     
     if (!senderName.trim()) errors.senderName = "Sender name is required";
-    if (!senderPhone.trim()) errors.senderPhone = "Sender phone is required";
-    if (!paymentReference.trim()) errors.paymentReference = "Payment reference is required";
+    if (!senderAddress.trim()) errors.senderAddress = "Sender address is required";
     
     setPaymentErrors(errors);
     return Object.keys(errors).length === 0;
@@ -373,8 +371,7 @@ const CheckoutPage = () => {
   totalAmount,
   // MTN Mobile Money payment details
   senderName,
-  senderPhone,
-  paymentReference,
+  senderAddress,
   momoCode: "*182*8*1*079559#"
 };
 
@@ -972,88 +969,61 @@ const CheckoutPage = () => {
                           Payment Details
                         </h3>
                         
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-2">
-                              Sender Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={senderName}
-                              onChange={(e) => {
-                                setSenderName(e.target.value);
-                                if (paymentErrors.senderName) {
-                                  setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
-                                }
-                              }}
-                              placeholder="Name of person who sent the money"
-                              className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                                paymentErrors.senderName 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : senderName.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {paymentErrors.senderName && (
-                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
-                            )}
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-2">
-                              Sender Phone Number <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="tel"
-                              value={senderPhone}
-                              onChange={(e) => {
-                                setSenderPhone(e.target.value);
-                                if (paymentErrors.senderPhone) {
-                                  setPaymentErrors(prev => ({ ...prev, senderPhone: undefined }));
-                                }
-                              }}
-                              placeholder="Phone number used to send money"
-                              className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                                paymentErrors.senderPhone 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : senderPhone.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {paymentErrors.senderPhone && (
-                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderPhone}</p>
-                            )}
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-2">
-                              Payment Reference/Transaction ID <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={paymentReference}
-                              onChange={(e) => {
-                                setPaymentReference(e.target.value);
-                                if (paymentErrors.paymentReference) {
-                                  setPaymentErrors(prev => ({ ...prev, paymentReference: undefined }));
-                                }
-                              }}
-                              placeholder="Transaction ID from MTN Mobile Money"
-                              className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                                paymentErrors.paymentReference 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : paymentReference.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {paymentErrors.paymentReference && (
-                              <p className="mt-1 text-xs text-red-600">{paymentErrors.paymentReference}</p>
-                            )}
-                          </div>
-                        </div>
+                         <div className="space-y-4">
+                           <div>
+                             <label className="block text-sm font-semibold text-gray-800 mb-2">
+                               Sender Name <span className="text-red-500">*</span>
+                             </label>
+                             <input
+                               type="text"
+                               value={senderName}
+                               onChange={(e) => {
+                                 setSenderName(e.target.value);
+                                 if (paymentErrors.senderName) {
+                                   setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
+                                 }
+                               }}
+                               placeholder="Name of person who sent the money"
+                               className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
+                                 paymentErrors.senderName 
+                                   ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                   : senderName.trim()
+                                     ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                     : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                               }`}
+                             />
+                             {paymentErrors.senderName && (
+                               <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
+                             )}
+                           </div>
+                           
+                           <div>
+                             <label className="block text-sm font-semibold text-gray-800 mb-2">
+                               Sender Address <span className="text-red-500">*</span>
+                             </label>
+                             <input
+                               type="text"
+                               value={senderAddress}
+                               onChange={(e) => {
+                                 setSenderAddress(e.target.value);
+                                 if (paymentErrors.senderAddress) {
+                                   setPaymentErrors(prev => ({ ...prev, senderAddress: undefined }));
+                                 }
+                               }}
+                               placeholder="Address of person who sent the money"
+                               className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
+                                 paymentErrors.senderAddress 
+                                   ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                   : senderAddress.trim()
+                                     ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                     : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                               }`}
+                             />
+                             {paymentErrors.senderAddress && (
+                               <p className="mt-1 text-xs text-red-600">{paymentErrors.senderAddress}</p>
+                             )}
+                           </div>
+                         </div>
                       </div>
                       
                       {/* Order Summary */}
