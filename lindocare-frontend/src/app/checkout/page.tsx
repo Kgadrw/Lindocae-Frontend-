@@ -32,11 +32,11 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("dpo");
+  const [paymentMethod, setPaymentMethod] = useState("mtn");
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 2;
+  const totalSteps = 3;
 
   // Address data using the new structure
   const [addressData, setAddressData] = useState<AddressData>({
@@ -53,9 +53,16 @@ const CheckoutPage = () => {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerName, setCustomerName] = useState("");
   
+  // Payment confirmation info
+  const [senderName, setSenderName] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  
   // Form validation errors
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [customerErrors, setCustomerErrors] = useState<{name?: string, email?: string, phone?: string}>({});
+  const [paymentErrors, setPaymentErrors] = useState<{senderName?: string, senderPhone?: string, paymentReference?: string}>({});
 
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -250,6 +257,17 @@ const CheckoutPage = () => {
     return Object.keys(newAddressErrors).length === 0;
   };
 
+  const validatePaymentInfo = () => {
+    const errors: {senderName?: string, senderPhone?: string, paymentReference?: string} = {};
+    
+    if (!senderName.trim()) errors.senderName = "Sender name is required";
+    if (!senderPhone.trim()) errors.senderPhone = "Sender phone is required";
+    if (!paymentReference.trim()) errors.paymentReference = "Payment reference is required";
+    
+    setPaymentErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleNextStep = () => {
     console.log('handleNextStep called, currentStep:', currentStep);
     setOrderStatus({}); // Clear any previous errors
@@ -269,6 +287,9 @@ const CheckoutPage = () => {
           setOrderStatus({ error: "Please complete all delivery address fields." });
         }
       }
+    } else if (currentStep === 2) {
+      console.log('Moving to payment confirmation step');
+      setCurrentStep(3);
     }
   };
 
@@ -286,7 +307,7 @@ const CheckoutPage = () => {
     setIsSubmitting(true);
 
     // Final validation
-    if (!validateCustomerInfo() || !validateAddress() || !paymentMethod) {
+    if (!validateCustomerInfo() || !validateAddress() || !validatePaymentInfo()) {
       setOrderStatus({ error: "Please complete all steps correctly." });
       setIsSubmitting(false);
       return;
@@ -338,7 +359,7 @@ const CheckoutPage = () => {
 
       // Prepare order data with new address structure
      const orderData = {
-  paymentMethod: paymentMethod || "dpo",
+  paymentMethod: paymentMethod || "mtn",
   province: addressData.province,
   district: addressData.district,
   sector: addressData.sector,
@@ -350,6 +371,11 @@ const CheckoutPage = () => {
   customerName,
   items: orderItems,
   totalAmount,
+  // MTN Mobile Money payment details
+  senderName,
+  senderPhone,
+  paymentReference,
+  momoCode: "*182*8*1*079559#"
 };
 
       console.log("Order data being sent to API (formatted):", orderData);
@@ -395,93 +421,22 @@ const CheckoutPage = () => {
         const firstName = firstNameRaw || "Customer";
         const lastName = restName.join(" ") || firstName;
 
-        if (paymentMethod === "dpo") {
-          // Initialize DPO with derived names
-          const dpoInitBody = {
-            orderId: String(orderId || ""),
-            totalAmount: totalAmount,
-            currency: "RWF",
-            email: customerEmail,
-            phone: customerPhone,
-            firstName,
-            lastName,
-            serviceDescription: `Payment for order ${orderId} - ${cartItems.length} item(s) from Lindocare`,
-            callbackUrl: "https://lindocae-frontend.vercel.app/payment-success",
-          };
-
-          console.log("Initializing DPO with:", dpoInitBody);
-          const dpoResponse = await fetch(
-            "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
-            {
-              method: "POST",
-              headers: {
-                accept: "application/json",
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(dpoInitBody),
-            }
-          );
-
-          if (dpoResponse.ok) {
-            const dpoData = await dpoResponse.json();
-            const redirectUrl = dpoData.redirectUrl || dpoData.paymentUrl;
-            if (redirectUrl) {
-              setPaymentRedirectUrl(redirectUrl);
-              setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-              try {
-                if (isUserLoggedIn()) await clearCartServer();
-                else saveLocalCart([]);
-                setCartItems([]);
-              } catch {}
-              if ((dpoData as any).token) {
-                localStorage.setItem("dpoPaymentToken", (dpoData as any).token);
-                localStorage.setItem("pendingOrderId", String(orderId || ""));
-                localStorage.setItem("pendingOrderAmount", String(totalAmount));
-              }
-              setTimeout(() => {
-                window.location.href = redirectUrl;
-              }, 1500);
-            } else {
-              setOrderStatus({
-                success: "Order created successfully. Proceed to payment from your orders page.",
-              });
-            }
-          } else {
-            const orderRedirectUrl =
-              orderResult.pesapalRedirectUrl ||
-              orderResult.redirectUrl ||
-              orderResult.order?.redirectUrl;
-            if (orderRedirectUrl) {
-              setPaymentRedirectUrl(orderRedirectUrl);
-              setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-              setTimeout(() => {
-                window.location.href = orderRedirectUrl;
-              }, 1500);
-            } else {
-              setOrderStatus({ error: "Payment initialization failed. Please try again." });
-            }
-          }
-        } else {
-          // Other payment methods rely on backend-provided redirect
-          const redirectUrl =
-            orderResult.pesapalRedirectUrl ||
-            orderResult.redirectUrl ||
-            orderResult.order?.redirectUrl;
-          if (redirectUrl) {
-            setPaymentRedirectUrl(redirectUrl);
-            setOrderStatus({ success: "Order created! Redirecting to payment gateway..." });
-            try {
-              if (isUserLoggedIn()) await clearCartServer();
-              else saveLocalCart([]);
-              setCartItems([]);
-            } catch {}
-            setTimeout(() => {
-              window.location.href = redirectUrl;
-            }, 1500);
-          } else {
-            setOrderStatus({ success: "Order created successfully." });
-          }
-        }
+        // MTN Mobile Money payment processing
+        setOrderStatus({ 
+          success: `Order created successfully! Please send ${formatRWF(totalAmount)} RWF to *182*8*1*079559# and complete payment confirmation.` 
+        });
+        
+        // Clear cart after successful order creation
+        try {
+          if (isUserLoggedIn()) await clearCartServer();
+          else saveLocalCart([]);
+          setCartItems([]);
+        } catch {}
+        
+        // Store order details for reference
+        localStorage.setItem("pendingOrderId", String(orderId || ""));
+        localStorage.setItem("pendingOrderAmount", String(totalAmount));
+        localStorage.setItem("momoCode", "*182*8*1*079559#");
       } else if (orderResponse.status === 401) {
         const errorText = await orderResponse.text();
         console.error("Order creation 401 error response:", errorText);
@@ -543,16 +498,16 @@ const CheckoutPage = () => {
               </svg>
               <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
-            <p className="text-gray-600">Complete your order in 2 simple steps • 100% Secure Payment</p>
+            <p className="text-gray-600">Complete your order in 3 simple steps • MTN Mobile Money Payment</p>
           </div>
         </div>
         
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-4 md:space-x-8">
-            {[1, 2].map((step) => {
-              const stepNames = ['Delivery Information', 'Payment & Review'];
-              const stepDescriptions = ['Your contact & address', 'Confirm & pay'];
+          <div className="flex items-center justify-center space-x-2 md:space-x-4">
+            {[1, 2, 3].map((step) => {
+              const stepNames = ['Delivery Info', 'Payment', 'Confirm'];
+              const stepDescriptions = ['Contact & address', 'MTN Mobile Money', 'Payment details'];
               const isCompleted = currentStep > step;
               const isActive = currentStep === step;
               
@@ -560,7 +515,7 @@ const CheckoutPage = () => {
                 <div key={step} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all duration-300 shadow-lg
+                      w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 shadow-lg
                       ${isCompleted 
                         ? 'bg-green-500 text-white scale-105' 
                         : isActive 
@@ -587,8 +542,8 @@ const CheckoutPage = () => {
                       </span>
                     </div>
                   </div>
-                  {step < 2 && (
-                    <div className={`w-16 md:w-32 h-1 mx-4 rounded-full transition-all duration-300 ${
+                  {step < 3 && (
+                    <div className={`w-8 md:w-16 h-1 mx-2 rounded-full transition-all duration-300 ${
                       currentStep > step ? 'bg-green-500' : 'bg-gray-200'
                     }`} />
                   )}
@@ -883,48 +838,60 @@ const CheckoutPage = () => {
                     </div>
                   )}
                   
-                  {/* Step 2: Payment Method & Order Review */}
+                  {/* Step 2: MTN Mobile Money Payment */}
                   {currentStep === 2 && (
                     <div className="space-y-6 animate-fade-in">
                       <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-blue-700 mb-2">Payment & Review</h2>
-                        <p className="text-gray-600">Review your order and complete payment</p>
+                        <h2 className="text-2xl font-bold text-blue-700 mb-2">MTN Mobile Money Payment</h2>
+                        <p className="text-gray-600">Send money using MTN Mobile Money</p>
                       </div>
                       
-                      {/* Payment Method */}
-                      <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                          <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                            </svg>
+                      {/* MTN Payment Instructions */}
+                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-xl text-white shadow-lg">
+                        <div className="flex items-center justify-center mb-4">
+                          <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3" />
+                          <h3 className="text-xl font-bold">MTN Mobile Money</h3>
+                        </div>
+                        <div className="text-center">
+                          <div className="bg-white bg-opacity-20 rounded-lg p-4 mb-4">
+                            <div className="text-2xl font-bold mb-2">Amount to Send</div>
+                            <div className="text-3xl font-bold">{formatRWF(subtotal)} RWF</div>
                           </div>
-                          <span>Payment Method</span>
+                          <div className="bg-white bg-opacity-20 rounded-lg p-4">
+                            <div className="text-lg font-semibold mb-2">USSD Code</div>
+                            <div className="text-2xl font-mono font-bold bg-white bg-opacity-30 px-4 py-2 rounded-lg">
+                              *182*8*1*079559#
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Payment Instructions */}
+                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                        <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+                          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          How to Pay
                         </h3>
-                        <label className="flex items-center p-4 border-2 border-blue-500 bg-white rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="dpo"
-                            checked={paymentMethod === "dpo"}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="mr-4 w-5 h-5 text-blue-600 focus:ring-blue-500"
-                          />
-                          <div className="flex items-center flex-1 space-x-3">
-                            <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                              </svg>
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-bold text-gray-900 text-lg">DPO Payment Gateway</div>
-                              <div className="text-sm text-gray-600 mt-0.5">Secure payment with Visa, Mastercard, and Mobile Money</div>
-                            </div>
-                            <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
+                        <div className="space-y-3 text-sm text-blue-700">
+                          <div className="flex items-start">
+                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">1</span>
+                            <span>Dial <strong>*182*8*1*079559#</strong> on your phone</span>
                           </div>
-                        </label>
+                          <div className="flex items-start">
+                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">2</span>
+                            <span>Enter amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">3</span>
+                            <span>Enter your MTN Mobile Money PIN</span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">4</span>
+                            <span>Confirm the transaction</span>
+                          </div>
+                        </div>
                       </div>
                       
                       {/* Order Review */}
@@ -988,6 +955,132 @@ const CheckoutPage = () => {
                     </div>
                   )}
                   
+                  {/* Step 3: Payment Confirmation */}
+                  {currentStep === 3 && (
+                    <div className="space-y-6 animate-fade-in">
+                      <div className="text-center mb-6">
+                        <h2 className="text-2xl font-bold text-blue-700 mb-2">Payment Confirmation</h2>
+                        <p className="text-gray-600">Enter your payment details to complete the order</p>
+                      </div>
+                      
+                      {/* Payment Confirmation Form */}
+                      <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                        <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+                          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Payment Details
+                        </h3>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800 mb-2">
+                              Sender Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={senderName}
+                              onChange={(e) => {
+                                setSenderName(e.target.value);
+                                if (paymentErrors.senderName) {
+                                  setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
+                                }
+                              }}
+                              placeholder="Name of person who sent the money"
+                              className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
+                                paymentErrors.senderName 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : senderName.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                              }`}
+                            />
+                            {paymentErrors.senderName && (
+                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800 mb-2">
+                              Sender Phone Number <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="tel"
+                              value={senderPhone}
+                              onChange={(e) => {
+                                setSenderPhone(e.target.value);
+                                if (paymentErrors.senderPhone) {
+                                  setPaymentErrors(prev => ({ ...prev, senderPhone: undefined }));
+                                }
+                              }}
+                              placeholder="Phone number used to send money"
+                              className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
+                                paymentErrors.senderPhone 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : senderPhone.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                              }`}
+                            />
+                            {paymentErrors.senderPhone && (
+                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderPhone}</p>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800 mb-2">
+                              Payment Reference/Transaction ID <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={paymentReference}
+                              onChange={(e) => {
+                                setPaymentReference(e.target.value);
+                                if (paymentErrors.paymentReference) {
+                                  setPaymentErrors(prev => ({ ...prev, paymentReference: undefined }));
+                                }
+                              }}
+                              placeholder="Transaction ID from MTN Mobile Money"
+                              className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
+                                paymentErrors.paymentReference 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : paymentReference.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                              }`}
+                            />
+                            {paymentErrors.paymentReference && (
+                              <p className="mt-1 text-xs text-red-600">{paymentErrors.paymentReference}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Order Summary */}
+                      <div className="bg-blue-50 p-6 rounded-xl border-2 border-blue-300 shadow-sm">
+                        <h3 className="font-bold text-gray-900 mb-4 text-lg flex items-center">
+                          <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          Order Summary
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="bg-white rounded-lg p-3 flex justify-between items-center shadow-sm">
+                            <span className="text-gray-600">Total Amount</span>
+                            <span className="font-bold text-blue-600 text-lg">{formatRWF(subtotal)} RWF</span>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 flex justify-between items-center shadow-sm">
+                            <span className="text-gray-600">Payment Method</span>
+                            <span className="font-semibold text-gray-900 flex items-center">
+                              <img src="/mtn.jpg" alt="MTN" className="w-5 h-5 rounded mr-2" />
+                              MTN Mobile Money
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Navigation Buttons */}
                   <div className="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
                     <button
@@ -1012,7 +1105,7 @@ const CheckoutPage = () => {
                         onClick={handleNextStep}
                         className="group flex items-center px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                       >
-                        Continue to Payment
+                        {currentStep === 2 ? 'Continue to Confirmation' : 'Continue to Payment'}
                         <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
