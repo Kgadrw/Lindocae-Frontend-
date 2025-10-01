@@ -152,7 +152,8 @@ export const rwandaLocations: Province[] = [
                 name: "Gishushu",
                 villages: [
                   { id: "gishushu_village", name: "Gishushu" },
-                  { id: "rwandex", name: "Rwandex" }
+                  { id: "rwandex", name: "Rwandex" },
+                  { id: "gacuriro", name: "Gacuriro" }
                 ]
               },
               {
@@ -160,7 +161,52 @@ export const rwandaLocations: Province[] = [
                 name: "Remera",
                 villages: [
                   { id: "remera_village", name: "Remera" },
-                  { id: "kisimenti", name: "Kisimenti" }
+                  { id: "kisimenti", name: "Kisimenti" },
+                  { id: "kimihurura", name: "Kimihurura" }
+                ]
+              },
+              {
+                id: "rukiri",
+                name: "Rukiri",
+                villages: [
+                  { id: "rukiri_village", name: "Rukiri" },
+                  { id: "karembure", name: "Karembure" }
+                ]
+              }
+            ]
+          },
+          {
+            id: "rusororo",
+            name: "Rusororo",
+            cells: [
+              {
+                id: "rusororo_cell",
+                name: "Rusororo",
+                villages: [
+                  { id: "rusororo_village", name: "Rusororo" },
+                  { id: "rwimbogo", name: "Rwimbogo" }
+                ]
+              },
+              {
+                id: "kabuga",
+                name: "Kabuga",
+                villages: [
+                  { id: "kabuga_village", name: "Kabuga" },
+                  { id: "gahanga", name: "Gahanga" }
+                ]
+              }
+            ]
+          },
+          {
+            id: "gikomero",
+            name: "Gikomero",
+            cells: [
+              {
+                id: "gikomero_cell",
+                name: "Gikomero",
+                villages: [
+                  { id: "gikomero_village", name: "Gikomero" },
+                  { id: "cyeru", name: "Cyeru" }
                 ]
               }
             ]
@@ -180,7 +226,16 @@ export const rwandaLocations: Province[] = [
                 name: "Gahanga",
                 villages: [
                   { id: "gahanga_village", name: "Gahanga" },
-                  { id: "busanza", name: "Busanza" }
+                  { id: "busanza", name: "Busanza" },
+                  { id: "rebero", name: "Rebero" }
+                ]
+              },
+              {
+                id: "karembure",
+                name: "Karembure",
+                villages: [
+                  { id: "karembure_village", name: "Karembure" },
+                  { id: "gaseke", name: "Gaseke" }
                 ]
               }
             ]
@@ -194,7 +249,16 @@ export const rwandaLocations: Province[] = [
                 name: "Gatenga",
                 villages: [
                   { id: "gatenga_village", name: "Gatenga" },
-                  { id: "kagarama", name: "Kagarama" }
+                  { id: "kagarama", name: "Kagarama" },
+                  { id: "kabeza", name: "Kabeza" }
+                ]
+              },
+              {
+                id: "kigarama",
+                name: "Kigarama",
+                villages: [
+                  { id: "kigarama_village", name: "Kigarama" },
+                  { id: "kimironko", name: "Kimironko" }
                 ]
               }
             ]
@@ -208,7 +272,16 @@ export const rwandaLocations: Province[] = [
                 name: "Gikondo",
                 villages: [
                   { id: "gikondo_village", name: "Gikondo" },
-                  { id: "sonatube", name: "Sonatube" }
+                  { id: "sonatube", name: "Sonatube" },
+                  { id: "nyenyeri", name: "Nyenyeri" }
+                ]
+              },
+              {
+                id: "nyanza",
+                name: "Nyanza",
+                villages: [
+                  { id: "nyanza_village", name: "Nyanza" },
+                  { id: "rilima", name: "Rilima" }
                 ]
               }
             ]

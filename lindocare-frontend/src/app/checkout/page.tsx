@@ -218,13 +218,19 @@ const CheckoutPage = () => {
     0
   );
 
-  // Step validation functions
+  // Step validation functions - Now simplified since name/email are auto-populated
   const validateCustomerInfo = () => {
     const errors: {name?: string, email?: string, phone?: string} = {};
-    if (!customerName.trim()) errors.name = "Name is required";
-    if (!customerEmail.trim()) errors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(customerEmail)) errors.email = "Invalid email format";
+    
+    // Validate phone number (only required field for logged-in users)
     if (!customerPhone.trim()) errors.phone = "Phone number is required";
+    
+    // For guest users, ensure name and email are present
+    if (!isUserLoggedIn()) {
+      if (!customerName.trim()) errors.name = "Name is required";
+      if (!customerEmail.trim()) errors.email = "Email is required";
+      else if (!/\S+@\S+\.\S+/.test(customerEmail)) errors.email = "Invalid email format";
+    }
     
     setCustomerErrors(errors);
     return Object.keys(errors).length === 0;
@@ -715,216 +721,154 @@ const CheckoutPage = () => {
             <div className="lg:w-3/5 p-6 bg-white">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout}>
-                  {/* Step 1: Customer Information & Delivery Address */}
+                  {/* Step 1: Phone & Delivery Address */}
                   {currentStep === 1 && (
-                    <div className="space-y-8 animate-fade-in">
-                      {/* Customer Information Section */}
-                      <div>
-                        <div className="text-center mb-6">
-                          <h2 className="text-2xl font-bold text-blue-700 mb-2">Delivery Information</h2>
-                          <p className="text-gray-600">
-                            {isUserLoggedIn() 
-                              ? "We've pre-filled your account information" 
-                              : "Enter your contact and delivery details"
-                            }
-                          </p>
-                          {isUserLoggedIn() && !isLoadingUserInfo && (
-                            <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-                              <div className="flex items-start">
-                                <svg className="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    <div className="space-y-6 animate-fade-in">
+                      {/* Header */}
+                      <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold text-blue-700 mb-2">Delivery Information</h2>
+                        {isUserLoggedIn() && customerName && customerEmail ? (
+                          <div className="mt-3 inline-block">
+                            <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-300 rounded-xl p-3 px-5">
+                              <div className="flex items-center justify-center text-sm">
+                                <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
-                                <p className="text-sm text-blue-700">
-                                  <strong>Info saved!</strong> Name and email fetched from your account. You can edit them if needed.
-                                </p>
+                                <span className="text-gray-700">
+                                  <strong className="text-green-700">Delivering to:</strong> {customerName} • {customerEmail}
+                                </span>
                               </div>
                             </div>
-                          )}
-                        </div>
-                        
-                        <div className="mb-8 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-5 flex items-center">
-                            <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <span>Contact Information</span>
-                          </h3>
+                          </div>
+                        ) : (
+                          <p className="text-gray-600">Enter your contact details and delivery address</p>
+                        )}
+                      </div>
                       
+                      {/* Guest User Fields - Name & Email */}
+                      {!isUserLoggedIn() && (
+                        <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5">
+                          <div className="flex items-start mb-4">
+                            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <p className="text-sm text-yellow-800">
+                              <strong>Guest Checkout:</strong> Please provide your contact information below
+                            </p>
+                          </div>
                           <div className="grid md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-800 mb-2">
                                 Full Name <span className="text-red-500">*</span>
-                                {isLoadingUserInfo && (
-                                  <span className="text-blue-500 text-xs ml-2">(Loading from account...)</span>
-                                )}
                               </label>
-                              <div className="relative">
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                  </svg>
-                                </div>
-                                <input
-                                  type="text"
-                                  value={customerName}
-                                  onChange={(e) => {
-                                    setCustomerName(e.target.value);
-                                    if (customerErrors.name) {
-                                      setCustomerErrors(prev => ({ ...prev, name: undefined }));
-                                    }
-                                  }}
-                                  placeholder={isLoadingUserInfo ? "Loading..." : "John Doe"}
-                                  disabled={isLoadingUserInfo}
-                                  className={`w-full pl-10 pr-10 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                                    isLoadingUserInfo 
-                                      ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' 
-                                      : customerErrors.name 
-                                        ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
-                                        : customerName.trim()
-                                          ? 'border-green-400 bg-green-50 focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                          : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                                  }`}
-                                />
-                                {customerName.trim() && !customerErrors.name && (
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                                {customerErrors.name && (
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
+                              <input
+                                type="text"
+                                value={customerName}
+                                onChange={(e) => {
+                                  setCustomerName(e.target.value);
+                                  if (customerErrors.name) {
+                                    setCustomerErrors(prev => ({ ...prev, name: undefined }));
+                                  }
+                                }}
+                                placeholder="John Doe"
+                                className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
+                                  customerErrors.name 
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                    : customerName.trim()
+                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
+                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                }`}
+                              />
                               {customerErrors.name && (
-                                <div className="mt-2 flex items-center text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                                  <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                  </svg>
-                                  {customerErrors.name}
-                                </div>
+                                <p className="mt-1 text-xs text-red-600">{customerErrors.name}</p>
                               )}
                             </div>
-                            
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-semibold text-gray-800 mb-2">
                                 Email Address <span className="text-red-500">*</span>
-                                {isLoadingUserInfo && (
-                                  <span className="text-blue-500 text-xs ml-2">(Loading from account...)</span>
-                                )}
                               </label>
-                              <div className="relative">
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                  </svg>
-                                </div>
-                                <input
-                                  type="email"
-                                  value={customerEmail}
-                                  onChange={(e) => {
-                                    setCustomerEmail(e.target.value);
-                                    if (customerErrors.email) {
-                                      setCustomerErrors(prev => ({ ...prev, email: undefined }));
-                                    }
-                                  }}
-                                  placeholder={isLoadingUserInfo ? "Loading..." : "customer@example.com"}
-                                  disabled={isLoadingUserInfo}
-                                  className={`w-full pl-10 pr-10 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                                    isLoadingUserInfo 
-                                      ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' 
-                                      : customerErrors.email 
-                                        ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
-                                        : customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail)
-                                          ? 'border-green-400 bg-green-50 focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                          : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                                  }`}
-                                />
-                                {customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail) && !customerErrors.email && (
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                                {customerErrors.email && (
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
+                              <input
+                                type="email"
+                                value={customerEmail}
+                                onChange={(e) => {
+                                  setCustomerEmail(e.target.value);
+                                  if (customerErrors.email) {
+                                    setCustomerErrors(prev => ({ ...prev, email: undefined }));
+                                  }
+                                }}
+                                placeholder="john@example.com"
+                                className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
+                                  customerErrors.email 
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                    : customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail)
+                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
+                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                }`}
+                              />
                               {customerErrors.email && (
-                                <div className="mt-2 flex items-center text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                                  <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                  </svg>
-                                  {customerErrors.email}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Phone Number <span className="text-red-500">*</span>
-                              </label>
-                              <div className="relative">
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                  </svg>
-                                </div>
-                                <input
-                                  type="tel"
-                                  value={customerPhone}
-                                  onChange={(e) => {
-                                    setCustomerPhone(e.target.value);
-                                    if (customerErrors.phone) {
-                                      setCustomerErrors(prev => ({ ...prev, phone: undefined }));
-                                    }
-                                  }}
-                                  placeholder="+2507XXXXXXXX"
-                                  className={`w-full pl-10 pr-10 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                                    customerErrors.phone 
-                                      ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
-                                      : customerPhone.trim()
-                                        ? 'border-green-400 bg-green-50 focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                        : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                                  }`}
-                                />
-                                {customerPhone.trim() && !customerErrors.phone && (
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                                {customerErrors.phone && (
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-                              {customerErrors.phone && (
-                                <div className="mt-2 flex items-center text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                                  <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                  </svg>
-                                  {customerErrors.phone}
-                                </div>
+                                <p className="mt-1 text-xs text-red-600">{customerErrors.email}</p>
                               )}
                             </div>
                           </div>
                         </div>
+                      )}
+                      
+                      {/* Phone Number - Compact */}
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-5 rounded-xl border border-blue-200">
+                        <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                          <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          Phone Number <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                          </div>
+                          <input
+                            type="tel"
+                            value={customerPhone}
+                            onChange={(e) => {
+                              setCustomerPhone(e.target.value);
+                              if (customerErrors.phone) {
+                                setCustomerErrors(prev => ({ ...prev, phone: undefined }));
+                              }
+                            }}
+                            placeholder="e.g., +250788123456"
+                            className={`w-full pl-12 pr-12 py-3.5 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
+                              customerErrors.phone 
+                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                : customerPhone.trim()
+                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
+                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                            }`}
+                          />
+                          {customerPhone.trim() && !customerErrors.phone && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          {customerErrors.phone && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        {customerErrors.phone && (
+                          <div className="mt-2 flex items-center text-sm text-red-600 bg-red-100 p-2 rounded-lg">
+                            <svg className="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            {customerErrors.phone}
+                          </div>
+                        )}
+                      </div>
                         
                         {/* Delivery Address Section */}
                         <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
@@ -946,7 +890,6 @@ const CheckoutPage = () => {
                             disabled={isSubmitting}
                           />
                         </div>
-                      </div>
                     </div>
                   )}
                   
