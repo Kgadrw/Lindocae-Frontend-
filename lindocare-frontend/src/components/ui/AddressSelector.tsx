@@ -173,28 +173,31 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="p-2 bg-blue-50 rounded-lg border border-blue-600">
-          <LocationIcon />
+      <div className="flex items-center space-x-2 mb-3">
+        <div className="p-1.5 bg-blue-100 rounded">
+          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Delivery Address</h3>
-          <p className="text-sm text-gray-600">Select your complete address for accurate delivery</p>
+          <h3 className="text-sm font-semibold text-gray-900">Delivery Address</h3>
+          <p className="text-xs text-gray-600">Select your location details</p>
         </div>
       </div>
 
-      {/* Address selection grid */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 gap-4   transition-all duration-300 ${isAnimating ? 'opacity-95' : 'opacity-100'}`}>
+      {/* Address selection grid - Compact with 2 columns */}
+      <div className={`grid grid-cols-2 gap-3 transition-all duration-300 ${isAnimating ? 'opacity-95' : 'opacity-100'}`}>
         {/* Province */}
-        <div className="md:col-span-2 ">
+        <div>
           <Select
             label="Province"
             options={provinces.map(p => ({ id: p.id, name: p.name }))}
             value={value.province}
             onChange={(val) => handleFieldChange('province', val)}
-            placeholder="Select your province"
+            placeholder="Select province"
             required={required}
             disabled={disabled}
             error={errors.province}
@@ -204,82 +207,90 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
         </div>
 
         {/* District */}
-        <div className="md:col-span-2">
+        <div>
           <Select
             label="District"
             options={districts.map(d => ({ id: d.id, name: d.name }))}
             value={value.district}
             onChange={(val) => handleFieldChange('district', val)}
-            placeholder={value.province ? "Select your district" : "Select province first"}
+            placeholder={value.province ? "Select district" : "Province first"}
             required={required}
             disabled={disabled || !value.province}
             error={errors.district}
             icon={<BuildingIcon />}
-            emptyMessage={value.province ? "No districts available" : "Please select a province first"}
+            emptyMessage={value.province ? "No districts" : "Select province first"}
           />
         </div>
 
         {/* Sector */}
-        <Select
-          label="Sector"
-          options={sectors.map(s => ({ id: s.id, name: s.name }))}
-          value={value.sector}
-          onChange={(val) => handleFieldChange('sector', val)}
-          placeholder={value.district ? "Select your sector" : "Select district first"}
-          required={required}
-          disabled={disabled || !value.district}
-          error={errors.sector}
-          icon={<MapIcon />}
-          emptyMessage={value.district ? "No sectors available" : "Please select a district first"}
-        />
+        <div>
+          <Select
+            label="Sector"
+            options={sectors.map(s => ({ id: s.id, name: s.name }))}
+            value={value.sector}
+            onChange={(val) => handleFieldChange('sector', val)}
+            placeholder={value.district ? "Select sector" : "District first"}
+            required={required}
+            disabled={disabled || !value.district}
+            error={errors.sector}
+            icon={<MapIcon />}
+            emptyMessage={value.district ? "No sectors" : "Select district first"}
+          />
+        </div>
 
         {/* Cell */}
-        <Select
-          label="Cell"
-          options={cells.map(c => ({ id: c.id, name: c.name }))}
-          value={value.cell}
-          onChange={(val) => handleFieldChange('cell', val)}
-          placeholder={value.sector ? "Select your cell" : "Select sector first"}
-          required={required}
-          disabled={disabled || !value.sector}
-          error={errors.cell}
-          icon={<BuildingIcon />}
-          emptyMessage={value.sector ? "No cells available" : "Please select a sector first"}
-        />
+        <div>
+          <Select
+            label="Cell"
+            options={cells.map(c => ({ id: c.id, name: c.name }))}
+            value={value.cell}
+            onChange={(val) => handleFieldChange('cell', val)}
+            placeholder={value.sector ? "Select cell" : "Sector first"}
+            required={required}
+            disabled={disabled || !value.sector}
+            error={errors.cell}
+            icon={<BuildingIcon />}
+            emptyMessage={value.sector ? "No cells" : "Select sector first"}
+          />
+        </div>
 
         {/* Village */}
-        <Select
-          label="Village"
-          options={villages.map(v => ({ id: v.id, name: v.name }))}
-          value={value.village}
-          onChange={(val) => handleFieldChange('village', val)}
-          placeholder={value.cell ? "Select your village" : "Select cell first"}
-          required={required}
-          disabled={disabled || !value.cell}
-          error={errors.village}
-          icon={<HomeIcon />}
-          emptyMessage={value.cell ? "No villages available" : "Please select a cell first"}
-        />
+        <div>
+          <Select
+            label="Village"
+            options={villages.map(v => ({ id: v.id, name: v.name }))}
+            value={value.village}
+            onChange={(val) => handleFieldChange('village', val)}
+            placeholder={value.cell ? "Select village" : "Cell first"}
+            required={required}
+            disabled={disabled || !value.cell}
+            error={errors.village}
+            icon={<HomeIcon />}
+            emptyMessage={value.cell ? "No villages" : "Select cell first"}
+          />
+        </div>
 
         {/* Street - Traditional input with styling to match Select component */}
-        <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1.5">
             Street Address
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <div className="relative">
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <RoadIcon />
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
             </div>
             <input
               type="text"
               value={value.street}
               onChange={(e) => handleFieldChange('street', e.target.value)}
-              placeholder="Enter your street address"
+              placeholder="Street name"
               required={required}
               disabled={disabled}
               className={`
-                w-full pl-12 pr-4 py-3 
+                w-full pl-9 pr-3 py-2 text-sm
                 border-2 rounded-lg transition-all duration-200
                 ${disabled 
                   ? 'bg-gray-100 border-gray-200 cursor-not-allowed text-gray-400' 
@@ -287,14 +298,14 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
                     ? 'border-red-300 bg-white hover:border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
                     : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                 }
-                placeholder-gray-400 text-gray-900 font-medium
+                placeholder-gray-400 text-gray-900
                 focus:outline-none
               `}
             />
           </div>
           {errors.street && (
-            <p className="mt-2 text-sm text-red-600 flex items-center">
-              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <p className="mt-1 text-xs text-red-600 flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               {errors.street}
@@ -303,40 +314,40 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
         </div>
       </div>
 
-      {/* Progress indicator */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg border-blue-600 border">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Address Completion</span>
-          <span className="text-sm text-gray-500">
+      {/* Progress indicator - Compact */}
+      <div className="mt-3 p-2 bg-gray-100 rounded border border-gray-300">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-medium text-gray-700">Progress</span>
+          <span className="text-xs text-gray-600">
             {Object.values(value).filter(v => v.trim()).length}/6 fields
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
+        <div className="w-full bg-gray-300 rounded-full h-1">
           <div 
-            className="bg-gradient-to-r from-blue-600 to-blue-700 h-1.5 rounded-full transition-all duration-500 ease-out"
+            className="bg-blue-600 h-1 rounded-full transition-all duration-500 ease-out"
             style={{ 
               width: `${(Object.values(value).filter(v => v.trim()).length / 6) * 100}%` 
             }}
           ></div>
         </div>
         {Object.values(value).filter(v => v.trim()).length === 6 && (
-          <div className="mt-2 flex items-center text-sm text-green-600">
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <div className="mt-1.5 flex items-center text-xs text-green-600">
+            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
-            Address completed successfully!
+            Complete!
           </div>
         )}
       </div>
 
-      {/* Address preview */}
+      {/* Address preview - Compact */}
       {(value.province || value.district || value.sector || value.cell || value.village || value.street) && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-600 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-600 mb-2">Address Preview:</h4>
-          <p className="text-sm text-gray-800">
+        <div className="mt-3 p-2 bg-blue-50 border border-blue-400 rounded">
+          <h4 className="text-xs font-medium text-blue-700 mb-1">Preview:</h4>
+          <p className="text-xs text-gray-700">
             {[value.street, value.village, value.cell, value.sector, value.district, value.province]
               .filter(Boolean)
-              .join(', ') || 'Please fill in your address details above'}
+              .join(', ') || 'Fill address above'}
           </p>
         </div>
       )}
