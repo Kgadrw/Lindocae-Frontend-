@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, CheckCircle, XCircle, UserPlus } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, XCircle, UserPlus, ArrowLeft } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
 
 const RegisterPage: React.FC = () => {
@@ -71,7 +72,7 @@ const RegisterPage: React.FC = () => {
   };
 
   // Clear address errors when address data changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (Object.keys(addressErrors).length > 0) {
       setAddressErrors({});
     }
@@ -93,7 +94,7 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
     
     try {
-      // Prepare registration data with address
+      // Prepare registration data with complete shipping address structure
       const registrationData = {
         firstName,
         lastName,
@@ -112,7 +113,10 @@ const RegisterPage: React.FC = () => {
           customerName: `${firstName} ${lastName}`,
           customerEmail: email,
           customerPhone: phone
-        }
+        },
+        customerEmail: email,
+        customerPhone: phone,
+        customerName: `${firstName} ${lastName}`
       };
 
       const response = await fetch("https://lindo-project.onrender.com/user/Register", {
@@ -320,14 +324,24 @@ const RegisterPage: React.FC = () => {
             <div className="text-center pt-4">
               <p className="text-gray-600">
                 Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => router.push("/login")}
+                <Link
+                  href="/login"
                   className="text-blue-600 hover:text-blue-700 font-semibold"
                 >
                   Sign in here
-                </button>
+                </Link>
               </p>
+            </div>
+
+            {/* Back to Home */}
+            <div className="text-center pt-2">
+              <Link
+                href="/"
+                className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back to Home
+              </Link>
             </div>
           </form>
 

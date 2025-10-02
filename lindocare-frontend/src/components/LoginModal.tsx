@@ -303,10 +303,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
             type="button"
             className="text-blue-600 hover:underline text-sm font-semibold"
             onClick={() => {
+              onClose();
               if (isRegister) {
-                setIsRegister(false);
+                window.location.href = '/login';
               } else {
-                onClose();
                 window.location.href = '/register';
               }
             }}
