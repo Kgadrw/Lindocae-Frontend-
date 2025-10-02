@@ -32,7 +32,7 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("mtn");
+  const [paymentMethod, setPaymentMethod] = useState("dpo");
   
   // Step management - Reorganized flow: Payment → Address → Confirmation
   const [currentStep, setCurrentStep] = useState(1);
@@ -456,7 +456,7 @@ const CheckoutPage = () => {
         };
       });
 
-      // Prepare shipping address in the format backend expects
+      // Prepare shipping address in the format backend expects (exact API spec)
       const shippingAddress = {
   province: addressData.province,
   district: addressData.district,
@@ -469,17 +469,15 @@ const CheckoutPage = () => {
         customerPhone: customerPhone.trim(),
       };
 
-      // Prepare order data matching backend schema
+      // Prepare order data matching exact backend API specification
       const orderData = {
-        paymentMethod: "mobile_money", // Backend expects this format
+        paymentMethod: paymentMethod || "dpo", // Use selected payment method or default to DPO
         shippingAddress: shippingAddress,
-  items: orderItems,
-        totalAmount: Number(subtotal), // Ensure it's a number
-        status: "pending",
-        customerName: customerName.trim(),
+        items: orderItems, // Include items array
+        totalAmount: Number(subtotal), // Include total amount
         customerEmail: customerEmail.trim(),
         customerPhone: customerPhone.trim(),
-  momoCode: "*182*8*1*079559#"
+        customerName: customerName.trim()
 };
 
       console.log("Order data being sent to API (formatted):", orderData);
@@ -536,9 +534,13 @@ const CheckoutPage = () => {
         const firstName = firstNameRaw || "Customer";
         const lastName = restName.join(" ") || firstName;
 
-        // MTN Mobile Money payment processing
+        // Payment processing success message
+        const paymentMessage = paymentMethod === "dpo" 
+          ? `Order created successfully! You will be redirected to DPO payment gateway to complete your payment of ${formatRWF(subtotal)} RWF.`
+          : `Order created successfully! Please send ${formatRWF(subtotal)} RWF to *182*8*1*079559# and complete payment confirmation.`;
+        
         setOrderStatus({ 
-          success: `Order created successfully! Please send ${formatRWF(subtotal)} RWF to *182*8*1*079559# and complete payment confirmation.` 
+          success: paymentMessage
         });
         
         // Clear cart after successful order creation
@@ -551,7 +553,10 @@ const CheckoutPage = () => {
         // Store order details for reference
         localStorage.setItem("pendingOrderId", String(orderId || ""));
         localStorage.setItem("pendingOrderAmount", String(subtotal));
+        localStorage.setItem("paymentMethod", paymentMethod || "dpo");
+        if (paymentMethod === "mtn") {
         localStorage.setItem("momoCode", "*182*8*1*079559#");
+        }
       } else if (orderResponse.status === 401) {
         const errorText = await orderResponse.text();
         console.error("Order creation 401 error response:", errorText);
@@ -870,44 +875,86 @@ const CheckoutPage = () => {
                         <p className="text-gray-600 text-sm sm:text-base">Select how you'd like to pay for your order</p>
                       </div>
                       
-                      {/* MTN Mobile Money Payment Card - Compact */}
-                      <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white shadow-lg border-2 border-white cursor-pointer" onClick={() => setPaymentMethod("mtn")}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center">
-                            <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 sm:mr-3 border border-white shadow-sm" />
-                            <div>
-                              <h3 className="text-base sm:text-lg font-bold">MTN Mobile Money</h3>
-                              <p className="text-yellow-100 text-xs sm:text-sm">Fast & Secure Payment</p>
-                            </div>
-                          </div>
-                          <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
-                            {paymentMethod === "mtn" && (
-                              <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                            )}
+                      {/* Payment Method Selection */}
+                      <div className="space-y-3">
+                        {/* DPO Payment Card */}
+                        <div className="bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white shadow-lg border-2 border-white cursor-pointer hover:shadow-xl transition-all" onClick={() => setPaymentMethod("dpo")}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 sm:mr-3 border border-white shadow-sm bg-white flex items-center justify-center">
+                                <span className="text-blue-600 font-bold text-sm sm:text-base">DPO</span>
+                              </div>
+                              <div>
+                                <h3 className="text-base sm:text-lg font-bold">DPO Payment Gateway</h3>
+                                <p className="text-blue-100 text-xs sm:text-sm">Secure Online Payment</p>
                               </div>
                             </div>
-                        
-                        <div className="bg-white rounded-lg p-2 sm:p-3 shadow-lg">
-                          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                            <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "dpo" ? "bg-white" : ""}`}>
+                              {paymentMethod === "dpo" && (
+                                <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                              </div>
+                            </div>
+                          
+                          <div className="bg-white rounded-lg p-2 sm:p-3 shadow-lg">
                             <div className="text-center">
                               <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
                               <div className="text-lg sm:text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
                           </div>
-                            <div className="text-center">
-                              <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
-                              <div className="text-sm sm:text-lg font-mono font-bold bg-blue-50 px-1 sm:px-2 py-1 rounded text-blue-600 border border-blue-200">
-                                *182*8*1*079559#
+                          </div>
+                          
+                          {paymentMethod === "dpo" && (
+                            <div className="mt-3 flex items-center justify-center">
+                              <div className="bg-white bg-opacity-20 rounded-lg px-3 py-1">
+                                <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
+                              </div>
+                            </div>
+                        )}
+                      </div>
+                      
+                        {/* MTN Mobile Money Payment Card - Compact */}
+                        <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white shadow-lg border-2 border-white cursor-pointer hover:shadow-xl transition-all" onClick={() => setPaymentMethod("mtn")}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 sm:mr-3 border border-white shadow-sm" />
+                              <div>
+                                <h3 className="text-base sm:text-lg font-bold">MTN Mobile Money</h3>
+                                <p className="text-yellow-100 text-xs sm:text-sm">USSD Payment</p>
+                              </div>
+                            </div>
+                            <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
+                              {paymentMethod === "mtn" && (
+                                <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                        
+                          <div className="bg-white rounded-lg p-2 sm:p-3 shadow-lg">
+                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                              <div className="text-center">
+                                <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
+                                <div className="text-lg sm:text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
+                            </div>
+                              <div className="text-center">
+                                <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
+                                <div className="text-sm sm:text-lg font-mono font-bold bg-blue-50 px-1 sm:px-2 py-1 rounded text-blue-600 border border-blue-200">
+                                  *182*8*1*079559#
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="mt-3 flex items-center justify-center">
-                          <div className="bg-black bg-opacity-20 rounded-lg px-3 py-1">
-                            <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
-                          </div>
+                          
+                          {paymentMethod === "mtn" && (
+                            <div className="mt-3 flex items-center justify-center">
+                              <div className="bg-black bg-opacity-20 rounded-lg px-3 py-1">
+                                <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
