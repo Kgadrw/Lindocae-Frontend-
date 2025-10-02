@@ -844,24 +844,7 @@ const CheckoutPage = () => {
                       </div>
                       
                       {/* MTN Payment Instructions */}
-                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-xl text-white shadow-lg">
-                        <div className="flex items-center justify-center mb-4">
-                          <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3" />
-                          <h3 className="text-xl font-bold">MTN Mobile Money</h3>
-                        </div>
-                        <div className="text-center">
-                          <div className="bg-white bg-opacity-20 rounded-lg p-4 mb-4">
-                            <div className="text-2xl font-bold mb-2">Amount to Send</div>
-                            <div className="text-3xl font-bold">{formatRWF(subtotal)} RWF</div>
-                          </div>
-                          <div className="bg-white bg-opacity-20 rounded-lg p-4">
-                            <div className="text-lg font-semibold mb-2">USSD Code</div>
-                            <div className="text-2xl font-mono font-bold bg-white bg-opacity-30 px-4 py-2 rounded-lg">
-                              *182*8*1*079559#
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      
                       
                       {/* Payment Instructions */}
                       <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
