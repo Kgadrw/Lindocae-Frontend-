@@ -302,7 +302,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
           <button
             type="button"
             className="text-blue-600 hover:underline text-sm font-semibold"
-            onClick={() => setIsRegister(v => !v)}
+            onClick={() => {
+              if (isRegister) {
+                setIsRegister(false);
+              } else {
+                onClose();
+                window.location.href = '/register';
+              }
+            }}
           >
             {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
           </button>

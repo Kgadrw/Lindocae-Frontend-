@@ -228,10 +228,8 @@ const LoginPage: React.FC = () => {
               <User size={16} className="inline mr-2" /> Sign In
             </button>
             <button
-              onClick={() => setActiveTab("register")}
-              className={`flex-1 py-3 px-4 rounded-md font-semibold text-sm transition-all ${
-                activeTab === "register" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
-              }`}
+              onClick={() => router.push("/register")}
+              className="flex-1 py-3 px-4 rounded-md font-semibold text-sm transition-all text-gray-600 hover:text-gray-800"
             >
               <UserPlus size={16} className="inline mr-2" /> Create Account
             </button>

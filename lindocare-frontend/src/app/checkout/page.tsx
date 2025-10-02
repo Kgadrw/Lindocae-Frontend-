@@ -15,7 +15,6 @@ import {
 import { normalizeImageUrl } from "../../utils/image";
 import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
 import { getUserInfo } from "../../utils/userInfo";
-import { storeOrderDetails } from "../../utils/dpoVerification";
 
 interface Product {
   id: string | number;
@@ -33,7 +32,8 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("momo");
+  // Single payment method - no selection needed
+  const paymentMethod = "momo";
 
   // Address data using the new structure
   const [addressData, setAddressData] = useState<AddressData>({
@@ -370,89 +370,20 @@ const CheckoutPage = () => {
         console.warn("Failed to clear cart:", error);
       }
 
-      // Handle payment based on selected method
-      if (paymentMethod === "dpo") {
-        // Step 2: Initialize DPO Payment
-        const firstName = customerName.split(' ')[0] || customerName;
-        const lastName = customerName.split(' ').slice(1).join(' ') || firstName;
-        
-        const dpoData = {
-          orderId: orderId,
-          totalAmount: subtotal,
-          currency: "RWF",
-          email: customerEmail,
-          phone: customerPhone,
-          firstName: firstName,
-          lastName: lastName,
-          serviceDescription: `Payment for order #${orderId}`,
-          callbackUrl: `${window.location.origin}/payment-success`
-        };
-
-        console.log("Initializing DPO payment:", dpoData);
-
-        const dpoResponse = await fetch(
-          "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
-          {
-            method: "POST",
-            headers: {
-              'accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(dpoData),
-          }
-        );
-
-        console.log("DPO response status:", dpoResponse.status);
-
-        if (dpoResponse.ok) {
-          const dpoResult = await dpoResponse.json();
-          console.log("DPO payment initialized:", dpoResult);
-
-          // Store order details for verification
-          storeOrderDetails(String(orderId || ''), subtotal, dpoResult.token);
-          
-          // Redirect to DPO payment page
-          if (dpoResult.paymentUrl) {
-            window.location.href = dpoResult.paymentUrl;
-          } else {
-        setOrderStatus({
-              success: `Order created successfully! Order ID: ${orderId}. Please complete payment.` 
-        });
-          }
-      } else {
-          // Handle DPO initialization error
-          let dpoErrorData: any = {};
-          let dpoResponseText = "";
-          try {
-            dpoResponseText = await dpoResponse.text();
-            if (dpoResponseText) {
-              dpoErrorData = JSON.parse(dpoResponseText);
-          }
-        } catch (parseError) {
-            dpoErrorData = { message: dpoResponseText || "Unknown error" };
-          }
-
-          console.error("DPO initialization error:", dpoResponse.status, dpoErrorData);
-        setOrderStatus({
-            error: `Order created but payment initialization failed: ${dpoErrorData.message || 'Unknown error'}. Please contact support.`,
-          });
-        }
-      } else {
-        // MTN Mobile Money - Simplified checkout with address only
-        setOrderStatus({ 
-          success: `Order completed successfully! Order ID: ${orderId}. Your order has been processed and will be delivered to the provided address. You'll receive confirmation via email/SMS.` 
-        });
-        
-        // Store order details for reference
-        localStorage.setItem("pendingOrderId", String(orderId || ""));
-        localStorage.setItem("pendingOrderAmount", String(subtotal));
-        localStorage.setItem("momoCode", "*182*8*1*079559#");
-        
-        // Redirect to success page after a delay for MTN payments
-        setTimeout(() => {
-          router.push('/payment-success?method=momo&orderId=' + orderId);
-        }, 3000);
-      }
+      // MTN Mobile Money - Simplified checkout
+      setOrderStatus({ 
+        success: `Order completed successfully! Order ID: ${orderId}. Your order has been processed and will be delivered to the provided address. You'll receive confirmation via email/SMS.` 
+      });
+      
+      // Store order details for reference
+      localStorage.setItem("pendingOrderId", String(orderId || ""));
+      localStorage.setItem("pendingOrderAmount", String(subtotal));
+      localStorage.setItem("momoCode", "*182*8*1*079559#");
+      
+      // Redirect to success page after a delay for MTN payments
+      setTimeout(() => {
+        router.push('/payment-success?method=momo&orderId=' + orderId);
+      }, 3000);
     } catch (err) {
       console.error("Checkout error:", err);
       setOrderStatus({ error: "Network error. Please try again." });
@@ -482,7 +413,7 @@ const CheckoutPage = () => {
               </svg>
               <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
-            <p className="text-gray-600">Complete your order with your preferred payment method</p>
+            <p className="text-gray-600">Complete your order with MTN Mobile Money payment</p>
             {!isUserLoggedIn() && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-700">
@@ -743,120 +674,58 @@ const CheckoutPage = () => {
                   <div className="bg-green-50 p-6 rounded-xl border border-green-200">
                     <h2 className="text-xl font-bold text-green-700 mb-4 flex items-center">
                       <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                       Payment Method
                     </h2>
-                    <div className="space-y-4">
-                      {/* MTN Mobile Money Option */}
-                      <label className="flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-green-100 transition-colors">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="momo"
-                          checked={paymentMethod === "momo"}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center">
-                            <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 rounded mr-3" />
-                            <div>
-                              <div className="font-semibold text-gray-900">MTN Mobile Money</div>
-                              <div className="text-sm text-gray-600">Manual payment via USSD</div>
+                    
+                    {/* Single Payment Method Display */}
+                    <div className="flex items-center p-4 bg-white border-2 border-green-300 rounded-xl">
+                      <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded mr-4" />
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 text-lg">MTN Mobile Money</div>
+                        <div className="text-sm text-gray-600">Quick and secure payment</div>
                       </div>
-                            {paymentMethod === "momo" && (
-                              <span className="ml-auto px-2 py-1 bg-green-600 text-white text-xs rounded-full">Selected</span>
-                            )}
-                          </div>
-                        </div>
-                      </label>
-
-                      {/* DPO Payment Option */}
-                      <label className="flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-green-100 transition-colors">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="dpo"
-                          checked={paymentMethod === "dpo"}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
-                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-gray-900">DPO Payment</div>
-                              <div className="text-sm text-gray-600">Online payment gateway</div>
-                            </div>
-                            {paymentMethod === "dpo" && (
-                              <span className="ml-auto px-2 py-1 bg-green-600 text-white text-xs rounded-full">Selected</span>
-                            )}
-                          </div>
-                        </div>
-                      </label>
-                      
-                      {/* Payment Method Info */}
-                      {paymentMethod === "momo" && (
-                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                          <div className="flex items-start">
-                            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 text-sm mb-2">MTN Mobile Money Checkout:</h4>
-                              <div className="space-y-2 text-xs text-gray-700">
-                                <div className="flex items-start">
-                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">1</span>
-                                  <span>Complete your order with address details</span>
-                                </div>
-                                <div className="flex items-start">
-                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">2</span>
-                                  <span>Order will be processed immediately</span>
-                                </div>
-                                <div className="flex items-start">
-                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">3</span>
-                                  <span>Payment can be made via: <strong>*182*8*1*079559#</strong></span>
-                                </div>
-                                <div className="flex items-start">
-                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">4</span>
-                                  <span>Amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
-                                </div>
-                                <div className="mt-3 p-2 bg-green-100 rounded border border-green-300">
-                                  <p className="text-xs font-medium text-green-800">
-                                    <strong>✓ Quick Checkout:</strong> Your order will be completed immediately. Payment can be made at your convenience.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                  
-                      {paymentMethod === "dpo" && (
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <div className="flex items-start">
-                            <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                           <div>
-                              <h4 className="font-semibold text-gray-900 text-sm mb-1">How DPO Payment Works:</h4>
-                              <ul className="text-xs text-gray-600 space-y-1">
-                                <li>• You'll be redirected to DPO's secure payment page</li>
-                                <li>• Choose your preferred payment method (Card, Mobile Money, etc.)</li>
-                                <li>• Complete payment and return to our site</li>
-                                <li>• Your order will be processed automatically</li>
-                              </ul>
-                           </div>
-                           </div>
-                         </div>
-                      )}
+                      <div className="px-3 py-1 bg-green-600 text-white text-sm rounded-full font-medium">
+                        Selected
                       </div>
+                    </div>
+                    
+                    {/* Payment Instructions */}
+                    <div className="mt-4 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-sm mb-2">How to Complete Payment:</h4>
+                          <div className="space-y-2 text-xs text-gray-700">
+                            <div className="flex items-start">
+                              <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">1</span>
+                              <span>Complete your order with address details below</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">2</span>
+                              <span>Order will be processed immediately</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">3</span>
+                              <span>Payment via: <strong>*182*8*1*079559#</strong></span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">4</span>
+                              <span>Amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
+                            </div>
+                            <div className="mt-3 p-2 bg-green-100 rounded border border-green-300">
+                              <p className="text-xs font-medium text-green-800">
+                                <strong>✓ Quick Checkout:</strong> Your order will be completed immediately. Payment can be made at your convenience.
+                              </p>
+                            </div>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Submit Button */}
                   <div className="flex justify-end">
@@ -871,26 +740,15 @@ const CheckoutPage = () => {
                       >
                         {isSubmitting ? (
                           <>
-                          <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full mr-3"></div>
-                          <span>Processing Order...</span>
+                            <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full mr-3"></div>
+                            <span>Processing Order...</span>
                           </>
                         ) : (
-                        <>
-                          {paymentMethod === "momo" ? (
                           <>
                             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                             </svg>
-                              Complete Order (MoMo)
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                              </svg>
-                              Pay with DPO
-                            </>
-                          )}
+                            Complete Order
                             <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
