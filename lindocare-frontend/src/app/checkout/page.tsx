@@ -676,86 +676,50 @@ const CheckoutPage = () => {
                 <form onSubmit={handleCheckout}>
                   {/* Step 1: Payment Method Selection */}
                   {currentStep === 1 && (
-                    <div className="space-y-6 animate-fade-in">
+                    <div className="animate-fade-in">
                       {/* Header */}
-                      <div className="text-center mb-6">
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-3">Choose Payment Method</h2>
-                        <p className="text-gray-600 text-lg">Select how you'd like to pay for your order</p>
+                      <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-2">Choose Payment Method</h2>
+                        <p className="text-gray-600">Select how you'd like to pay for your order</p>
                       </div>
                       
-                      {/* MTN Mobile Money Payment Card */}
-                      <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-8 rounded-2xl text-white shadow-2xl border-4 border-white transform hover:scale-105 transition-all duration-300 cursor-pointer" onClick={() => setPaymentMethod("mtn")}>
-                        <div className="flex items-center justify-between mb-6">
+                      {/* MTN Mobile Money Payment Card - Compact */}
+                      <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-4 rounded-xl text-white shadow-lg border-2 border-white cursor-pointer" onClick={() => setPaymentMethod("mtn")}>
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center">
-                            <img src="/mtn.jpg" alt="MTN" className="w-16 h-16 rounded-xl mr-4 border-2 border-white shadow-lg" />
+                            <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3 border border-white shadow-sm" />
                             <div>
-                              <h3 className="text-2xl font-bold">MTN Mobile Money</h3>
-                              <p className="text-yellow-100 text-lg">Fast & Secure Payment</p>
+                              <h3 className="text-lg font-bold">MTN Mobile Money</h3>
+                              <p className="text-yellow-100 text-sm">Fast & Secure Payment</p>
                             </div>
                           </div>
-                          <div className={`w-8 h-8 rounded-full border-4 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
+                          <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
                             {paymentMethod === "mtn" && (
-                              <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
                           </div>
                         </div>
                         
-                        <div className="bg-white bg-opacity-20 rounded-xl p-6 backdrop-blur-sm">
-                          <div className="grid md:grid-cols-2 gap-6">
+                        <div className="bg-black bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                          <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
-                              <div className="text-2xl font-bold mb-2 text-yellow-100">Total Amount</div>
-                              <div className="text-4xl font-bold text-white">{formatRWF(subtotal)} RWF</div>
+                              <div className="text-sm font-semibold mb-1 text-yellow-100">Total Amount</div>
+                              <div className="text-xl font-bold text-white">{formatRWF(subtotal)} RWF</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-lg font-semibold mb-2 text-yellow-100">USSD Code</div>
-                              <div className="text-2xl font-mono font-bold bg-white bg-opacity-30 px-4 py-3 rounded-xl">
+                              <div className="text-sm font-semibold mb-1 text-yellow-100">USSD Code</div>
+                              <div className="text-lg font-mono font-bold bg-black bg-opacity-40 px-2 py-1 rounded text-white">
                                 *182*8*1*079559#
                               </div>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="mt-6 flex items-center justify-center">
-                          <div className="bg-white bg-opacity-20 rounded-lg p-3 px-6">
-                            <span className="text-white font-semibold text-lg">✓ Selected Payment Method</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Payment Features */}
-                      <div className="bg-green-50 p-6 rounded-xl border-2 border-green-200">
-                        <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
-                          <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          Why Choose MTN Mobile Money?
-                        </h3>
-                        <div className="grid md:grid-cols-2 gap-4 text-green-700">
-                          <div className="flex items-center">
-                            <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span className="font-medium">Instant Payment</span>
-                          </div>
-                          <div className="flex items-center">
-                            <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span className="font-medium">Bank-Level Security</span>
-                          </div>
-                          <div className="flex items-center">
-                            <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span className="font-medium">No Hidden Fees</span>
-                          </div>
-                          <div className="flex items-center">
-                            <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span className="font-medium">24/7 Available</span>
+                        <div className="mt-3 flex items-center justify-center">
+                          <div className="bg-black bg-opacity-20 rounded-lg px-3 py-1">
+                            <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
                           </div>
                         </div>
                       </div>
