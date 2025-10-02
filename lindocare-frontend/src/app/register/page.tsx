@@ -286,12 +286,16 @@ const RegisterPage: React.FC = () => {
               </h2>
               <p className="text-sm text-gray-600">We'll use this address for delivering your orders</p>
               
-              {isMounted && (
+              {isMounted && addressData ? (
                 <AddressSelector
                   value={addressData}
                   onChange={setAddressData}
                   errors={addressErrors}
                 />
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                  Loading address form...
+                </div>
               )}
             </div>
 
