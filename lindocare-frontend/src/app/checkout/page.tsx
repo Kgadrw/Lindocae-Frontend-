@@ -64,6 +64,7 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
   const [users, setUsers] = useState<any[]>([]); // optional (kept as in your original)
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [isLoadingUserInfo, setIsLoadingUserInfo] = useState(true);
   const router = useRouter();
@@ -293,6 +294,7 @@ const CheckoutPage = () => {
   const testBackendConnection = async () => {
     try {
       console.log("Testing backend connection...");
+      setBackendStatus('checking');
       const response = await fetch("https://lindo-project.onrender.com/health", {
         method: "GET",
         headers: {
@@ -300,12 +302,98 @@ const CheckoutPage = () => {
         },
       });
       console.log("Backend health check status:", response.status);
-      return response.ok;
+      const isHealthy = response.ok;
+      setBackendStatus(isHealthy ? 'online' : 'offline');
+      return isHealthy;
     } catch (error) {
       console.log("Backend health check failed:", error);
+      setBackendStatus('offline');
       return false;
     }
   };
+
+  // Function to retry failed orders when backend is back online
+  const retryFailedOrders = async () => {
+    try {
+      const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
+      if (failedOrders.length === 0) return;
+
+      console.log(`Found ${failedOrders.length} failed orders to retry...`);
+      
+      const successfulOrders = [];
+      const stillFailedOrders = [];
+
+      for (const order of failedOrders) {
+        try {
+          const token = getAuthToken();
+          const response = await fetch("https://lindo-project.onrender.com/orders/createOrder", {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(order),
+          });
+
+          if (response.ok) {
+            console.log(`Successfully retried order ${order.id}`);
+            successfulOrders.push(order.id);
+          } else {
+            console.log(`Order ${order.id} still failing with status ${response.status}`);
+            stillFailedOrders.push(order);
+          }
+        } catch (error) {
+          console.log(`Error retrying order ${order.id}:`, error);
+          stillFailedOrders.push(order);
+        }
+      }
+
+      // Update localStorage with remaining failed orders
+      localStorage.setItem('fallbackOrders', JSON.stringify(stillFailedOrders));
+      
+      if (successfulOrders.length > 0) {
+        console.log(`Successfully processed ${successfulOrders.length} orders`);
+        // Optionally show a success message to user
+        setOrderStatus({ 
+          success: `Great! ${successfulOrders.length} pending order(s) have been successfully processed.` 
+        });
+        setTimeout(() => setOrderStatus({}), 5000);
+      }
+    } catch (error) {
+      console.error("Error retrying failed orders:", error);
+    }
+  };
+
+  // Check for failed orders on component mount and periodically
+  useEffect(() => {
+    const checkAndRetryOrders = async () => {
+      const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
+      if (failedOrders.length > 0) {
+        console.log(`Found ${failedOrders.length} pending orders. Checking if backend is back online...`);
+        
+        const backendHealthy = await testBackendConnection();
+        if (backendHealthy) {
+          console.log("Backend is back online! Retrying failed orders...");
+          await retryFailedOrders();
+        }
+      }
+    };
+
+    // Initial check
+    checkAndRetryOrders();
+
+    // Set up periodic check every 30 seconds if there are failed orders
+    const interval = setInterval(async () => {
+      const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
+      if (failedOrders.length > 0) {
+        await checkAndRetryOrders();
+      }
+    }, 30000); // Check every 30 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,6 +649,33 @@ const CheckoutPage = () => {
             </svg>
             Back to Cart
           </button>
+          
+          {/* Backend Status Indicator */}
+          {backendStatus !== 'online' && (
+            <div className={`mb-3 p-3 rounded-lg border-l-4 ${
+              backendStatus === 'checking' 
+                ? 'bg-yellow-50 border-yellow-400' 
+                : 'bg-red-50 border-red-400'
+            }`}>
+              <div className="flex items-center">
+                <div className={`w-3 h-3 rounded-full mr-2 ${
+                  backendStatus === 'checking' 
+                    ? 'bg-yellow-400 animate-pulse' 
+                    : 'bg-red-400'
+                }`}></div>
+                <span className={`text-sm font-medium ${
+                  backendStatus === 'checking' 
+                    ? 'text-yellow-700' 
+                    : 'text-red-700'
+                }`}>
+                  {backendStatus === 'checking' 
+                    ? 'Checking server status...' 
+                    : 'Server temporarily unavailable - orders will be saved locally'}
+                </span>
+              </div>
+            </div>
+          )}
+          
           <div className="text-center">
             <div className="flex items-center justify-center mb-2">
               <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1050,7 +1165,7 @@ const CheckoutPage = () => {
                   
                   {/* Status Messages */}
                   {orderStatus.error && (
-                    <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md animate-fade-in">
+                    <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md animate-fade-in" data-error-message>
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
                           <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -1059,7 +1174,34 @@ const CheckoutPage = () => {
                         </div>
                         <div className="ml-3 flex-1">
                           <h3 className="text-sm font-bold text-red-800 mb-1">Error</h3>
-                          <p className="text-sm text-red-700">{orderStatus.error}</p>
+                          <p className="text-sm text-red-700 mb-3">{orderStatus.error}</p>
+                          {orderStatus.error.includes('saved locally') && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={async (e) => {
+                                  const retryButton = e.target as HTMLButtonElement;
+                                  retryButton.disabled = true;
+                                  retryButton.textContent = 'Retrying...';
+                                  await retryFailedOrders();
+                                  retryButton.disabled = false;
+                                  retryButton.textContent = 'Retry Order';
+                                }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                              >
+                                Retry Order
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
+                                  console.log('Pending orders:', failedOrders);
+                                  alert(`You have ${failedOrders.length} order(s) saved locally. They will be processed automatically when the backend is restored.`);
+                                }}
+                                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                              >
+                                View Pending Orders
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
