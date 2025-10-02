@@ -14,7 +14,7 @@ import {
 } from "../../utils/serverStorage";
 import { normalizeImageUrl } from "../../utils/image";
 import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
-import { getUserInfo, saveUserPurchaseInfo } from "../../utils/userInfo";
+import { getUserInfo } from "../../utils/userInfo";
 
 interface Product {
   id: string | number;
@@ -301,71 +301,78 @@ const CheckoutPage = () => {
       return;
     }
 
-    try {
-      // **SAVE USER PURCHASE INFO TO DATABASE FIRST**
-      console.log('Saving user purchase info to database...');
-      
-      // Calculate total amount from cart items
-      const totalAmount = cartItems.reduce((sum, item) => {
-        const itemTotal = (item.price || 0) * (item.quantity || 1);
-        return sum + itemTotal;
-      }, 0);
-      
-      // Prepare cart items for database storage
-      const cartItemsForDB = cartItems.map((item) => ({
-        id: String(item.id),
-        name: item.name || 'Product',
-        price: item.price || 0,
-        quantity: item.quantity || 1,
-      }));
-      
-      // Save purchase information to database before proceeding
-      const saveResult = await saveUserPurchaseInfo({
-        userName: customerName,
-        userEmail: customerEmail,
-        cartItems: cartItemsForDB,
-        phone: customerPhone,
-        address: addressData,
-        totalAmount,
-      });
-      
-      if (!saveResult.success) {
-        console.warn('Failed to save purchase info to database:', saveResult.error);
-        // Continue with checkout even if save fails, but log the error
-      } else {
-        console.log('Purchase info saved successfully to database, Order ID:', saveResult.orderId);
-      }
+    // Additional validation to ensure all required fields are filled
+    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+      setOrderStatus({ error: "Please fill in all customer information fields." });
+      setIsSubmitting(false);
+      return;
+    }
 
+    if (!addressData.province || !addressData.district || !addressData.street.trim()) {
+      setOrderStatus({ error: "Please complete all required address fields (Province, District, Street)." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+      setOrderStatus({ error: "Your cart is empty. Please add items before checkout." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate subtotal
+    if (!subtotal || subtotal <= 0) {
+      setOrderStatus({ error: "Invalid order total. Please refresh and try again." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
       const token = getAuthToken();
 
       // Prepare order items for the API
-      const orderItems = cartItems.map((item) => ({
-        productId: item.id,
-        quantity: item.quantity || 1,
-        price: item.price || 0,
-      }));
+      const orderItems = cartItems.map((item) => {
+        // Validate each item has required fields
+        if (!item.id || !item.price || item.price <= 0 || !item.quantity || item.quantity <= 0) {
+          throw new Error(`Invalid cart item: ${item.name || 'Unknown item'}. Please refresh and try again.`);
+        }
+        
+        return {
+          productId: String(item.id),
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        };
+      });
 
-      // Prepare order data with new address structure
-     const orderData = {
-  paymentMethod: paymentMethod || "mtn",
-  province: addressData.province,
-  district: addressData.district,
-  sector: addressData.sector,
-  cell: addressData.cell,
-  village: addressData.village,
-  street: addressData.street,
-  customerEmail,
-  customerPhone,
-  customerName,
-  items: orderItems,
-  totalAmount,
-  // MTN Mobile Money payment details
-  momoCode: "*182*8*1*079559#"
-};
+      // Prepare shipping address in the format backend expects
+      const shippingAddress = {
+        province: addressData.province,
+        district: addressData.district,
+        sector: addressData.sector?.trim() || "",
+        cell: addressData.cell?.trim() || "",
+        village: addressData.village?.trim() || "",
+        street: addressData.street.trim(),
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim(),
+      };
+
+      // Prepare order data matching backend schema
+      const orderData = {
+        paymentMethod: "mobile_money", // Backend expects this format
+        shippingAddress: shippingAddress,
+        items: orderItems,
+        totalAmount: Number(subtotal), // Ensure it's a number
+        status: "pending",
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim(),
+        momoCode: "*182*8*1*079559#"
+      };
 
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
-      console.log("Total amount calculated:", totalAmount);
+      console.log("Total amount calculated:", subtotal);
 
       // Optional auth token from localStorage (include if present)
       let openLock: string | null = null;
@@ -394,6 +401,7 @@ const CheckoutPage = () => {
       );
 
       console.log("Order response status:", orderResponse.status);
+      console.log("Order response headers:", Object.fromEntries(orderResponse.headers.entries()));
 
       if (orderResponse.ok) {
         const orderResult = await orderResponse.json();
@@ -408,7 +416,7 @@ const CheckoutPage = () => {
 
         // MTN Mobile Money payment processing
         setOrderStatus({ 
-          success: `Order created successfully! Please send ${formatRWF(totalAmount)} RWF to *182*8*1*079559# and complete payment confirmation.` 
+          success: `Order created successfully! Please send ${formatRWF(subtotal)} RWF to *182*8*1*079559# and complete payment confirmation.` 
         });
         
         // Clear cart after successful order creation
@@ -420,7 +428,7 @@ const CheckoutPage = () => {
         
         // Store order details for reference
         localStorage.setItem("pendingOrderId", String(orderId || ""));
-        localStorage.setItem("pendingOrderAmount", String(totalAmount));
+        localStorage.setItem("pendingOrderAmount", String(subtotal));
         localStorage.setItem("momoCode", "*182*8*1*079559#");
       } else if (orderResponse.status === 401) {
         const errorText = await orderResponse.text();
@@ -449,9 +457,20 @@ const CheckoutPage = () => {
         console.error("Order creation error body (text):", responseText || "<empty body>");
         console.error("Order creation error parsed object:", errorData);
 
+        // Provide more specific error messages
+        let errorMessage = "Failed to create order. Please try again.";
+        if (orderResponse.status === 500) {
+          errorMessage = "Server error occurred. The backend service may be temporarily unavailable. Please try again later.";
+        } else if (orderResponse.status === 404) {
+          errorMessage = "Order creation endpoint not found. Please contact support.";
+        } else if (orderResponse.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+
         setOrderStatus({
-          error:
-            errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
+          error: errorMessage,
         });
       }
     } catch (err) {
