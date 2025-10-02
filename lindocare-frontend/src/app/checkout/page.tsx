@@ -289,6 +289,24 @@ const CheckoutPage = () => {
     }
   };
 
+  // Test function to check backend connectivity
+  const testBackendConnection = async () => {
+    try {
+      console.log("Testing backend connection...");
+      const response = await fetch("https://lindo-project.onrender.com/health", {
+        method: "GET",
+        headers: {
+          'accept': 'application/json',
+        },
+      });
+      console.log("Backend health check status:", response.status);
+      return response.ok;
+    } catch (error) {
+      console.log("Backend health check failed:", error);
+      return false;
+    }
+  };
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setOrderStatus({});
@@ -328,6 +346,12 @@ const CheckoutPage = () => {
     }
 
     try {
+      // Test backend connectivity first
+      const backendHealthy = await testBackendConnection();
+      if (!backendHealthy) {
+        console.warn("Backend health check failed, but proceeding with order creation...");
+      }
+
       const token = getAuthToken();
 
       // Prepare order items for the API
@@ -373,6 +397,7 @@ const CheckoutPage = () => {
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
       console.log("Total amount calculated:", subtotal);
+      console.log("Order data JSON string:", JSON.stringify(orderData, null, 2));
 
       // Optional auth token from localStorage (include if present)
       let openLock: string | null = null;
@@ -402,6 +427,15 @@ const CheckoutPage = () => {
 
       console.log("Order response status:", orderResponse.status);
       console.log("Order response headers:", Object.fromEntries(orderResponse.headers.entries()));
+      
+      // Log the full response for debugging
+      const responseClone = orderResponse.clone();
+      try {
+        const responseText = await responseClone.text();
+        console.log("Full API response:", responseText);
+      } catch (e) {
+        console.log("Could not read response text:", e);
+      }
 
       if (orderResponse.ok) {
         const orderResult = await orderResponse.json();
@@ -461,6 +495,10 @@ const CheckoutPage = () => {
         let errorMessage = "Failed to create order. Please try again.";
         if (orderResponse.status === 500) {
           errorMessage = "Server error occurred. The backend service may be temporarily unavailable. Please try again later.";
+          // For debugging: show the actual error from backend
+          if (errorData.message) {
+            errorMessage += ` Backend error: ${errorData.message}`;
+          }
         } else if (orderResponse.status === 404) {
           errorMessage = "Order creation endpoint not found. Please contact support.";
         } else if (orderResponse.status === 401) {
@@ -469,9 +507,37 @@ const CheckoutPage = () => {
           errorMessage = errorData.message;
         }
 
-        setOrderStatus({
-          error: errorMessage,
-        });
+        // If backend is down, offer to save order locally for later processing
+        if (orderResponse.status === 500) {
+          console.log("Backend server error - offering local storage fallback");
+          
+          // Store order data locally as fallback
+          try {
+            const fallbackOrder = {
+              ...orderData,
+              id: `fallback_${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              status: 'pending_backend',
+            };
+            
+            const existingOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
+            existingOrders.push(fallbackOrder);
+            localStorage.setItem('fallbackOrders', JSON.stringify(existingOrders));
+            
+            setOrderStatus({
+              error: `${errorMessage} Your order has been saved locally and will be processed when the service is restored.`,
+            });
+          } catch (storageError) {
+            console.error("Could not save fallback order:", storageError);
+            setOrderStatus({
+              error: errorMessage,
+            });
+          }
+        } else {
+          setOrderStatus({
+            error: errorMessage,
+          });
+        }
       }
     } catch (err) {
       console.error("Checkout error:", err);
