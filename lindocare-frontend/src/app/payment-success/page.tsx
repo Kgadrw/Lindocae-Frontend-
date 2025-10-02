@@ -29,48 +29,67 @@ const PaymentSuccessContent = () => {
         const urlOrderId = searchParams.get('orderId') || searchParams.get('order_id');
         const orderId = urlOrderId || storedDetails.orderId;
         
-        // Extract DPO token from URL parameters or use stored token
-        const dpoToken = extractDPOTokenFromURL(searchParams) || storedDetails.dpoToken;
+        // Check if this is an MTN Mobile Money payment
+        const paymentMethod = searchParams.get('method');
         
-        if (dpoToken) {
-          console.log('Verifying payment with DPO token:', dpoToken);
-          
-          // Verify the payment with DPO
-          const verificationResult: DPOVerificationResult = await verifyDPOPayment(dpoToken);
-          
-          if (verificationResult.success) {
-            setVerificationStatus('success');
-            setOrderDetails({
-              orderId: verificationResult.orderId || orderId || 'N/A',
-              paymentId: verificationResult.paymentId || dpoToken,
-              amount: verificationResult.amount || storedDetails.amount,
-              status: 'success',
-              verificationDetails: verificationResult.details
-            });
-            
-            // Clear stored payment data after successful verification
-            clearStoredOrderDetails();
-          } else {
-            setVerificationStatus('failed');
-            setOrderDetails({
-              orderId: orderId,
-              paymentId: dpoToken,
-              status: 'verification_failed',
-              error: verificationResult.error || 'Payment verification failed'
-            });
-          }
-        } else {
-          // Fallback: get details from URL parameters without verification
-          console.log('No DPO token found, using URL parameters only');
-          if (orderId) {
-            setOrderDetails({
-              orderId,
-              paymentId: searchParams.get('paymentId') || searchParams.get('payment_id') || 'N/A',
-              amount: storedDetails.amount,
-              status: 'success'
-            });
-          }
+        if (paymentMethod === 'momo') {
+          // MTN Mobile Money - No verification needed, order is already complete
+          console.log('MTN Mobile Money payment - order completed');
           setVerificationStatus('success');
+          setOrderDetails({
+            orderId: orderId || 'N/A',
+            paymentId: 'MTN Mobile Money',
+            amount: storedDetails.amount,
+            status: 'completed',
+            paymentMethod: 'momo'
+          });
+        } else {
+          // DPO Payment - Verify with token
+          const dpoToken = extractDPOTokenFromURL(searchParams) || storedDetails.dpoToken;
+          
+          if (dpoToken) {
+            console.log('Verifying payment with DPO token:', dpoToken);
+            
+            // Verify the payment with DPO
+            const verificationResult: DPOVerificationResult = await verifyDPOPayment(dpoToken);
+            
+            if (verificationResult.success) {
+              setVerificationStatus('success');
+              setOrderDetails({
+                orderId: verificationResult.orderId || orderId || 'N/A',
+                paymentId: verificationResult.paymentId || dpoToken,
+                amount: verificationResult.amount || storedDetails.amount,
+                status: 'success',
+                verificationDetails: verificationResult.details,
+                paymentMethod: 'dpo'
+              });
+              
+              // Clear stored payment data after successful verification
+              clearStoredOrderDetails();
+            } else {
+              setVerificationStatus('failed');
+              setOrderDetails({
+                orderId: orderId,
+                paymentId: dpoToken,
+                status: 'verification_failed',
+                error: verificationResult.error || 'Payment verification failed',
+                paymentMethod: 'dpo'
+              });
+            }
+          } else {
+            // Fallback: get details from URL parameters without verification
+            console.log('No DPO token found, using URL parameters only');
+            if (orderId) {
+              setOrderDetails({
+                orderId,
+                paymentId: searchParams.get('paymentId') || searchParams.get('payment_id') || 'N/A',
+                amount: storedDetails.amount,
+                status: 'success',
+                paymentMethod: 'unknown'
+              });
+            }
+            setVerificationStatus('success');
+          }
         }
       } catch (error) {
         console.error('Payment verification error:', error);
@@ -105,11 +124,14 @@ const PaymentSuccessContent = () => {
 
         {/* Success Message */}
         <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          Payment Successful!
+          {orderDetails?.paymentMethod === 'momo' ? 'Order Completed!' : 'Payment Successful!'}
         </h1>
         
         <p className="text-gray-600 mb-6">
-          Thank you for your purchase! Your order has been confirmed and will be processed shortly.
+          {orderDetails?.paymentMethod === 'momo' 
+            ? 'Thank you for your order! Your order has been processed and will be delivered to the provided address. Payment can be made via MTN Mobile Money at your convenience.'
+            : 'Thank you for your purchase! Your order has been confirmed and will be processed shortly.'
+          }
         </p>
 
         {/* Order Details */}
@@ -152,11 +174,29 @@ const PaymentSuccessContent = () => {
         {verificationStatus === 'success' && (
           <div className="bg-blue-50 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-blue-900 mb-2">What's Next?</h3>
-            <ul className="text-sm text-blue-800 space-y-1 text-left">
-              <li>• You'll receive an email confirmation shortly</li>
-              <li>• We'll notify you when your order ships</li>
-              <li>• Track your order in your account dashboard</li>
-            </ul>
+            {orderDetails?.paymentMethod === 'momo' ? (
+              <div className="space-y-3">
+                <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <h4 className="font-semibold text-yellow-800 text-sm mb-2">Payment Instructions:</h4>
+                  <div className="text-sm text-yellow-700 space-y-1">
+                    <p>• Dial <strong>*182*8*1*079559#</strong> on your phone</p>
+                    <p>• Enter amount: <strong>{orderDetails.amount ? parseInt(orderDetails.amount).toLocaleString() : 'N/A'} RWF</strong></p>
+                    <p>• Complete payment at your convenience</p>
+                  </div>
+                </div>
+                <ul className="text-sm text-blue-800 space-y-1 text-left">
+                  <li>• You'll receive an email confirmation shortly</li>
+                  <li>• We'll notify you when your order ships</li>
+                  <li>• Track your order in your account dashboard</li>
+                </ul>
+              </div>
+            ) : (
+              <ul className="text-sm text-blue-800 space-y-1 text-left">
+                <li>• You'll receive an email confirmation shortly</li>
+                <li>• We'll notify you when your order ships</li>
+                <li>• Track your order in your account dashboard</li>
+              </ul>
+            )}
           </div>
         )}
 

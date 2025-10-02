@@ -324,7 +324,7 @@ const CheckoutPage = () => {
         }
 
         console.error("Order creation error:", orderResponse.status, errorData);
-        setOrderStatus({
+        setOrderStatus({ 
           error: errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
         });
         setIsSubmitting(false);
@@ -360,12 +360,12 @@ const CheckoutPage = () => {
           console.log('Could not save address (not critical):', addressSaveError);
         }
       }
-
-      // Clear cart after successful order creation
-      try {
-        if (isUserLoggedIn()) await clearCartServer();
-        else saveLocalCart([]);
-        setCartItems([]);
+        
+        // Clear cart after successful order creation
+        try {
+          if (isUserLoggedIn()) await clearCartServer();
+          else saveLocalCart([]);
+          setCartItems([]);
       } catch (error) {
         console.warn("Failed to clear cart:", error);
       }
@@ -415,11 +415,11 @@ const CheckoutPage = () => {
           if (dpoResult.paymentUrl) {
             window.location.href = dpoResult.paymentUrl;
           } else {
-            setOrderStatus({ 
+        setOrderStatus({
               success: `Order created successfully! Order ID: ${orderId}. Please complete payment.` 
-            });
+        });
           }
-        } else {
+      } else {
           // Handle DPO initialization error
           let dpoErrorData: any = {};
           let dpoResponseText = "";
@@ -427,26 +427,31 @@ const CheckoutPage = () => {
             dpoResponseText = await dpoResponse.text();
             if (dpoResponseText) {
               dpoErrorData = JSON.parse(dpoResponseText);
-            }
-          } catch (parseError) {
+          }
+        } catch (parseError) {
             dpoErrorData = { message: dpoResponseText || "Unknown error" };
           }
 
           console.error("DPO initialization error:", dpoResponse.status, dpoErrorData);
-          setOrderStatus({
+        setOrderStatus({
             error: `Order created but payment initialization failed: ${dpoErrorData.message || 'Unknown error'}. Please contact support.`,
           });
         }
       } else {
-        // MTN Mobile Money - Manual payment
+        // MTN Mobile Money - Simplified checkout with address only
         setOrderStatus({ 
-          success: `Order created successfully! Order ID: ${orderId}. Please complete payment by dialing *182*8*1*079559# and sending ${formatRWF(subtotal)} RWF. You'll receive confirmation via email/SMS.` 
+          success: `Order completed successfully! Order ID: ${orderId}. Your order has been processed and will be delivered to the provided address. You'll receive confirmation via email/SMS.` 
         });
         
         // Store order details for reference
         localStorage.setItem("pendingOrderId", String(orderId || ""));
         localStorage.setItem("pendingOrderAmount", String(subtotal));
         localStorage.setItem("momoCode", "*182*8*1*079559#");
+        
+        // Redirect to success page after a delay for MTN payments
+        setTimeout(() => {
+          router.push('/payment-success?method=momo&orderId=' + orderId);
+        }, 3000);
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -792,37 +797,37 @@ const CheckoutPage = () => {
                         <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                           <div className="flex items-start">
                             <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                             <div>
-                              <h4 className="font-semibold text-gray-900 text-sm mb-2">How MTN Mobile Money Works:</h4>
+                              <h4 className="font-semibold text-gray-900 text-sm mb-2">MTN Mobile Money Checkout:</h4>
                               <div className="space-y-2 text-xs text-gray-700">
-                          <div className="flex items-start">
+                                <div className="flex items-start">
                                   <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">1</span>
-                            <span>Dial <strong>*182*8*1*079559#</strong> on your phone</span>
-                          </div>
-                          <div className="flex items-start">
+                                  <span>Complete your order with address details</span>
+                                </div>
+                                <div className="flex items-start">
                                   <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">2</span>
-                            <span>Enter amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
-                          </div>
-                          <div className="flex items-start">
+                                  <span>Order will be processed immediately</span>
+                                </div>
+                                <div className="flex items-start">
                                   <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">3</span>
-                            <span>Enter your MTN Mobile Money PIN</span>
-                          </div>
-                          <div className="flex items-start">
+                                  <span>Payment can be made via: <strong>*182*8*1*079559#</strong></span>
+                                </div>
+                                <div className="flex items-start">
                                   <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">4</span>
-                            <span>Confirm the transaction</span>
-                          </div>
-                                <div className="mt-3 p-2 bg-yellow-100 rounded border border-yellow-300">
-                                  <p className="text-xs font-medium text-yellow-800">
-                                    <strong>Note:</strong> After payment, your order will be processed manually. You'll receive confirmation via email/SMS.
+                                  <span>Amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
+                                </div>
+                                <div className="mt-3 p-2 bg-green-100 rounded border border-green-300">
+                                  <p className="text-xs font-medium text-green-800">
+                                    <strong>✓ Quick Checkout:</strong> Your order will be completed immediately. Payment can be made at your convenience.
                                   </p>
-                        </div>
-                      </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
                   
                       {paymentMethod === "dpo" && (
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -856,18 +861,18 @@ const CheckoutPage = () => {
                         }`}
                         disabled={isSubmitting}
                       >
-                      {isSubmitting ? (
-                        <>
+                        {isSubmitting ? (
+                          <>
                           <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full mr-3"></div>
                           <span>Processing Order...</span>
-                        </>
-                      ) : (
+                          </>
+                        ) : (
                         <>
                           {paymentMethod === "momo" ? (
-                            <>
-                              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <>
+                            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                              </svg>
+                            </svg>
                               Complete Order (MoMo)
                             </>
                           ) : (
@@ -878,11 +883,11 @@ const CheckoutPage = () => {
                               Pay with DPO
                             </>
                           )}
-                          <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                          </svg>
-                        </>
-                      )}
+                            <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                          </>
+                        )}
                       </button>
                   </div>
                   
