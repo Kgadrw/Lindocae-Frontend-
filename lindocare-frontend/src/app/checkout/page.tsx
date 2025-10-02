@@ -77,6 +77,43 @@ const CheckoutPage = () => {
               setCustomerPhone(userInfo.phone);
             }
           }
+
+          // Try to fetch user address information
+          try {
+            const token = getAuthToken();
+            if (token) {
+              const addressResponse = await fetch(
+                "https://lindo-project.onrender.com/user/address",
+                {
+                  method: "GET",
+                  headers: {
+                    'accept': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                }
+              );
+
+              if (addressResponse.ok) {
+                const addressData = await addressResponse.json();
+                console.log('Fetched user address:', addressData);
+                
+                // Pre-populate address if available
+                if (addressData.address) {
+                  setAddressData({
+                    province: addressData.address.province || '',
+                    district: addressData.address.district || '',
+                    sector: addressData.address.sector || '',
+                    cell: addressData.address.cell || '',
+                    village: addressData.address.village || '',
+                    street: addressData.address.street || ''
+                  });
+                }
+              }
+            }
+          } catch (addressError) {
+            console.log('No saved address found or error fetching address:', addressError);
+            // This is not critical, user can still enter address manually
+          }
         } catch (error) {
           console.error('Error loading user info:', error);
         }
@@ -298,13 +335,17 @@ const CheckoutPage = () => {
       const orderId = orderResult.order?._id || orderResult.orderId;
 
       // Step 2: Initialize DPO Payment
+      const firstName = customerName.split(' ')[0] || customerName;
+      const lastName = customerName.split(' ').slice(1).join(' ') || firstName;
+      
       const dpoData = {
+        orderId: orderId,
         totalAmount: subtotal,
         currency: "RWF",
         email: customerEmail,
         phone: customerPhone,
-        firstName: customerName.split(' ')[0] || customerName,
-        lastName: customerName.split(' ').slice(1).join(' ') || customerName,
+        firstName: firstName,
+        lastName: lastName,
         serviceDescription: `Payment for order #${orderId}`,
         callbackUrl: `${window.location.origin}/payment-success`
       };
@@ -328,6 +369,32 @@ const CheckoutPage = () => {
       if (dpoResponse.ok) {
         const dpoResult = await dpoResponse.json();
         console.log("DPO payment initialized:", dpoResult);
+
+        // Save address for future use (for logged-in users)
+        if (isUserLoggedIn()) {
+          try {
+            const token = getAuthToken();
+            if (token) {
+              await fetch(
+                "https://lindo-project.onrender.com/user/address",
+                {
+                  method: "POST",
+                  headers: {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    address: addressData
+                  }),
+                }
+              );
+              console.log('Address saved for future use');
+            }
+          } catch (addressSaveError) {
+            console.log('Could not save address (not critical):', addressSaveError);
+          }
+        }
 
         // Clear cart after successful order creation
         try {
@@ -603,13 +670,23 @@ const CheckoutPage = () => {
 
                   {/* Delivery Address */}
                   <div className="bg-gray-50 p-6 rounded-xl border border-gray-300">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                      <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Delivery Address
-                    </h2>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                        <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Delivery Address
+                      </h2>
+                      {isUserLoggedIn() && (addressData.province || addressData.district) && (
+                        <div className="flex items-center text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          From Account
+                        </div>
+                      )}
+                    </div>
                     <AddressSelector
                       value={addressData}
                       onChange={setAddressData}
@@ -617,6 +694,19 @@ const CheckoutPage = () => {
                       required={true}
                       disabled={isSubmitting}
                     />
+                    {isUserLoggedIn() && (addressData.province || addressData.district) && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start">
+                          <svg className="w-4 h-4 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-sm text-blue-800 font-medium">Address Pre-filled</p>
+                            <p className="text-xs text-blue-600">We've loaded your saved address. You can modify it if needed.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Payment Method */}
