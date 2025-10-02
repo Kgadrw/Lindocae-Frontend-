@@ -697,17 +697,17 @@ const CheckoutPage = () => {
                             {paymentMethod === "mtn" && (
                               <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
+                                </svg>
                             )}
-                          </div>
-                        </div>
+                              </div>
+                            </div>
                         
                         <div className="bg-white rounded-lg p-3 shadow-lg">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
                               <div className="text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
                               <div className="text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
-                            </div>
+                          </div>
                             <div className="text-center">
                               <div className="text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
                               <div className="text-lg font-mono font-bold bg-blue-50 px-2 py-1 rounded text-blue-600 border border-blue-200">
@@ -745,7 +745,7 @@ const CheckoutPage = () => {
                             <div>
                               <p className="text-sm text-yellow-800 font-semibold">Guest Checkout</p>
                               <p className="text-xs text-yellow-700">Please provide your contact information</p>
-                            </div>
+                          </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -816,29 +816,29 @@ const CheckoutPage = () => {
                           <div>
                             <label className="block text-xs font-medium text-gray-800 mb-1">
                               Phone Number <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="tel"
-                              value={customerPhone}
-                              onChange={(e) => {
-                                setCustomerPhone(e.target.value);
-                                if (customerErrors.phone) {
-                                  setCustomerErrors(prev => ({ ...prev, phone: undefined }));
-                                }
-                              }}
+                        </label>
+                          <input
+                            type="tel"
+                            value={customerPhone}
+                            onChange={(e) => {
+                              setCustomerPhone(e.target.value);
+                              if (customerErrors.phone) {
+                                setCustomerErrors(prev => ({ ...prev, phone: undefined }));
+                              }
+                            }}
                               placeholder="+250788123456"
                               className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
-                                customerErrors.phone 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : customerPhone.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {customerErrors.phone && (
+                              customerErrors.phone 
+                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                : customerPhone.trim()
+                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                            }`}
+                          />
+                          {customerErrors.phone && (
                               <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
                             )}
-                          </div>
+                            </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-800 mb-1">
                               Sender Name <span className="text-red-500">*</span>
@@ -863,175 +863,109 @@ const CheckoutPage = () => {
                             />
                             {paymentErrors.senderName && (
                               <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
-                            )}
-                          </div>
+                          )}
                         </div>
+                          </div>
                       </div>
                         
                       {/* Delivery Address Section - Compact */}
                       <div className="bg-green-50 border border-green-300 rounded-lg p-4">
-                        <AddressSelector
-                          value={addressData}
-                          onChange={setAddressData}
-                          errors={addressErrors}
-                          required={true}
-                          disabled={isSubmitting}
-                        />
-                      </div>
+                          <AddressSelector
+                            value={addressData}
+                            onChange={setAddressData}
+                            errors={addressErrors}
+                            required={true}
+                            disabled={isSubmitting}
+                          />
+                        </div>
                     </div>
                   )}
                   
                   {/* Step 3: Order Confirmation */}
                   {currentStep === 3 && (
-                    <div className="space-y-6 animate-fade-in">
-                      <div className="text-center mb-6">
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-blue-600 bg-clip-text text-transparent mb-3">Order Confirmation</h2>
-                        <p className="text-gray-600 text-lg">Review your order and complete payment</p>
+                    <div className="animate-fade-in">
+                      <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-green-500 to-blue-600 bg-clip-text text-transparent mb-2">Order Confirmation</h2>
+                        <p className="text-gray-600">Review your order and complete payment</p>
                       </div>
                       
-                      {/* Payment Method Display */}
-                      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 p-6 rounded-2xl text-white shadow-xl">
-                        <div className="flex items-center justify-between mb-4">
+                      {/* Payment Instructions */}
+                      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 p-4 rounded-xl text-white shadow-lg mb-4">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center">
-                            <img src="/mtn.jpg" alt="MTN" className="w-12 h-12 rounded-lg mr-4 border-2 border-white shadow-lg" />
+                            <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3 border border-white shadow-sm" />
                             <div>
-                              <h3 className="text-xl font-bold">MTN Mobile Money</h3>
-                              <p className="text-yellow-100">Selected Payment Method</p>
-                            </div>
+                              <h3 className="text-lg font-bold">MTN Mobile Money</h3>
+                              <p className="text-yellow-100 text-sm">Selected Payment Method</p>
+                        </div>
                           </div>
                           <div className="bg-white bg-opacity-20 rounded-lg p-2">
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
-                          </div>
                         </div>
-                        
-                        <div className="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
+                      </div>
+                      
+                        <div className="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
                           <div className="text-center">
-                            <div className="text-lg font-semibold mb-2 text-yellow-100">Payment Instructions</div>
-                            <div className="text-xl font-bold mb-3">Send {formatRWF(subtotal)} RWF</div>
-                            <div className="text-2xl font-mono font-bold bg-white bg-opacity-30 px-4 py-2 rounded-lg">
+                            <div className="text-sm font-semibold mb-1 text-yellow-100">Payment Instructions</div>
+                            <div className="text-lg font-bold mb-2">Send {formatRWF(subtotal)} RWF</div>
+                            <div className="text-xl font-mono font-bold bg-white bg-opacity-30 px-3 py-2 rounded-lg">
                               *182*8*1*079559#
-                            </div>
+                          </div>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Payment Details Form */}
-                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-300">
-                        <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
-                          <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Payment Details
-                        </h3>
-                        
-                        <div className="space-y-6">
-                          <div>
-                            <label className="block text-lg font-bold text-gray-800 mb-3">
-                              Sender Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={senderName}
-                              onChange={(e) => {
-                                setSenderName(e.target.value);
-                                if (paymentErrors.senderName) {
-                                  setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
-                                }
-                              }}
-                              placeholder="Name of person who sent the money"
-                              className={`w-full px-4 py-4 border-2 rounded-xl outline-none transition-all duration-200 text-lg font-medium ${
-                                paymentErrors.senderName 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : senderName.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {paymentErrors.senderName && (
-                              <p className="mt-2 text-sm text-red-600 font-medium">{paymentErrors.senderName}</p>
-                            )}
-                          </div>
-                          
-                          <div>
-                            <label className="block text-lg font-bold text-gray-800 mb-3">
-                              Sender Address <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={senderAddress}
-                              onChange={(e) => {
-                                setSenderAddress(e.target.value);
-                                if (paymentErrors.senderAddress) {
-                                  setPaymentErrors(prev => ({ ...prev, senderAddress: undefined }));
-                                }
-                              }}
-                              placeholder="Address of person who sent the money"
-                              className={`w-full px-4 py-4 border-2 rounded-xl outline-none transition-all duration-200 text-lg font-medium ${
-                                paymentErrors.senderAddress 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : senderAddress.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {paymentErrors.senderAddress && (
-                              <p className="mt-2 text-sm text-red-600 font-medium">{paymentErrors.senderAddress}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Complete Order Summary */}
-                      <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border-2 border-green-300 shadow-lg">
-                        <h3 className="font-bold text-gray-900 mb-6 text-xl flex items-center">
-                          <svg className="w-6 h-6 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {/* Order Summary */}
+                      <div className="bg-green-50 border border-green-300 rounded-lg p-4 shadow-sm">
+                        <h3 className="font-bold text-gray-900 mb-4 text-lg flex items-center">
+                          <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
                           Order Summary
                         </h3>
-                        <div className="space-y-4">
-                          <div className="bg-white rounded-xl p-4 shadow-sm">
-                            <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <span className="text-gray-600 font-medium">Customer</span>
-                                <div className="font-bold text-gray-900 text-lg">{customerName}</div>
+                                <span className="text-gray-600 text-sm font-medium">Customer</span>
+                                <div className="font-bold text-gray-900">{customerName}</div>
                               </div>
                               <div>
-                                <span className="text-gray-600 font-medium">Email</span>
-                                <div className="font-semibold text-gray-900">{customerEmail}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium">Phone</span>
-                                <div className="font-semibold text-gray-900">{customerPhone}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium">Payment Method</span>
-                                <div className="font-semibold text-gray-900 flex items-center">
-                                  <img src="/mtn.jpg" alt="MTN" className="w-5 h-5 rounded mr-2" />
-                                  MTN Mobile Money
-                                </div>
-                              </div>
+                                <span className="text-gray-600 text-sm font-medium">Email</span>
+                                <div className="font-semibold text-gray-900 text-sm">{customerEmail}</div>
                             </div>
+                              <div>
+                                <span className="text-gray-600 text-sm font-medium">Phone</span>
+                                <div className="font-semibold text-gray-900 text-sm">{customerPhone}</div>
                           </div>
+                              <div>
+                                <span className="text-gray-600 text-sm font-medium">Payment Method</span>
+                                <div className="font-semibold text-gray-900 text-sm flex items-center">
+                                  <img src="/mtn.jpg" alt="MTN" className="w-4 h-4 rounded mr-1" />
+                                  MTN Mobile Money
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                           
-                          <div className="bg-white rounded-xl p-4 shadow-sm">
-                            <span className="text-gray-600 font-medium block mb-2">Delivery Address</span>
-                            <div className="font-semibold text-gray-900">
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <span className="text-gray-600 text-sm font-medium block mb-1">Delivery Address</span>
+                            <div className="font-semibold text-gray-900 text-sm">
                               {[addressData.street, addressData.village, addressData.cell, addressData.sector, addressData.district, addressData.province]
                                 .filter(Boolean)
                                 .join(', ') || 'Not specified'}
-                            </div>
-                          </div>
-                          
-                          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 shadow-lg">
+                      </div>
+                           </div>
+                           
+                          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 shadow-lg">
                             <div className="flex justify-between items-center">
-                              <span className="font-bold text-white text-xl">Total Amount</span>
-                              <span className="font-bold text-white text-3xl">{formatRWF(subtotal)} RWF</span>
-                            </div>
-                          </div>
-                        </div>
+                              <span className="font-bold text-white text-lg">Total Amount</span>
+                              <span className="font-bold text-white text-2xl">{formatRWF(subtotal)} RWF</span>
+                           </div>
+                         </div>
+                      </div>
                       </div>
                     </div>
                   )}
