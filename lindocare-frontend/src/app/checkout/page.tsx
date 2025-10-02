@@ -247,9 +247,6 @@ const CheckoutPage = () => {
     
     if (!addressData.province) newAddressErrors.province = "Province is required";
     if (!addressData.district) newAddressErrors.district = "District is required";
-    if (!addressData.sector) newAddressErrors.sector = "Sector is required";
-    if (!addressData.cell) newAddressErrors.cell = "Cell is required";
-    if (!addressData.village) newAddressErrors.village = "Village is required";
     if (!addressData.street.trim()) newAddressErrors.street = "Street address is required";
     
     setAddressErrors(newAddressErrors);
@@ -275,18 +272,21 @@ const CheckoutPage = () => {
       console.log('Payment method selected, moving to address step');
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      console.log('Validating customer info and address:', { customerName, customerEmail, customerPhone, addressData });
+      console.log('Validating customer info, address, and sender info:', { customerName, customerEmail, customerPhone, addressData, senderName });
       const customerValid = validateCustomerInfo();
       const addressValid = validateAddress();
+      const senderValid = senderName.trim() !== "";
       
-      if (customerValid && addressValid) {
-        console.log('Customer info and address valid, moving to confirmation step');
+      if (customerValid && addressValid && senderValid) {
+        console.log('All info valid, moving to confirmation step');
         setCurrentStep(3);
       } else {
         if (!customerValid) {
           setOrderStatus({ error: "Please fill in all customer information correctly." });
         } else if (!addressValid) {
           setOrderStatus({ error: "Please complete all delivery address fields." });
+        } else if (!senderValid) {
+          setOrderStatus({ error: "Please provide the sender name for payment." });
         }
       }
     }
@@ -702,15 +702,15 @@ const CheckoutPage = () => {
                           </div>
                         </div>
                         
-                        <div className="bg-black bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                        <div className="bg-white rounded-lg p-3 shadow-lg">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
-                              <div className="text-sm font-semibold mb-1 text-yellow-100">Total Amount</div>
-                              <div className="text-xl font-bold text-white">{formatRWF(subtotal)} RWF</div>
+                              <div className="text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
+                              <div className="text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-sm font-semibold mb-1 text-yellow-100">USSD Code</div>
-                              <div className="text-lg font-mono font-bold bg-black bg-opacity-40 px-2 py-1 rounded text-white">
+                              <div className="text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
+                              <div className="text-lg font-mono font-bold bg-blue-50 px-2 py-1 rounded text-blue-600 border border-blue-200">
                                 *182*8*1*079559#
                               </div>
                             </div>
@@ -728,45 +728,43 @@ const CheckoutPage = () => {
                   
                   {/* Step 2: Delivery Information */}
                   {currentStep === 2 && (
-                    <div className="space-y-6 animate-fade-in">
+                    <div className="animate-fade-in">
                       {/* Header */}
-                      <div className="text-center mb-6">
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-3">Delivery Information</h2>
+                      <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-2">Delivery Information</h2>
                         {isUserLoggedIn() && customerName && customerEmail ? (
-                          <div className="mt-3 inline-block">
-                            <div className="bg-green-50 border-2 border-green-400 rounded-xl p-3 px-6">
+                          <div className="mt-2 inline-block">
+                            <div className="bg-green-50 border border-green-400 rounded-lg p-2 px-4">
                               <div className="flex items-center justify-center text-sm">
-                                <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
-                                <span className="text-gray-700 font-semibold">
+                                <span className="text-gray-700 font-medium">
                                   <strong className="text-green-700">Delivering to:</strong> {customerName} • {customerEmail}
                                 </span>
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <p className="text-gray-600 text-lg">Enter your contact details and delivery address</p>
+                          <p className="text-gray-600">Enter your contact details and delivery address</p>
                         )}
                       </div>
                       
-                      {/* Guest User Fields - Name & Email */}
+                      {/* Guest User Fields - Compact */}
                       {!isUserLoggedIn() && (
-                        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-6">
-                          <div className="flex items-start mb-4">
-                            <svg className="w-6 h-6 text-yellow-600 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-4">
+                          <div className="flex items-start mb-3">
+                            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                             </svg>
                             <div>
-                              <p className="text-lg text-yellow-800 font-semibold">
-                                <strong>Guest Checkout</strong>
-                              </p>
-                              <p className="text-sm text-yellow-700">Please provide your contact information below</p>
+                              <p className="text-sm text-yellow-800 font-semibold">Guest Checkout</p>
+                              <p className="text-xs text-yellow-700">Please provide your contact information</p>
                             </div>
                           </div>
-                          <div className="grid md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-sm font-bold text-gray-800 mb-3">
+                              <label className="block text-xs font-medium text-gray-800 mb-1">
                                 Full Name <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -779,20 +777,20 @@ const CheckoutPage = () => {
                                   }
                                 }}
                                 placeholder="John Doe"
-                                className={`w-full px-4 py-4 border-2 rounded-xl outline-none transition-all duration-200 font-medium text-lg ${
+                                className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
                                   customerErrors.name 
-                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
                                     : customerName.trim()
-                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                                 }`}
                               />
                               {customerErrors.name && (
-                                <p className="mt-2 text-sm text-red-600 font-medium">{customerErrors.name}</p>
+                                <p className="mt-1 text-xs text-red-600">{customerErrors.name}</p>
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-bold text-gray-800 mb-3">
+                              <label className="block text-xs font-medium text-gray-800 mb-1">
                                 Email Address <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -805,91 +803,98 @@ const CheckoutPage = () => {
                                   }
                                 }}
                                 placeholder="john@example.com"
-                                className={`w-full px-4 py-4 border-2 rounded-xl outline-none transition-all duration-200 font-medium text-lg ${
+                                className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
                                   customerErrors.email 
-                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
                                     : customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail)
-                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                                 }`}
                               />
                               {customerErrors.email && (
-                                <p className="mt-2 text-sm text-red-600 font-medium">{customerErrors.email}</p>
+                                <p className="mt-1 text-xs text-red-600">{customerErrors.email}</p>
                               )}
                             </div>
                           </div>
                         </div>
                       )}
                       
-                      {/* Phone Number - Enhanced */}
-                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-300">
-                        <label className="block text-lg font-bold text-gray-800 mb-3 flex items-center">
-                          <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {/* Contact & Sender Information */}
+                      <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4">
+                        <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center">
+                          <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
-                          Phone Number <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="relative">
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
+                          Contact & Sender Information
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-800 mb-1">
+                              Phone Number <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="tel"
+                              value={customerPhone}
+                              onChange={(e) => {
+                                setCustomerPhone(e.target.value);
+                                if (customerErrors.phone) {
+                                  setCustomerErrors(prev => ({ ...prev, phone: undefined }));
+                                }
+                              }}
+                              placeholder="+250788123456"
+                              className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
+                                customerErrors.phone 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : customerPhone.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                              }`}
+                            />
+                            {customerErrors.phone && (
+                              <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
+                            )}
                           </div>
-                          <input
-                            type="tel"
-                            value={customerPhone}
-                            onChange={(e) => {
-                              setCustomerPhone(e.target.value);
-                              if (customerErrors.phone) {
-                                setCustomerErrors(prev => ({ ...prev, phone: undefined }));
-                              }
-                            }}
-                            placeholder="e.g., +250788123456"
-                            className={`w-full pl-12 pr-12 py-4 border-2 rounded-xl outline-none transition-all duration-200 text-lg font-medium ${
-                              customerErrors.phone 
-                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                : customerPhone.trim()
-                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                            }`}
-                          />
-                          {customerPhone.trim() && !customerErrors.phone && (
-                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                              <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
-                          {customerErrors.phone && (
-                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                              <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-800 mb-1">
+                              Sender Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={senderName}
+                              onChange={(e) => {
+                                setSenderName(e.target.value);
+                                if (paymentErrors.senderName) {
+                                  setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
+                                }
+                              }}
+                              placeholder="Name on MTN account"
+                              className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
+                                paymentErrors.senderName 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : senderName.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                              }`}
+                            />
+                            {paymentErrors.senderName && (
+                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
+                            )}
+                          </div>
                         </div>
-                        {customerErrors.phone && (
-                          <div className="mt-3 flex items-center text-sm text-red-600 bg-red-100 p-3 rounded-lg">
-                            <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            {customerErrors.phone}
-                          </div>
-                        )}
                       </div>
                         
-                      {/* Delivery Address Section - Enhanced */}
-                      <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border-2 border-green-300">
-                        <div className="flex items-center mb-4">
-                          <div className="p-2 bg-green-100 rounded-lg mr-3">
-                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {/* Delivery Address Section - Compact */}
+                      <div className="bg-green-50 border border-green-300 rounded-lg p-4">
+                        <div className="flex items-center mb-3">
+                          <div className="p-1 bg-green-100 rounded mr-2">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                           </div>
                           <div>
-                            <h3 className="text-xl font-bold text-gray-900">Delivery Address</h3>
-                            <p className="text-sm text-gray-600">Select your complete address for delivery</p>
+                            <h3 className="text-sm font-bold text-gray-900">Delivery Address</h3>
+                            <p className="text-xs text-gray-600">Where to deliver your order</p>
                           </div>
                         </div>
                         <AddressSelector
@@ -1041,7 +1046,7 @@ const CheckoutPage = () => {
                           <div className="bg-white rounded-xl p-4 shadow-sm">
                             <span className="text-gray-600 font-medium block mb-2">Delivery Address</span>
                             <div className="font-semibold text-gray-900">
-                              {[addressData.street, addressData.village, addressData.cell, addressData.sector, addressData.district, addressData.province]
+                              {[addressData.street, addressData.district, addressData.province]
                                 .filter(Boolean)
                                 .join(', ') || 'Not specified'}
                             </div>
