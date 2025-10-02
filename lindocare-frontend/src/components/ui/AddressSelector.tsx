@@ -174,21 +174,8 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center space-x-2 mb-3">
-        <div className="p-1.5 bg-blue-100 rounded">
-          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900">Delivery Address</h3>
-          <p className="text-xs text-gray-600">Select your location details</p>
-        </div>
-      </div>
 
-      {/* Simplified Address selection - Only Province, District, and Street */}
+      {/* Address selection with manual inputs */}
       <div className={`grid grid-cols-2 gap-3 transition-all duration-300 ${isAnimating ? 'opacity-95' : 'opacity-100'}`}>
         {/* Province */}
         <div>
@@ -222,23 +209,138 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
           />
         </div>
 
-        {/* Street Address - Full width */}
-        <div className="col-span-2">
+        {/* Sector - Manual input */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+            Sector
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <MapIcon />
+            </div>
+            <input
+              type="text"
+              value={value.sector}
+              onChange={(e) => handleFieldChange('sector', e.target.value)}
+              placeholder="Enter sector name"
+              disabled={disabled}
+              className={`
+                w-full pl-9 pr-3 py-2 text-sm
+                border-2 rounded-lg transition-all duration-200
+                ${disabled 
+                  ? 'bg-gray-100 border-gray-200 cursor-not-allowed text-gray-400' 
+                  : errors.sector 
+                    ? 'border-red-300 bg-white hover:border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                }
+                placeholder-gray-400 text-gray-900
+                focus:outline-none
+              `}
+            />
+          </div>
+          {errors.sector && (
+            <p className="mt-1 text-xs text-red-600 flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.sector}
+            </p>
+          )}
+        </div>
+
+        {/* Cell - Manual input */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+            Cell
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <BuildingIcon />
+            </div>
+            <input
+              type="text"
+              value={value.cell}
+              onChange={(e) => handleFieldChange('cell', e.target.value)}
+              placeholder="Enter cell name"
+              disabled={disabled}
+              className={`
+                w-full pl-9 pr-3 py-2 text-sm
+                border-2 rounded-lg transition-all duration-200
+                ${disabled 
+                  ? 'bg-gray-100 border-gray-200 cursor-not-allowed text-gray-400' 
+                  : errors.cell 
+                    ? 'border-red-300 bg-white hover:border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                }
+                placeholder-gray-400 text-gray-900
+                focus:outline-none
+              `}
+            />
+          </div>
+          {errors.cell && (
+            <p className="mt-1 text-xs text-red-600 flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.cell}
+            </p>
+          )}
+        </div>
+
+        {/* Village - Manual input */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+            Village
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <HomeIcon />
+            </div>
+            <input
+              type="text"
+              value={value.village}
+              onChange={(e) => handleFieldChange('village', e.target.value)}
+              placeholder="Enter village name"
+              disabled={disabled}
+              className={`
+                w-full pl-9 pr-3 py-2 text-sm
+                border-2 rounded-lg transition-all duration-200
+                ${disabled 
+                  ? 'bg-gray-100 border-gray-200 cursor-not-allowed text-gray-400' 
+                  : errors.village 
+                    ? 'border-red-300 bg-white hover:border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                }
+                placeholder-gray-400 text-gray-900
+                focus:outline-none
+              `}
+            />
+          </div>
+          {errors.village && (
+            <p className="mt-1 text-xs text-red-600 flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.village}
+            </p>
+          )}
+        </div>
+
+        {/* Street Address */}
+        <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
             Street Address
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <div className="relative">
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
+              <RoadIcon />
             </div>
             <input
               type="text"
               value={value.street}
               onChange={(e) => handleFieldChange('street', e.target.value)}
-              placeholder="Enter your street address"
+              placeholder="Enter street address"
               required={required}
               disabled={disabled}
               className={`
@@ -266,23 +368,23 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
         </div>
       </div>
 
-      {/* Progress indicator - Simplified */}
+      {/* Progress indicator - Updated */}
       <div className="mt-3 p-2 bg-gray-100 rounded border border-gray-300">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-medium text-gray-700">Progress</span>
           <span className="text-xs text-gray-600">
-            {[value.province, value.district, value.street].filter(v => v.trim()).length}/3 fields
+            {Object.values(value).filter(v => v.trim()).length}/6 fields
           </span>
         </div>
         <div className="w-full bg-gray-300 rounded-full h-1">
           <div 
             className="bg-blue-600 h-1 rounded-full transition-all duration-500 ease-out"
             style={{ 
-              width: `${([value.province, value.district, value.street].filter(v => v.trim()).length / 3) * 100}%` 
+              width: `${(Object.values(value).filter(v => v.trim()).length / 6) * 100}%` 
             }}
           ></div>
         </div>
-        {[value.province, value.district, value.street].filter(v => v.trim()).length === 3 && (
+        {Object.values(value).filter(v => v.trim()).length === 6 && (
           <div className="mt-1.5 flex items-center text-xs text-green-600">
             <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -292,12 +394,12 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
         )}
       </div>
 
-      {/* Address preview - Simplified */}
-      {(value.province || value.district || value.street) && (
+      {/* Address preview - Complete */}
+      {(value.province || value.district || value.sector || value.cell || value.village || value.street) && (
         <div className="mt-3 p-2 bg-blue-50 border border-blue-400 rounded">
           <h4 className="text-xs font-medium text-blue-700 mb-1">Preview:</h4>
           <p className="text-xs text-gray-700">
-            {[value.street, value.district, value.province]
+            {[value.street, value.village, value.cell, value.sector, value.district, value.province]
               .filter(Boolean)
               .join(', ') || 'Fill address above'}
           </p>
