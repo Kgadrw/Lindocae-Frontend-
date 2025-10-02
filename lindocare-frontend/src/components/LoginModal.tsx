@@ -82,16 +82,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !gender || !password || !confirmPassword) {
       setError("All fields are required.");
       return;
     }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
       return;
     }
     setLoading(true);
@@ -100,9 +96,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
       formData.append('firstName', firstName);
       formData.append('lastName', lastName);
       formData.append('email', email);
-      formData.append('gender', 'not_specified'); // Default value
+      formData.append('gender', gender);
       formData.append('password', password);
-      formData.append('role', 'customer'); // Changed from vendor to customer
+      formData.append('role', 'vendor');
       // Optionally: formData.append('image', file);
       const res = await fetch('https://lindo-project.onrender.com/user/Register', {
         method: 'POST',
@@ -110,14 +106,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
       });
       if (res.status === 201) {
         setLoading(false);
-        setFirstName(""); setLastName(""); setEmail(""); setPassword(""); setConfirmPassword("");
-        setSuccess("Registration successful! You can now complete your order.");
+        setFirstName(""); setLastName(""); setGender(""); setEmail(""); setPassword(""); setConfirmPassword("");
+        setSuccess("Registration successful!");
         const avatar = await getGravatarUrl(email);
         setTimeout(() => {
           setSuccess("");
           if (onLoginSuccess) onLoginSuccess(firstName, avatar, email);
           onClose();
-        }, 1500);
+        }, 1200);
       } else if (res.status === 400) {
         setError("Email already exists");
         setLoading(false);
@@ -157,12 +153,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
           </div>
         )}
         <Image src="/lindo.png" alt="Lindo Logo" width={90} height={36} className="mb-2" style={{ width: 'auto', height: 'auto' }} />
-        <h2 className="text-xl font-bold text-gray-700 mb-4">{isRegister ? 'Quick Registration' : 'Register/Sign in'}</h2>
-        {isRegister && (
-          <p className="text-sm text-gray-600 mb-4 text-center">
-            Create your account quickly. We'll collect your delivery address during checkout.
-          </p>
-        )}
+        <h2 className="text-xl font-bold text-gray-700 mb-4">{isRegister ? 'Register' : 'Register/Sign in'}</h2>
         <form className="w-full flex flex-col gap-4 mb-4" onSubmit={isRegister ? handleRegister : handleLogin}>
           {!isRegister && (
             <>
@@ -237,6 +228,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
                 </div>
               </div>
               <div className="mb-2">
+                <label className="block mb-0.5 text-blue-700 font-medium text-sm">Gender</label>
+                <select
+                  name="gender"
+                  value={gender}
+                  onChange={e => setGender(e.target.value)}
+                  className="w-full border border-blue-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm text-blue-900 placeholder:text-blue-400"
+                  required
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div className="mb-2">
                 <label className="block mb-0.5 text-blue-700 font-medium text-sm">Email</label>
             <input
               type="email"
@@ -302,14 +307,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
           <button
             type="button"
             className="text-blue-600 hover:underline text-sm font-semibold"
-            onClick={() => {
-              onClose();
-              if (isRegister) {
-                window.location.href = '/login';
-              } else {
-                window.location.href = '/register';
-              }
-            }}
+            onClick={() => setIsRegister(v => !v)}
           >
             {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
           </button>

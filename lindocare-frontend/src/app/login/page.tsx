@@ -1,194 +1,493 @@
 "use client";
-
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, CheckCircle, XCircle, User, ArrowLeft } from "lucide-react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
+import { Eye, EyeOff, CheckCircle, Upload , XCircle, UserPlus, User } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  
-  // Form state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Create Account state (ADDED missing states here)
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
+  const [registerEmail, setRegisterEmail] = useState<string>("");
+  const [registerPassword, setRegisterPassword] = useState<string>("");
+  const [registerImage, setRegisterImage] = useState<File | null>(null);
+  const [registerShowPassword, setRegisterShowPassword] = useState<boolean>(false);
+  const [registerKeepSignedIn, setRegisterKeepSignedIn] = useState<boolean>(true);
+  const [registerLoading, setRegisterLoading] = useState<boolean>(false);
+  const [registerError, setRegisterError] = useState<string>("");
+  const [registerSuccess, setRegisterSuccess] = useState<string>("");
+
+  // Sign In state
+  const [loginEmail, setLoginEmail] = useState<string>("");
+  const [loginPassword, setLoginPassword] = useState<string>("");
+  const [loginShowPassword, setLoginShowPassword] = useState<boolean>(false);
+  const [loginKeepSignedIn, setLoginKeepSignedIn] = useState<boolean>(true);
+  const [loginLoading, setLoginLoading] = useState<boolean>(false);
+  const [loginError, setLoginError] = useState<string>("");
+  const [loginSuccess, setLoginSuccess] = useState<string>("");
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-    
-    if (!email.trim() || !password.trim()) {
-      setError("Please fill in all fields.");
+    setRegisterError("");
+    setRegisterLoading(true);
+  
+    if (!firstName || !lastName || !gender || !registerEmail || !registerPassword) {
+      setRegisterError("All fields are required.");
+      setRegisterLoading(false);
+      return;
+    }
+  
+    try {
+      const formData = new FormData();
+      if (registerImage) formData.append("image", registerImage);
+      formData.append("firstName", firstName);
+      formData.append("lastName", lastName);
+      formData.append("email", registerEmail);
+      formData.append("gender", gender);
+      formData.append("password", registerPassword);
+      formData.append("role", "vendor");
+  
+      const res = await fetch("https://lindo-project.onrender.com/user/Register", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const data = await res.json().catch(() => ({}));
+  
+      if (res.status === 201 && data?.user) {
+        setRegisterSuccess("Registration successful!");
+        setFirstName("");
+        setLastName("");
+        setGender("");
+        setRegisterEmail("");
+        setRegisterPassword("");
+        setRegisterImage(null);
+  
+        // ✅ Save session like in login
+        localStorage.setItem("userData", JSON.stringify(data));
+        localStorage.setItem("userEmail", data.user.email);
+  
+        const name =
+          `${data.user.firstName || ""} ${data.user.lastName || ""}`.trim() ||
+          data.user.email;
+        localStorage.setItem(`userName:${data.user.email}`, name);
+  
+        // ✅ Save profile picture
+        if (data.user.image) {
+          // store absolute or relative URL depending on API response
+          localStorage.setItem(`userImage:${data.user.email}`, data.user.image);
+        }
+  
+        // ✅ Trigger header update
+        try {
+          window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+        } catch {
+          localStorage.setItem("userEmail", data.user.email); // fallback
+        }
+  
+        // Redirect home
+        setTimeout(() => {
+          setRegisterSuccess("");
+          router.push("/");
+        }, 800);
+      } else if (res.status === 400) {
+        setRegisterError(data?.message || "Email already exists");
+      } else {
+        setRegisterError(data?.message || "Server error. Please try again later.");
+      }
+    } catch (err) {
+      setRegisterError("Network error. Please try again.");
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+  
+  
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoginLoading(true);
+
+    if (!loginEmail || !loginPassword) {
+      setLoginError("Email and password are required.");
+      setLoginLoading(false);
       return;
     }
 
-    setLoading(true);
-    
     try {
-      const response = await fetch("https://lindo-project.onrender.com/user/Login", {
+      const res = await fetch("https://lindo-project.onrender.com/user/Login", {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
 
-      if (response.status === 200) {
-        const data = await response.json();
-        
-        // Store user data
-        if (data.user) {
-          localStorage.setItem("userData", JSON.stringify(data));
-          localStorage.setItem("userEmail", data.user.email);
-          localStorage.setItem(`userName:${data.user.email}`, data.user.firstName + " " + data.user.lastName);
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 200 && data?.user) {
+        localStorage.setItem("userData", JSON.stringify(data));
+        localStorage.setItem("userEmail", loginEmail);
+
+        const name =
+          `${data.user.firstName || ""} ${data.user.lastName || ""}`.trim() ||
+          data.user.email ||
+          loginEmail;
+        localStorage.setItem(`userName:${loginEmail}`, name);
+
+        // Trigger updates in other tabs/components that listen to storage
+        try {
+          window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+        } catch (e) {
+          // fallback for environments where StorageEvent ctor may be restricted
+          localStorage.setItem("userEmail", loginEmail);
         }
 
-        setSuccess("Login successful! Redirecting...");
-        
-        // Redirect after success
+        setLoginSuccess("Login successful!");
+        setLoginEmail("");
+        setLoginPassword("");
+
         setTimeout(() => {
+          setLoginSuccess("");
           router.push("/");
-        }, 1500);
-      } else if (response.status === 401) {
-        setError("Invalid email or password.");
-      } else if (response.status === 404) {
-        setError("User not found. Please check your email.");
+        }, 800);
+      } else if (res.status === 401) {
+        setLoginError("Invalid credentials");
+      } else if (res.status === 404) {
+        setLoginError("User not found");
       } else {
-        setError("Login failed. Please try again.");
+        setLoginError(data?.message || "Server error. Please try again later.");
       }
     } catch (err) {
-      setError("Network error. Please check your connection and try again.");
+      setLoginError("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
+  // Handle Google OAuth callback in URL (if your backend redirects back with email/user)
+ 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+  
+      const userEmail = params.get("email");
+      const userName = params.get("name");
+      const userAvatar = params.get("avatar");
+  
+      if (userEmail) {
+        localStorage.setItem("userEmail", userEmail);
+  
+        if (userName && userName !== userEmail) {
+          localStorage.setItem(`userName:${userEmail}`, userName);
+        }
+  
+        if (userAvatar) {
+          localStorage.setItem(`userAvatar:${userEmail}`, userAvatar);
+        }
+  
+        // Notify other tabs/components
+        window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+        window.dispatchEvent(new CustomEvent("userLogin", { detail: { email: userEmail, name: userName, avatar: userAvatar } }));
+  
+        // Clean URL and redirect to home page
+        const url = new URL(window.location.href);
+        url.search = "";
+        window.history.replaceState({}, document.title, url.toString());
+  
+        setTimeout(() => {
+          window.location.replace("/");
+        }, 100);
+      }
+    }
+  }, [router]);
+  
+
+
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Image src="/lindo.png" alt="Lindo Logo" width={120} height={48} className="h-12 w-auto" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-2">
+      <div className="w-full max-w-4xl  p-8 mx-4 flex flex-col items-center " style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}>
+        {/* Tab Navigation */}
+        <div className="w-full max-w-2xl mb-6">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab("login")}
+              className={`flex-1 py-3 px-4 rounded-md font-semibold text-sm transition-all ${
+                activeTab === "login" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              <User size={16} className="inline mr-2" /> Sign In
+            </button>
+            <button
+              onClick={() => setActiveTab("register")}
+              className={`flex-1 py-3 px-4 rounded-md font-semibold text-sm transition-all ${
+                activeTab === "register" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              <UserPlus size={16} className="inline mr-2" /> Create Account
+            </button>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your Lindo account</p>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+        <div className="w-full max-w-md">
+          {/* Create Account Form */}
+          {activeTab === "register" && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <UserPlus size={24} className="text-green-600" />
+                  <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
+                </div>
+                <p className="text-gray-600 text-sm">Join Lindo for the best baby care experience</p>
+              </div>
+
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your email address"
+                type="text"
+                placeholder="First Name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
                 required
               />
-            </div>
 
-            {/* Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <input
+                type="text"
+                placeholder="Last Name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
+                required
+              />
+
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+
+              <input
+                type="email"
+                placeholder="Email address"
+                value={registerEmail}
+                onChange={(e) => setRegisterEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
+                required
+              />
+
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter your password"
+                  type={registerShowPassword ? "text" : "password"}
+                  placeholder="Create password"
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-400"
                   required
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setRegisterShowPassword((v) => !v)}
+                  tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {registerShowPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <div className="pt-4">
+              <label className="flex items-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-50">
+              <Upload size={18} className="text-gray-500" />
+              <span className="text-gray-600">
+                {registerImage ? registerImage.name : "Upload profile image"}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setRegisterImage(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+            </label>
+
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={registerKeepSignedIn}
+                  onChange={(e) => setRegisterKeepSignedIn(e.target.checked)}
+                  className="accent-green-600"
+                />
+                Keep me signed in
+              </label>
+
+              {registerError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                  <XCircle size={16} className="text-red-500" />
+                  <span className="text-red-700 text-sm font-medium">{registerError}</span>
+                </div>
+              )}
+
+              {registerSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                  <CheckCircle size={16} className="text-green-500" />
+                  <span className="text-green-700 text-sm font-medium">{registerSuccess}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={loading}
-                className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 ${
-                  loading
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105 shadow-lg hover:shadow-xl'
-                }`}
+                className="w-full rounded-lg bg-green-600 text-white font-semibold py-3 flex items-center justify-center gap-2 hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={registerLoading}
               >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full mr-3"></div>
-                    Signing In...
-                  </div>
+                {registerLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Creating Account...
+                  </>
                 ) : (
-                  <div className="flex items-center justify-center">
-                    <User className="w-5 h-5 mr-2" />
-                    Sign In
-                  </div>
+                  <>
+                    <UserPlus size={20} /> Create Account
+                  </>
                 )}
               </button>
-            </div>
 
-            {/* Register Link */}
-            <div className="text-center pt-4">
-              <p className="text-gray-600">
-                Don't have an account?{" "}
-                <Link
-                  href="/register"
-                  className="text-blue-600 hover:text-blue-700 font-semibold"
-                >
-                  Create one here
-                </Link>
-              </p>
-            </div>
-
-            {/* Back to Home */}
-            <div className="text-center pt-2">
-              <Link
-                href="/"
-                className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm"
+              {/* <div className="flex items-center my-4">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="mx-3 text-gray-400 text-sm">or</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div> */}
+{/*
+              <button
+                type="button"
+                onClick={() => (window.location.href = "https://lindo-project.onrender.com/auth/google")}
+                className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium py-3 text-base shadow-sm hover:bg-gray-50 transition"
               >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to Home
-              </Link>
-            </div>
-          </form>
-
-          {/* Status Messages */}
-          {error && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center">
-                <XCircle className="w-5 h-5 text-red-500 mr-2" />
-                <span className="text-red-700 font-medium">{error}</span>
+                <img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                  alt="Google"
+                  width={20}
+                  height={20}
+                />
+                Continue with Google
+              </button>
+*/}
+              <div className="text-xs text-gray-500 text-center mt-4">
+                By creating an account, you agree to our{" "}
+                <Link href="/terms-of-use" className="text-green-600 hover:underline">Terms & Conditions</Link> and{" "}
+                <Link href="/privacy-policy" className="text-green-600 hover:underline">Privacy Policy</Link>.
               </div>
-            </div>
+            </form>
           )}
 
-          {success && (
-            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-                <span className="text-green-700 font-medium">{success}</span>
+          {/* Sign In Form */}
+          {activeTab === "login" && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <User size={24} className="text-blue-600" />
+                  <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
+                </div>
+                <p className="text-gray-600 text-sm">Sign in to your Lindo account</p>
               </div>
-            </div>
+
+              <input
+                type="email"
+                placeholder="Email address"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                required
+              />
+
+              <div className="relative">
+                <input
+                  type={loginShowPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setLoginShowPassword((v) => !v)}
+                  tabIndex={-1}
+                >
+                  {loginShowPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={loginKeepSignedIn}
+                    onChange={(e) => setLoginKeepSignedIn(e.target.checked)}
+                    className="accent-blue-600"
+                  />
+                  Keep me signed in
+                </label>
+                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">Forgot password?</Link>
+              </div>
+
+              {loginError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                  <XCircle size={16} className="text-red-500" />
+                  <span className="text-red-700 text-sm font-medium">{loginError}</span>
+                </div>
+              )}
+
+              {loginSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                  <CheckCircle size={16} className="text-green-500" />
+                  <span className="text-green-700 text-sm font-medium">{loginSuccess}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-blue-600 text-white font-semibold py-3 flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loginLoading}
+              >
+                {loginLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Signing In...
+                  </>
+                ) : (
+                  <>
+                    <User size={20} /> Sign In
+                  </>
+                )}
+              </button>
+
+              {/*<div className="flex items-center my-4">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="mx-3 text-gray-400 text-sm">or</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div> */}
+{/*
+              <button
+                type="button"
+                onClick={() => (window.location.href = "https://lindo-project.onrender.com/auth/google")}
+                className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium py-3 text-base shadow-sm hover:bg-gray-50 transition"
+              >
+                <img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                  alt="Google"
+                  width={20}
+                  height={20}
+                />
+                Continue with Google
+              </button>
+              */}
+            </form>
           )}
         </div>
       </div>
