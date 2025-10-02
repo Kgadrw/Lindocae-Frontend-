@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, CheckCircle, XCircle, UserPlus } from "lucide-react";
 import Image from "next/image";
@@ -33,6 +33,12 @@ const RegisterPage: React.FC = () => {
 
   // Address validation errors
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Validation functions
   const validateForm = () => {
@@ -63,6 +69,13 @@ const RegisterPage: React.FC = () => {
     setAddressErrors(newAddressErrors);
     return Object.keys(newAddressErrors).length === 0;
   };
+
+  // Clear address errors when address data changes
+  React.useEffect(() => {
+    if (Object.keys(addressErrors).length > 0) {
+      setAddressErrors({});
+    }
+  }, [addressData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -269,12 +282,13 @@ const RegisterPage: React.FC = () => {
               </h2>
               <p className="text-sm text-gray-600">We'll use this address for delivering your orders</p>
               
-              <AddressSelector
-                addressData={addressData}
-                setAddressData={setAddressData}
-                errors={addressErrors}
-                setErrors={setAddressErrors}
-              />
+              {isMounted && (
+                <AddressSelector
+                  value={addressData}
+                  onChange={setAddressData}
+                  errors={addressErrors}
+                />
+              )}
             </div>
 
             {/* Submit Button */}
