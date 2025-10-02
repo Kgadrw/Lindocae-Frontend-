@@ -14,7 +14,7 @@ import {
 } from "../../utils/serverStorage";
 import { normalizeImageUrl } from "../../utils/image";
 import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
-import { getUserInfo } from "../../utils/userInfo";
+import { getUserInfo, saveUserPurchaseInfo } from "../../utils/userInfo";
 
 interface Product {
   id: string | number;
@@ -32,7 +32,7 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("dpo");
+  const [paymentMethod, setPaymentMethod] = useState("mtn");
   
   // Step management - Reorganized flow: Payment → Address → Confirmation
   const [currentStep, setCurrentStep] = useState(1);
@@ -54,17 +54,19 @@ const CheckoutPage = () => {
   const [customerName, setCustomerName] = useState("");
   
   // Payment confirmation info
+  const [senderName, setSenderName] = useState("");
+  const [senderAddress, setSenderAddress] = useState("");
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   
   // Form validation errors
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [customerErrors, setCustomerErrors] = useState<{name?: string, email?: string, phone?: string}>({});
+  const [paymentErrors, setPaymentErrors] = useState<{senderName?: string, senderAddress?: string}>({});
 
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
   const [users, setUsers] = useState<any[]>([]); // optional (kept as in your original)
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [isLoadingUserInfo, setIsLoadingUserInfo] = useState(true);
   const router = useRouter();
@@ -252,8 +254,13 @@ const CheckoutPage = () => {
   };
 
   const validatePaymentInfo = () => {
-    // No validation needed for payment info since we removed the fields
-    return true;
+    const errors: {senderName?: string, senderAddress?: string} = {};
+    
+    if (!senderName.trim()) errors.senderName = "Sender name is required";
+    if (!senderAddress.trim()) errors.senderAddress = "Sender address is required";
+    
+    setPaymentErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleNextStep = () => {
@@ -265,11 +272,12 @@ const CheckoutPage = () => {
       console.log('Payment method selected, moving to address step');
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      console.log('Validating customer info and address:', { customerName, customerEmail, customerPhone, addressData });
+      console.log('Validating customer info, address, and sender info:', { customerName, customerEmail, customerPhone, addressData, senderName });
       const customerValid = validateCustomerInfo();
       const addressValid = validateAddress();
+      const senderValid = senderName.trim() !== "";
       
-      if (customerValid && addressValid) {
+      if (customerValid && addressValid && senderValid) {
         console.log('All info valid, moving to confirmation step');
         setCurrentStep(3);
       } else {
@@ -277,6 +285,8 @@ const CheckoutPage = () => {
           setOrderStatus({ error: "Please fill in all customer information correctly." });
         } else if (!addressValid) {
           setOrderStatus({ error: "Please complete all delivery address fields." });
+        } else if (!senderValid) {
+          setOrderStatus({ error: "Please provide the sender name for payment." });
         }
       }
     }
@@ -290,200 +300,85 @@ const CheckoutPage = () => {
     }
   };
 
-  // Test function to check backend connectivity
-  const testBackendConnection = async () => {
-    try {
-      console.log("Testing backend connection...");
-      setBackendStatus('checking');
-      const response = await fetch("https://lindo-project.onrender.com/health", {
-        method: "GET",
-        headers: {
-          'accept': 'application/json',
-        },
-      });
-      console.log("Backend health check status:", response.status);
-      const isHealthy = response.ok;
-      setBackendStatus(isHealthy ? 'online' : 'offline');
-      return isHealthy;
-    } catch (error) {
-      console.log("Backend health check failed:", error);
-      setBackendStatus('offline');
-      return false;
-    }
-  };
-
-  // Function to retry failed orders when backend is back online
-  const retryFailedOrders = async () => {
-    try {
-      const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
-      if (failedOrders.length === 0) return;
-
-      console.log(`Found ${failedOrders.length} failed orders to retry...`);
-      
-      const successfulOrders = [];
-      const stillFailedOrders = [];
-
-      for (const order of failedOrders) {
-        try {
-          const token = getAuthToken();
-          const response = await fetch("https://lindo-project.onrender.com/orders/createOrder", {
-            method: "POST",
-            headers: {
-              accept: "application/json",
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify(order),
-          });
-
-          if (response.ok) {
-            console.log(`Successfully retried order ${order.id}`);
-            successfulOrders.push(order.id);
-          } else {
-            console.log(`Order ${order.id} still failing with status ${response.status}`);
-            stillFailedOrders.push(order);
-          }
-        } catch (error) {
-          console.log(`Error retrying order ${order.id}:`, error);
-          stillFailedOrders.push(order);
-        }
-      }
-
-      // Update localStorage with remaining failed orders
-      localStorage.setItem('fallbackOrders', JSON.stringify(stillFailedOrders));
-      
-      if (successfulOrders.length > 0) {
-        console.log(`Successfully processed ${successfulOrders.length} orders`);
-        // Optionally show a success message to user
-        setOrderStatus({ 
-          success: `Great! ${successfulOrders.length} pending order(s) have been successfully processed.` 
-        });
-        setTimeout(() => setOrderStatus({}), 5000);
-      }
-    } catch (error) {
-      console.error("Error retrying failed orders:", error);
-    }
-  };
-
-  // Check for failed orders on component mount and periodically
-  useEffect(() => {
-    const checkAndRetryOrders = async () => {
-      const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
-      if (failedOrders.length > 0) {
-        console.log(`Found ${failedOrders.length} pending orders. Checking if backend is back online...`);
-        
-        const backendHealthy = await testBackendConnection();
-        if (backendHealthy) {
-          console.log("Backend is back online! Retrying failed orders...");
-          await retryFailedOrders();
-        }
-      }
-    };
-
-    // Initial check
-    checkAndRetryOrders();
-
-    // Set up periodic check every 30 seconds if there are failed orders
-    const interval = setInterval(async () => {
-      const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
-      if (failedOrders.length > 0) {
-        await checkAndRetryOrders();
-      }
-    }, 30000); // Check every 30 seconds
-
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
-  }, []);
-
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setOrderStatus({});
     setIsSubmitting(true);
 
     // Final validation
-    if (!validateCustomerInfo() || !validateAddress()) {
+    if (!validateCustomerInfo() || !validateAddress() || !validatePaymentInfo()) {
       setOrderStatus({ error: "Please complete all steps correctly." });
       setIsSubmitting(false);
       return;
     }
 
-    // Additional validation to ensure all required fields are filled
-    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
-      setOrderStatus({ error: "Please fill in all customer information fields." });
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!addressData.province || !addressData.district || !addressData.street.trim()) {
-      setOrderStatus({ error: "Please complete all required address fields (Province, District, Street)." });
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!cartItems || cartItems.length === 0) {
-      setOrderStatus({ error: "Your cart is empty. Please add items before checkout." });
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Validate subtotal
-    if (!subtotal || subtotal <= 0) {
-      setOrderStatus({ error: "Invalid order total. Please refresh and try again." });
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      // Test backend connectivity first
-      const backendHealthy = await testBackendConnection();
-      if (!backendHealthy) {
-        console.warn("Backend health check failed, but proceeding with order creation...");
+      // **SAVE USER PURCHASE INFO TO DATABASE FIRST**
+      console.log('Saving user purchase info to database...');
+      
+      // Calculate total amount from cart items
+      const totalAmount = cartItems.reduce((sum, item) => {
+        const itemTotal = (item.price || 0) * (item.quantity || 1);
+        return sum + itemTotal;
+      }, 0);
+      
+      // Prepare cart items for database storage
+      const cartItemsForDB = cartItems.map((item) => ({
+        id: String(item.id),
+        name: item.name || 'Product',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+      }));
+      
+      // Save purchase information to database before proceeding
+      const saveResult = await saveUserPurchaseInfo({
+        userName: customerName,
+        userEmail: customerEmail,
+        cartItems: cartItemsForDB,
+        phone: customerPhone,
+        address: addressData,
+        totalAmount,
+      });
+      
+      if (!saveResult.success) {
+        console.warn('Failed to save purchase info to database:', saveResult.error);
+        // Continue with checkout even if save fails, but log the error
+      } else {
+        console.log('Purchase info saved successfully to database, Order ID:', saveResult.orderId);
       }
 
       const token = getAuthToken();
 
       // Prepare order items for the API
-      const orderItems = cartItems.map((item) => {
-        // Validate each item has required fields
-        if (!item.id || !item.price || item.price <= 0 || !item.quantity || item.quantity <= 0) {
-          throw new Error(`Invalid cart item: ${item.name || 'Unknown item'}. Please refresh and try again.`);
-        }
-        
-        return {
-          productId: String(item.id),
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-        };
-      });
+      const orderItems = cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+      }));
 
-      // Prepare shipping address in the format backend expects (exact API spec)
-      const shippingAddress = {
+      // Prepare order data with new address structure
+     const orderData = {
+  paymentMethod: paymentMethod || "mtn",
   province: addressData.province,
   district: addressData.district,
-        sector: addressData.sector?.trim() || "",
-        cell: addressData.cell?.trim() || "",
-        village: addressData.village?.trim() || "",
-        street: addressData.street.trim(),
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim(),
-        customerPhone: customerPhone.trim(),
-      };
-
-      // Prepare order data matching exact backend API specification
-      const orderData = {
-        paymentMethod: paymentMethod || "dpo", // Use selected payment method or default to DPO
-        shippingAddress: shippingAddress,
-        items: orderItems, // Include items array
-        totalAmount: Number(subtotal), // Include total amount
-        customerEmail: customerEmail.trim(),
-        customerPhone: customerPhone.trim(),
-        customerName: customerName.trim()
+  sector: addressData.sector,
+  cell: addressData.cell,
+  village: addressData.village,
+  street: addressData.street,
+  customerEmail,
+  customerPhone,
+  customerName,
+  items: orderItems,
+  totalAmount,
+  // MTN Mobile Money payment details
+  senderName,
+  senderAddress,
+  momoCode: "*182*8*1*079559#"
 };
 
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
-      console.log("Total amount calculated:", subtotal);
-      console.log("Order data JSON string:", JSON.stringify(orderData, null, 2));
+      console.log("Total amount calculated:", totalAmount);
 
       // Optional auth token from localStorage (include if present)
       let openLock: string | null = null;
@@ -512,16 +407,6 @@ const CheckoutPage = () => {
       );
 
       console.log("Order response status:", orderResponse.status);
-      console.log("Order response headers:", Object.fromEntries(orderResponse.headers.entries()));
-      
-      // Log the full response for debugging
-      const responseClone = orderResponse.clone();
-      try {
-        const responseText = await responseClone.text();
-        console.log("Full API response:", responseText);
-      } catch (e) {
-        console.log("Could not read response text:", e);
-      }
 
       if (orderResponse.ok) {
         const orderResult = await orderResponse.json();
@@ -534,13 +419,9 @@ const CheckoutPage = () => {
         const firstName = firstNameRaw || "Customer";
         const lastName = restName.join(" ") || firstName;
 
-        // Payment processing success message
-        const paymentMessage = paymentMethod === "dpo" 
-          ? `Order created successfully! You will be redirected to DPO payment gateway to complete your payment of ${formatRWF(subtotal)} RWF.`
-          : `Order created successfully! Please send ${formatRWF(subtotal)} RWF to *182*8*1*079559# and complete payment confirmation.`;
-        
+        // MTN Mobile Money payment processing
         setOrderStatus({ 
-          success: paymentMessage
+          success: `Order created successfully! Please send ${formatRWF(totalAmount)} RWF to *182*8*1*079559# and complete payment confirmation.` 
         });
         
         // Clear cart after successful order creation
@@ -552,11 +433,8 @@ const CheckoutPage = () => {
         
         // Store order details for reference
         localStorage.setItem("pendingOrderId", String(orderId || ""));
-        localStorage.setItem("pendingOrderAmount", String(subtotal));
-        localStorage.setItem("paymentMethod", paymentMethod || "dpo");
-        if (paymentMethod === "mtn") {
+        localStorage.setItem("pendingOrderAmount", String(totalAmount));
         localStorage.setItem("momoCode", "*182*8*1*079559#");
-        }
       } else if (orderResponse.status === 401) {
         const errorText = await orderResponse.text();
         console.error("Order creation 401 error response:", errorText);
@@ -584,53 +462,10 @@ const CheckoutPage = () => {
         console.error("Order creation error body (text):", responseText || "<empty body>");
         console.error("Order creation error parsed object:", errorData);
 
-        // Provide more specific error messages
-        let errorMessage = "Failed to create order. Please try again.";
-        if (orderResponse.status === 500) {
-          errorMessage = "Server error occurred. The backend service may be temporarily unavailable. Please try again later.";
-          // For debugging: show the actual error from backend
-          if (errorData.message) {
-            errorMessage += ` Backend error: ${errorData.message}`;
-          }
-        } else if (orderResponse.status === 404) {
-          errorMessage = "Order creation endpoint not found. Please contact support.";
-        } else if (orderResponse.status === 401) {
-          errorMessage = "Authentication failed. Please log in again.";
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-
-        // If backend is down, offer to save order locally for later processing
-        if (orderResponse.status === 500) {
-          console.log("Backend server error - offering local storage fallback");
-          
-          // Store order data locally as fallback
-          try {
-            const fallbackOrder = {
-              ...orderData,
-              id: `fallback_${Date.now()}`,
-              timestamp: new Date().toISOString(),
-              status: 'pending_backend',
-            };
-            
-            const existingOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
-            existingOrders.push(fallbackOrder);
-            localStorage.setItem('fallbackOrders', JSON.stringify(existingOrders));
-
         setOrderStatus({
-              error: `${errorMessage} Your order has been saved locally and will be processed when the service is restored.`,
-            });
-          } catch (storageError) {
-            console.error("Could not save fallback order:", storageError);
-            setOrderStatus({
-              error: errorMessage,
-            });
-          }
-        } else {
-          setOrderStatus({
-            error: errorMessage,
-          });
-        }
+          error:
+            errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
+        });
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -641,60 +476,33 @@ const CheckoutPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-3 sm:py-6 px-2 sm:px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-6 px-4">
       <div className="w-full max-w-7xl mx-auto">
         {/* Header with Back Button */}
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-6">
           <button
             onClick={() => router.push('/cart')}
-            className="flex items-center text-blue-600 hover:text-blue-700 mb-3 sm:mb-4 font-medium transition-colors group text-sm sm:text-base"
+            className="flex items-center text-blue-600 hover:text-blue-700 mb-4 font-medium transition-colors group"
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Cart
           </button>
-          
-          {/* Backend Status Indicator */}
-          {backendStatus !== 'online' && (
-            <div className={`mb-3 p-3 rounded-lg border-l-4 ${
-              backendStatus === 'checking' 
-                ? 'bg-yellow-50 border-yellow-400' 
-                : 'bg-red-50 border-red-400'
-            }`}>
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-2 ${
-                  backendStatus === 'checking' 
-                    ? 'bg-yellow-400 animate-pulse' 
-                    : 'bg-red-400'
-                }`}></div>
-                <span className={`text-sm font-medium ${
-                  backendStatus === 'checking' 
-                    ? 'text-yellow-700' 
-                    : 'text-red-700'
-                }`}>
-                  {backendStatus === 'checking' 
-                    ? 'Checking server status...' 
-                    : 'Server temporarily unavailable - orders will be saved locally'}
-                </span>
-              </div>
-            </div>
-          )}
-          
           <div className="text-center">
             <div className="flex items-center justify-center mb-2">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700">Secure Checkout</h1>
+              <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
-            <p className="text-gray-600 text-xs sm:text-sm lg:text-base px-2">Complete your order in 3 simple steps • Choose Payment → Enter Address → Confirm</p>
+            <p className="text-gray-600">Complete your order in 3 simple steps • Choose Payment → Enter Address → Confirm</p>
           </div>
         </div>
         
         {/* Progress Steps */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center justify-center space-x-1 sm:space-x-2 md:space-x-4">
+        <div className="mb-8">
+          <div className="flex items-center justify-center space-x-2 md:space-x-4">
             {[1, 2, 3].map((step) => {
               const stepNames = ['Payment Method', 'Delivery Info', 'Confirmation'];
               const stepDescriptions = ['Choose payment', 'Contact & address', 'Review & confirm'];
@@ -705,35 +513,35 @@ const CheckoutPage = () => {
                 <div key={step} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div className={`
-                      w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 shadow-lg
+                      w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 shadow-lg
                       ${isCompleted 
                         ? 'bg-green-500 text-white scale-105' 
                         : isActive 
-                          ? 'bg-blue-600 text-white ring-2 sm:ring-4 ring-blue-200 scale-110' 
+                          ? 'bg-blue-600 text-white ring-4 ring-blue-200 scale-110' 
                           : 'bg-gray-200 text-gray-500'
                       }
                     `}>
                       {isCompleted ? (
-                        <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       ) : (
-                        <span className="text-sm sm:text-base">{step}</span>
+                        step
                       )}
                     </div>
-                    <div className="mt-1 sm:mt-2 text-center">
-                      <span className={`block text-xs sm:text-sm font-semibold ${
+                    <div className="mt-2 text-center">
+                      <span className={`block text-sm font-semibold ${
                         isActive ? 'text-blue-700' : isCompleted ? 'text-green-600' : 'text-gray-500'
                       }`}>
                         {stepNames[step - 1]}
                       </span>
-                      <span className="block text-xs text-gray-500 mt-0.5 hidden sm:block">
+                      <span className="block text-xs text-gray-500 mt-0.5">
                         {stepDescriptions[step - 1]}
                       </span>
                     </div>
                   </div>
                   {step < 3 && (
-                    <div className={`w-4 sm:w-8 md:w-16 h-1 mx-1 sm:mx-2 rounded-full transition-all duration-300 ${
+                    <div className={`w-8 md:w-16 h-1 mx-2 rounded-full transition-all duration-300 ${
                       currentStep > step ? 'bg-green-500' : 'bg-gray-200'
                     }`} />
                   )}
@@ -743,15 +551,15 @@ const CheckoutPage = () => {
           </div>
         </div>
         
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl overflow-hidden border border-white">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-white">
           <div className="flex flex-col lg:flex-row">
             {/* Left: Order Summary */}
-            <div className="lg:w-2/5 bg-gradient-to-br from-blue-50 to-purple-50 p-4 sm:p-6 border-b-2 lg:border-b-0 lg:border-r-2 border-blue-200 lg:sticky lg:top-6 lg:self-start">
-              <div className="flex items-center mb-3 sm:mb-4">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="lg:w-2/5 bg-gradient-to-br from-blue-50 to-purple-50 p-6 border-r-2 border-blue-200 lg:sticky lg:top-6 lg:self-start">
+              <div className="flex items-center mb-4">
+                <svg className="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <h2 className="text-lg sm:text-xl font-bold text-blue-700">Order Summary</h2>
+                <h2 className="text-xl font-bold text-blue-700">Order Summary</h2>
               </div>
               {isLoadingCart ? (
                 <div className="text-center text-gray-500 py-8">
@@ -774,10 +582,10 @@ const CheckoutPage = () => {
               ) : (
                 <>
                   {/* Order Items */}
-                  <div className="space-y-2 sm:space-y-3 mb-4 max-h-48 sm:max-h-64 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+                  <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                     {cartItems.map((item, idx) => (
-                      <div key={`cart-${String((item as any)?.id ?? "")}-${idx}`} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                      <div key={`cart-${String((item as any)?.id ?? "")}-${idx}`} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                           {(() => {
                             let image = "";
                             if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
@@ -794,14 +602,14 @@ const CheckoutPage = () => {
                           })()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 text-xs sm:text-sm truncate">{item.name || "Product"}</div>
-                          <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                            <span className="text-xs text-gray-500 bg-gray-100 px-1.5 sm:px-2 py-0.5 rounded-full">Qty: {item.quantity || 1}</span>
-                            <span className="text-xs text-gray-400 hidden sm:inline">×</span>
+                          <div className="font-semibold text-gray-900 text-sm truncate">{item.name || "Product"}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Qty: {item.quantity || 1}</span>
+                            <span className="text-xs text-gray-400">×</span>
                             <span className="text-xs text-gray-600">{formatRWF(item.price || 0)} RWF</span>
                           </div>
                         </div>
-                        <div className="font-bold text-blue-600 text-xs sm:text-sm whitespace-nowrap">
+                        <div className="font-bold text-blue-600 text-sm whitespace-nowrap">
                           {formatRWF((item.price || 0) * (item.quantity || 1))} RWF
                         </div>
                       </div>
@@ -809,9 +617,9 @@ const CheckoutPage = () => {
                   </div>
                   
                   {/* Price Summary */}
-                  <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm">
-                    <div className="space-y-2 sm:space-y-3">
-                      <div className="flex justify-between text-xs sm:text-sm">
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
                         <span className="text-gray-600 flex items-center">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -863,7 +671,7 @@ const CheckoutPage = () => {
             </div>
 
             {/* Right: Step Content */}
-            <div className="lg:w-3/5 p-4 sm:p-6 bg-white">
+            <div className="lg:w-3/5 p-6 bg-white">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout}>
                   {/* Step 1: Payment Method Selection */}
@@ -871,90 +679,48 @@ const CheckoutPage = () => {
                     <div className="animate-fade-in">
                       {/* Header */}
                       <div className="text-center mb-4">
-                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-2">Choose Payment Method</h2>
-                        <p className="text-gray-600 text-sm sm:text-base">Select how you'd like to pay for your order</p>
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-2">Choose Payment Method</h2>
+                        <p className="text-gray-600">Select how you'd like to pay for your order</p>
                       </div>
                       
-                      {/* Payment Method Selection */}
-                      <div className="space-y-3">
-                        {/* DPO Payment Card */}
-                        <div className="bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white shadow-lg border-2 border-white cursor-pointer hover:shadow-xl transition-all" onClick={() => setPaymentMethod("dpo")}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 sm:mr-3 border border-white shadow-sm bg-white flex items-center justify-center">
-                                <span className="text-blue-600 font-bold text-sm sm:text-base">DPO</span>
-                              </div>
-                              <div>
-                                <h3 className="text-base sm:text-lg font-bold">DPO Payment Gateway</h3>
-                                <p className="text-blue-100 text-xs sm:text-sm">Secure Online Payment</p>
-                              </div>
-                            </div>
-                            <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "dpo" ? "bg-white" : ""}`}>
-                              {paymentMethod === "dpo" && (
-                                <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                              </div>
-                            </div>
-                          
-                          <div className="bg-white rounded-lg p-2 sm:p-3 shadow-lg">
-                            <div className="text-center">
-                              <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
-                              <div className="text-lg sm:text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
-                          </div>
-                          </div>
-                          
-                          {paymentMethod === "dpo" && (
-                            <div className="mt-3 flex items-center justify-center">
-                              <div className="bg-white bg-opacity-20 rounded-lg px-3 py-1">
-                                <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
-                              </div>
-                            </div>
-                        )}
-                      </div>
-                      
-                        {/* MTN Mobile Money Payment Card - Compact */}
-                        <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white shadow-lg border-2 border-white cursor-pointer hover:shadow-xl transition-all" onClick={() => setPaymentMethod("mtn")}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center">
-                              <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 sm:mr-3 border border-white shadow-sm" />
-                              <div>
-                                <h3 className="text-base sm:text-lg font-bold">MTN Mobile Money</h3>
-                                <p className="text-yellow-100 text-xs sm:text-sm">USSD Payment</p>
-                              </div>
-                            </div>
-                            <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
-                              {paymentMethod === "mtn" && (
-                                <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
+                      {/* MTN Mobile Money Payment Card - Compact */}
+                      <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-4 rounded-xl text-white shadow-lg border-2 border-white cursor-pointer" onClick={() => setPaymentMethod("mtn")}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center">
+                            <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3 border border-white shadow-sm" />
+                            <div>
+                              <h3 className="text-lg font-bold">MTN Mobile Money</h3>
+                              <p className="text-yellow-100 text-sm">Fast & Secure Payment</p>
                             </div>
                           </div>
+                          <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
+                            {paymentMethod === "mtn" && (
+                              <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
                         
-                          <div className="bg-white rounded-lg p-2 sm:p-3 shadow-lg">
-                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                              <div className="text-center">
-                                <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
-                                <div className="text-lg sm:text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
+                        <div className="bg-white rounded-lg p-3 shadow-lg">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                              <div className="text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
+                              <div className="text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
                             </div>
-                              <div className="text-center">
-                                <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
-                                <div className="text-sm sm:text-lg font-mono font-bold bg-blue-50 px-1 sm:px-2 py-1 rounded text-blue-600 border border-blue-200">
-                                  *182*8*1*079559#
-                                </div>
+                            <div className="text-center">
+                              <div className="text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
+                              <div className="text-lg font-mono font-bold bg-blue-50 px-2 py-1 rounded text-blue-600 border border-blue-200">
+                                *182*8*1*079559#
                               </div>
                             </div>
                           </div>
-                          
-                          {paymentMethod === "mtn" && (
-                            <div className="mt-3 flex items-center justify-center">
-                              <div className="bg-black bg-opacity-20 rounded-lg px-3 py-1">
-                                <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
-                              </div>
-                            </div>
-                          )}
+                        </div>
+                        
+                        <div className="mt-3 flex items-center justify-center">
+                          <div className="bg-black bg-opacity-20 rounded-lg px-3 py-1">
+                            <span className="text-white font-semibold text-sm">✓ Selected Payment Method</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -966,7 +732,22 @@ const CheckoutPage = () => {
                       {/* Header */}
                       <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-2">Delivery Information</h2>
-                        <p className="text-gray-600">Enter your contact details and delivery address</p>
+                        {isUserLoggedIn() && customerName && customerEmail ? (
+                          <div className="mt-2 inline-block">
+                            <div className="bg-green-50 border border-green-400 rounded-lg p-2 px-4">
+                              <div className="flex items-center justify-center text-sm">
+                                <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-gray-700 font-medium">
+                                  <strong className="text-green-700">Delivering to:</strong> {customerName} • {customerEmail}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-600">Enter your contact details and delivery address</p>
+                        )}
                       </div>
                       
                       {/* Guest User Fields - Compact */}
@@ -1038,17 +819,18 @@ const CheckoutPage = () => {
                         </div>
                       )}
                       
-                      {/* Contact Information */}
+                      {/* Contact & Sender Information */}
                       <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4">
                         <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center">
                           <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
-                          Contact Information
+                          Contact & Sender Information
                         </h3>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-800 mb-1">
-                            Phone Number <span className="text-red-500">*</span>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-800 mb-1">
+                              Phone Number <span className="text-red-500">*</span>
                         </label>
                           <input
                             type="tel"
@@ -1059,8 +841,8 @@ const CheckoutPage = () => {
                                 setCustomerErrors(prev => ({ ...prev, phone: undefined }));
                               }
                             }}
-                            placeholder="+250788123456"
-                            className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
+                              placeholder="+250788123456"
+                              className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
                               customerErrors.phone 
                                 ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
                                 : customerPhone.trim()
@@ -1069,13 +851,52 @@ const CheckoutPage = () => {
                             }`}
                           />
                           {customerErrors.phone && (
-                            <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
+                              <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
+                            )}
+                            </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-800 mb-1">
+                              Sender Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={senderName}
+                              onChange={(e) => {
+                                setSenderName(e.target.value);
+                                if (paymentErrors.senderName) {
+                                  setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
+                                }
+                              }}
+                              placeholder="Name on MTN account"
+                              className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
+                                paymentErrors.senderName 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : senderName.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                              }`}
+                            />
+                            {paymentErrors.senderName && (
+                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
                           )}
                         </div>
+                          </div>
                       </div>
                         
                       {/* Delivery Address Section - Compact */}
                       <div className="bg-green-50 border border-green-300 rounded-lg p-4">
+                        <div className="flex items-center mb-3">
+                          <div className="p-1 bg-green-100 rounded mr-2">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-gray-900">Delivery Address</h3>
+                            <p className="text-xs text-gray-600">Where to deliver your order</p>
+                          </div>
+                        </div>
                           <AddressSelector
                             value={addressData}
                             onChange={setAddressData}
@@ -1089,79 +910,172 @@ const CheckoutPage = () => {
                   
                   {/* Step 3: Order Confirmation */}
                   {currentStep === 3 && (
-                    <div className="animate-fade-in">
-                      <div className="text-center mb-4">
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-green-500 to-blue-600 bg-clip-text text-transparent mb-2">Order Confirmation</h2>
-                        <p className="text-gray-600">Review your order and complete payment</p>
+                    <div className="space-y-6 animate-fade-in">
+                      <div className="text-center mb-6">
+                        <h2 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-blue-600 bg-clip-text text-transparent mb-3">Order Confirmation</h2>
+                        <p className="text-gray-600 text-lg">Review your order and complete payment</p>
                       </div>
                       
+                      {/* Payment Method Display */}
+                      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 p-6 rounded-2xl text-white shadow-xl">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center">
+                            <img src="/mtn.jpg" alt="MTN" className="w-12 h-12 rounded-lg mr-4 border-2 border-white shadow-lg" />
+                            <div>
+                          <h3 className="text-xl font-bold">MTN Mobile Money</h3>
+                              <p className="text-yellow-100">Selected Payment Method</p>
+                        </div>
+                          </div>
+                          <div className="bg-white bg-opacity-20 rounded-lg p-2">
+                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
                       
-                      {/* Order Summary */}
-                      <div className="bg-green-50 border border-green-300 rounded-lg p-4 shadow-sm">
-                        <h3 className="font-bold text-gray-900 mb-4 text-lg flex items-center">
-                          <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
+                          <div className="text-center">
+                            <div className="text-lg font-semibold mb-2 text-yellow-100">Payment Instructions</div>
+                            <div className="text-xl font-bold mb-3">Send {formatRWF(subtotal)} RWF</div>
+                            <div className="text-2xl font-mono font-bold bg-white bg-opacity-30 px-4 py-2 rounded-lg">
+                              *182*8*1*079559#
+                          </div>
+                          </div>
+                          </div>
+                              </div>
+                      
+                      {/* Payment Details Form */}
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-300">
+                        <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
+                          <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Payment Details
+                        </h3>
+                        
+                        <div className="space-y-6">
+                           <div>
+                            <label className="block text-lg font-bold text-gray-800 mb-3">
+                               Sender Name <span className="text-red-500">*</span>
+                             </label>
+                             <input
+                               type="text"
+                               value={senderName}
+                               onChange={(e) => {
+                                 setSenderName(e.target.value);
+                                 if (paymentErrors.senderName) {
+                                   setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
+                                 }
+                               }}
+                               placeholder="Name of person who sent the money"
+                              className={`w-full px-4 py-4 border-2 rounded-xl outline-none transition-all duration-200 text-lg font-medium ${
+                                 paymentErrors.senderName 
+                                   ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                   : senderName.trim()
+                                     ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                     : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                               }`}
+                             />
+                             {paymentErrors.senderName && (
+                              <p className="mt-2 text-sm text-red-600 font-medium">{paymentErrors.senderName}</p>
+                             )}
+                           </div>
+                           
+                           <div>
+                            <label className="block text-lg font-bold text-gray-800 mb-3">
+                               Sender Address <span className="text-red-500">*</span>
+                             </label>
+                             <input
+                               type="text"
+                               value={senderAddress}
+                               onChange={(e) => {
+                                 setSenderAddress(e.target.value);
+                                 if (paymentErrors.senderAddress) {
+                                   setPaymentErrors(prev => ({ ...prev, senderAddress: undefined }));
+                                 }
+                               }}
+                               placeholder="Address of person who sent the money"
+                              className={`w-full px-4 py-4 border-2 rounded-xl outline-none transition-all duration-200 text-lg font-medium ${
+                                 paymentErrors.senderAddress 
+                                   ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                   : senderAddress.trim()
+                                     ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                     : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                               }`}
+                             />
+                             {paymentErrors.senderAddress && (
+                              <p className="mt-2 text-sm text-red-600 font-medium">{paymentErrors.senderAddress}</p>
+                             )}
+                           </div>
+                         </div>
+                      </div>
+                      
+                      {/* Complete Order Summary */}
+                      <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border-2 border-green-300 shadow-lg">
+                        <h3 className="font-bold text-gray-900 mb-6 text-xl flex items-center">
+                          <svg className="w-6 h-6 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
                           Order Summary
                         </h3>
-                        <div className="space-y-3">
-                          <div className="bg-white rounded-lg p-3 shadow-sm">
-                            <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-4">
+                          <div className="bg-white rounded-xl p-4 shadow-sm">
+                            <div className="grid md:grid-cols-2 gap-4">
                               <div>
-                                <span className="text-gray-600 text-sm font-medium">Customer</span>
-                                <div className="font-bold text-gray-900">{customerName}</div>
+                                <span className="text-gray-600 font-medium">Customer</span>
+                                <div className="font-bold text-gray-900 text-lg">{customerName}</div>
+                          </div>
+                              <div>
+                                <span className="text-gray-600 font-medium">Email</span>
+                                <div className="font-semibold text-gray-900">{customerEmail}</div>
                               </div>
                               <div>
-                                <span className="text-gray-600 text-sm font-medium">Email</span>
-                                <div className="font-semibold text-gray-900 text-sm">{customerEmail}</div>
+                                <span className="text-gray-600 font-medium">Phone</span>
+                                <div className="font-semibold text-gray-900">{customerPhone}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium">Payment Method</span>
+                                <div className="font-semibold text-gray-900 flex items-center">
+                              <img src="/mtn.jpg" alt="MTN" className="w-5 h-5 rounded mr-2" />
+                              MTN Mobile Money
+                                </div>
+                              </div>
                             </div>
-                              <div>
-                                <span className="text-gray-600 text-sm font-medium">Phone</span>
-                                <div className="font-semibold text-gray-900 text-sm">{customerPhone}</div>
                           </div>
-                              <div>
-                                <span className="text-gray-600 text-sm font-medium">Payment Method</span>
-                                <div className="font-semibold text-gray-900 text-sm flex items-center">
-                                  <img src="/mtn.jpg" alt="MTN" className="w-4 h-4 rounded mr-1" />
-                                  MTN Mobile Money
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                           
-                          <div className="bg-white rounded-lg p-3 shadow-sm">
-                            <span className="text-gray-600 text-sm font-medium block mb-1">Delivery Address</span>
-                            <div className="font-semibold text-gray-900 text-sm">
-                              {[addressData.street, addressData.village, addressData.cell, addressData.sector, addressData.district, addressData.province]
+                          <div className="bg-white rounded-xl p-4 shadow-sm">
+                            <span className="text-gray-600 font-medium block mb-2">Delivery Address</span>
+                            <div className="font-semibold text-gray-900">
+                              {[addressData.street, addressData.district, addressData.province]
                                 .filter(Boolean)
                                 .join(', ') || 'Not specified'}
-                      </div>
-                           </div>
-                           
-                          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 shadow-lg">
+                            </div>
+                          </div>
+                          
+                          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 shadow-lg">
                             <div className="flex justify-between items-center">
-                              <span className="font-bold text-white text-lg">Total Amount</span>
-                              <span className="font-bold text-white text-2xl">{formatRWF(subtotal)} RWF</span>
-                           </div>
-                         </div>
-                      </div>
+                              <span className="font-bold text-white text-xl">Total Amount</span>
+                              <span className="font-bold text-white text-3xl">{formatRWF(subtotal)} RWF</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
                   
                   {/* Navigation Buttons */}
-                  <div className="flex flex-col sm:flex-row justify-between items-center pt-4 sm:pt-6 border-t border-gray-200 mt-6 sm:mt-8 gap-3 sm:gap-0">
+                  <div className="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className={`group flex items-center px-4 sm:px-6 py-2.5 sm:py-3 border-2 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 text-sm sm:text-base ${
+                      className={`group flex items-center px-6 py-3 border-2 rounded-xl font-semibold transition-all duration-200 ${
                         currentStep === 1 
                           ? 'text-gray-400 border-gray-200 cursor-not-allowed bg-gray-50' 
                           : 'text-gray-700 border-gray-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 shadow-sm hover:shadow-md'
                       }`}
                       disabled={currentStep === 1}
                     >
-                      <svg className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 transition-transform ${currentStep > 1 ? 'group-hover:-translate-x-1' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-5 h-5 mr-2 transition-transform ${currentStep > 1 ? 'group-hover:-translate-x-1' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                       Previous
@@ -1171,18 +1085,17 @@ const CheckoutPage = () => {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="group flex items-center px-6 sm:px-8 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base w-full sm:w-auto justify-center"
+                        className="group flex items-center px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                       >
-                        <span className="hidden sm:inline">{currentStep === 1 ? 'Continue to Address' : currentStep === 2 ? 'Continue to Confirmation' : 'Complete Order'}</span>
-                        <span className="sm:hidden">{currentStep === 1 ? 'Continue' : currentStep === 2 ? 'Review' : 'Complete'}</span>
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {currentStep === 1 ? 'Continue to Address' : currentStep === 2 ? 'Continue to Confirmation' : 'Complete Order'}
+                        <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
                     ) : (
                       <button
                         type="submit"
-                        className={`group flex items-center px-6 sm:px-8 py-3 sm:py-3.5 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg transition-all duration-300 shadow-xl w-full sm:w-auto justify-center ${
+                        className={`group flex items-center px-8 py-3.5 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl ${
                           isSubmitting
                             ? 'bg-gray-400 text-white cursor-not-allowed'
                             : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105 hover:shadow-2xl'
@@ -1191,12 +1104,12 @@ const CheckoutPage = () => {
                       >
                         {isSubmitting ? (
                           <>
-                            <div className="animate-spin w-4 h-4 sm:w-5 sm:h-5 border-2 sm:border-3 border-white border-t-transparent rounded-full mr-2 sm:mr-3"></div>
-                            <span className="text-sm sm:text-base">Processing Payment...</span>
+                            <div className="animate-spin w-5 h-5 border-3 border-white border-t-transparent rounded-full mr-3"></div>
+                            <span>Processing Payment...</span>
                           </>
                         ) : (
                           <>
-                            <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Complete Order
@@ -1212,7 +1125,7 @@ const CheckoutPage = () => {
                   
                   {/* Status Messages */}
                   {orderStatus.error && (
-                    <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md animate-fade-in" data-error-message>
+                    <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md animate-fade-in">
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
                           <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -1221,34 +1134,7 @@ const CheckoutPage = () => {
                         </div>
                         <div className="ml-3 flex-1">
                           <h3 className="text-sm font-bold text-red-800 mb-1">Error</h3>
-                          <p className="text-sm text-red-700 mb-3">{orderStatus.error}</p>
-                          {orderStatus.error.includes('saved locally') && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={async (e) => {
-                                  const retryButton = e.target as HTMLButtonElement;
-                                  retryButton.disabled = true;
-                                  retryButton.textContent = 'Retrying...';
-                                  await retryFailedOrders();
-                                  retryButton.disabled = false;
-                                  retryButton.textContent = 'Retry Order';
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                              >
-                                Retry Order
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const failedOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
-                                  console.log('Pending orders:', failedOrders);
-                                  alert(`You have ${failedOrders.length} order(s) saved locally. They will be processed automatically when the backend is restored.`);
-                                }}
-                                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                              >
-                                View Pending Orders
-                              </button>
-                            </div>
-                          )}
+                          <p className="text-sm text-red-700">{orderStatus.error}</p>
                         </div>
                       </div>
                     </div>
