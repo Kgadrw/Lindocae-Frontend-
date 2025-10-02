@@ -483,6 +483,14 @@ const CheckoutPage = () => {
               <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
             <p className="text-gray-600">Complete your order with your preferred payment method</p>
+            {!isUserLoggedIn() && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>New to Lindo?</strong> You can register quickly during checkout - we only need your name, email, and password. 
+                  We'll collect your delivery address here.
+                </p>
+              </div>
+            )}
           </div>
         </div>
         

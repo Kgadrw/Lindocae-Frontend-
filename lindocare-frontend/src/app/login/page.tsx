@@ -34,8 +34,14 @@ const LoginPage: React.FC = () => {
     setRegisterError("");
     setRegisterLoading(true);
   
-    if (!firstName || !lastName || !gender || !registerEmail || !registerPassword) {
+    if (!firstName || !lastName || !registerEmail || !registerPassword) {
       setRegisterError("All fields are required.");
+      setRegisterLoading(false);
+      return;
+    }
+
+    if (registerPassword.length < 6) {
+      setRegisterError("Password must be at least 6 characters long.");
       setRegisterLoading(false);
       return;
     }
@@ -46,9 +52,9 @@ const LoginPage: React.FC = () => {
       formData.append("firstName", firstName);
       formData.append("lastName", lastName);
       formData.append("email", registerEmail);
-      formData.append("gender", gender);
+      formData.append("gender", "not_specified"); // Default value
       formData.append("password", registerPassword);
-      formData.append("role", "vendor");
+      formData.append("role", "customer"); // Changed from vendor to customer
   
       const res = await fetch("https://lindo-project.onrender.com/user/Register", {
         method: "POST",
@@ -58,10 +64,9 @@ const LoginPage: React.FC = () => {
       const data = await res.json().catch(() => ({}));
   
       if (res.status === 201 && data?.user) {
-        setRegisterSuccess("Registration successful!");
+        setRegisterSuccess("Registration successful! You can now complete your order.");
         setFirstName("");
         setLastName("");
-        setGender("");
         setRegisterEmail("");
         setRegisterPassword("");
         setRegisterImage(null);
@@ -240,9 +245,9 @@ const LoginPage: React.FC = () => {
               <div className="text-center mb-6">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <UserPlus size={24} className="text-green-600" />
-                  <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">Quick Registration</h2>
                 </div>
-                <p className="text-gray-600 text-sm">Join Lindo for the best baby care experience</p>
+                <p className="text-gray-600 text-sm">Create your account quickly. We'll collect your delivery address during checkout.</p>
               </div>
 
               <input
@@ -263,16 +268,6 @@ const LoginPage: React.FC = () => {
                 required
               />
 
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                required
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
 
               <input
                 type="email"
