@@ -4,6 +4,13 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Home, ShoppingBag, Package } from 'lucide-react';
+import { 
+  verifyDPOPayment, 
+  extractDPOTokenFromURL, 
+  getStoredOrderDetails, 
+  clearStoredOrderDetails,
+  DPOVerificationResult 
+} from '../../utils/dpoVerification';
 
 const PaymentSuccessContent = () => {
   const router = useRouter();
@@ -15,69 +22,51 @@ const PaymentSuccessContent = () => {
   useEffect(() => {
     const verifyPayment = async () => {
       try {
-        // Get payment token and order details from localStorage
-        const paymentToken = localStorage.getItem('dpoPaymentToken');
-        const pendingAmount = localStorage.getItem('pendingOrderAmount');
-        const pendingOrderId = localStorage.getItem('pendingOrderId');
+        // Get stored order details
+        const storedDetails = getStoredOrderDetails();
         
-        // Get order ID from URL parameters first, then fallback to localStorage
+        // Get order ID from URL parameters first, then fallback to stored
         const urlOrderId = searchParams.get('orderId') || searchParams.get('order_id');
-        const orderId = urlOrderId || pendingOrderId;
+        const orderId = urlOrderId || storedDetails.orderId;
         
-        if (paymentToken) {
+        // Extract DPO token from URL parameters or use stored token
+        const dpoToken = extractDPOTokenFromURL(searchParams) || storedDetails.dpoToken;
+        
+        if (dpoToken) {
+          console.log('Verifying payment with DPO token:', dpoToken);
+          
           // Verify the payment with DPO
-          const verifyResponse = await fetch('https://lindo-project.onrender.com/dpo/verify/dpoPayment', {
-            method: 'POST',
-            headers: {
-              'accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token: paymentToken }),
-          });
-
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            console.log('Payment verification response:', verifyData);
+          const verificationResult: DPOVerificationResult = await verifyDPOPayment(dpoToken);
+          
+          if (verificationResult.success) {
+            setVerificationStatus('success');
+            setOrderDetails({
+              orderId: verificationResult.orderId || orderId || 'N/A',
+              paymentId: verificationResult.paymentId || dpoToken,
+              amount: verificationResult.amount || storedDetails.amount,
+              status: 'success',
+              verificationDetails: verificationResult.details
+            });
             
-            if (verifyData.success) {
-              setVerificationStatus('success');
-              setOrderDetails({
-                orderId: orderId || verifyData.details?.orderId || 'N/A',
-                paymentId: verifyData.details?.paymentId || paymentToken,
-                amount: pendingAmount,
-                status: 'success',
-                verificationDetails: verifyData.details
-              });
-              
-              // Clear stored payment data
-              localStorage.removeItem('dpoPaymentToken');
-              localStorage.removeItem('pendingOrderAmount');
-              localStorage.removeItem('pendingOrderId');
-            } else {
-              setVerificationStatus('failed');
-              setOrderDetails({
-                orderId: orderId,
-                paymentId: paymentToken,
-                status: 'verification_failed',
-                error: verifyData.message || 'Payment verification failed'
-              });
-            }
+            // Clear stored payment data after successful verification
+            clearStoredOrderDetails();
           } else {
             setVerificationStatus('failed');
-            const errorData = await verifyResponse.json().catch(() => ({}));
             setOrderDetails({
               orderId: orderId,
-              paymentId: paymentToken,
+              paymentId: dpoToken,
               status: 'verification_failed',
-              error: errorData.message || 'Payment verification failed'
+              error: verificationResult.error || 'Payment verification failed'
             });
           }
         } else {
-          // Fallback: get details from URL parameters
+          // Fallback: get details from URL parameters without verification
+          console.log('No DPO token found, using URL parameters only');
           if (orderId) {
             setOrderDetails({
               orderId,
               paymentId: searchParams.get('paymentId') || searchParams.get('payment_id') || 'N/A',
+              amount: storedDetails.amount,
               status: 'success'
             });
           }

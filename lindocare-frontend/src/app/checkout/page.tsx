@@ -15,6 +15,7 @@ import {
 import { normalizeImageUrl } from "../../utils/image";
 import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
 import { getUserInfo } from "../../utils/userInfo";
+import { storeOrderDetails } from "../../utils/dpoVerification";
 
 interface Product {
   id: string | number;
@@ -32,8 +33,8 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("dpo");
-  
+  const [paymentMethod, setPaymentMethod] = useState("momo");
+
   // Address data using the new structure
   const [addressData, setAddressData] = useState<AddressData>({
     province: '',
@@ -267,15 +268,15 @@ const CheckoutPage = () => {
 
     try {
       // Step 1: Create Order
-      const orderData = {
+     const orderData = {
         paymentMethod: paymentMethod,
         shippingAddress: {
-          province: addressData.province,
-          district: addressData.district,
-          sector: addressData.sector,
-          cell: addressData.cell,
-          village: addressData.village,
-          street: addressData.street,
+  province: addressData.province,
+  district: addressData.district,
+  sector: addressData.sector,
+  cell: addressData.cell,
+  village: addressData.village,
+  street: addressData.street,
           customerName: customerName,
           customerEmail: customerEmail,
           customerPhone: customerPhone
@@ -334,102 +335,118 @@ const CheckoutPage = () => {
       console.log("Order created successfully:", orderResult);
       const orderId = orderResult.order?._id || orderResult.orderId;
 
-      // Step 2: Initialize DPO Payment
-      const firstName = customerName.split(' ')[0] || customerName;
-      const lastName = customerName.split(' ').slice(1).join(' ') || firstName;
-      
-      const dpoData = {
-        orderId: orderId,
-        totalAmount: subtotal,
-        currency: "RWF",
-        email: customerEmail,
-        phone: customerPhone,
-        firstName: firstName,
-        lastName: lastName,
-        serviceDescription: `Payment for order #${orderId}`,
-        callbackUrl: `${window.location.origin}/payment-success`
-      };
-
-      console.log("Initializing DPO payment:", dpoData);
-
-      const dpoResponse = await fetch(
-        "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
-        {
-          method: "POST",
-          headers: {
-            'accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(dpoData),
-        }
-      );
-
-      console.log("DPO response status:", dpoResponse.status);
-
-      if (dpoResponse.ok) {
-        const dpoResult = await dpoResponse.json();
-        console.log("DPO payment initialized:", dpoResult);
-
-        // Save address for future use (for logged-in users)
-        if (isUserLoggedIn()) {
-          try {
-            const token = getAuthToken();
-            if (token) {
-              await fetch(
-                "https://lindo-project.onrender.com/user/address",
-                {
-                  method: "POST",
-                  headers: {
-                    'accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    address: addressData
-                  }),
-                }
-              );
-              console.log('Address saved for future use');
-            }
-          } catch (addressSaveError) {
-            console.log('Could not save address (not critical):', addressSaveError);
-          }
-        }
-
-        // Clear cart after successful order creation
+      // Save address for future use (for logged-in users)
+      if (isUserLoggedIn()) {
         try {
-          if (isUserLoggedIn()) await clearCartServer();
-          else saveLocalCart([]);
-          setCartItems([]);
-        } catch (error) {
-          console.warn("Failed to clear cart:", error);
+          const token = getAuthToken();
+          if (token) {
+            await fetch(
+              "https://lindo-project.onrender.com/user/address",
+              {
+                method: "POST",
+                headers: {
+                  'accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  address: addressData
+                }),
+              }
+            );
+            console.log('Address saved for future use');
+          }
+        } catch (addressSaveError) {
+          console.log('Could not save address (not critical):', addressSaveError);
         }
+      }
 
-        // Redirect to DPO payment page
-        if (dpoResult.paymentUrl) {
-          window.location.href = dpoResult.paymentUrl;
+      // Clear cart after successful order creation
+      try {
+        if (isUserLoggedIn()) await clearCartServer();
+        else saveLocalCart([]);
+        setCartItems([]);
+      } catch (error) {
+        console.warn("Failed to clear cart:", error);
+      }
+
+      // Handle payment based on selected method
+      if (paymentMethod === "dpo") {
+        // Step 2: Initialize DPO Payment
+        const firstName = customerName.split(' ')[0] || customerName;
+        const lastName = customerName.split(' ').slice(1).join(' ') || firstName;
+        
+        const dpoData = {
+          orderId: orderId,
+          totalAmount: subtotal,
+          currency: "RWF",
+          email: customerEmail,
+          phone: customerPhone,
+          firstName: firstName,
+          lastName: lastName,
+          serviceDescription: `Payment for order #${orderId}`,
+          callbackUrl: `${window.location.origin}/payment-success`
+        };
+
+        console.log("Initializing DPO payment:", dpoData);
+
+        const dpoResponse = await fetch(
+          "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
+          {
+            method: "POST",
+            headers: {
+              'accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dpoData),
+          }
+        );
+
+        console.log("DPO response status:", dpoResponse.status);
+
+        if (dpoResponse.ok) {
+          const dpoResult = await dpoResponse.json();
+          console.log("DPO payment initialized:", dpoResult);
+
+          // Store order details for verification
+          storeOrderDetails(String(orderId || ''), subtotal, dpoResult.token);
+          
+          // Redirect to DPO payment page
+          if (dpoResult.paymentUrl) {
+            window.location.href = dpoResult.paymentUrl;
+          } else {
+            setOrderStatus({ 
+              success: `Order created successfully! Order ID: ${orderId}. Please complete payment.` 
+            });
+          }
         } else {
-          setOrderStatus({ 
-            success: `Order created successfully! Order ID: ${orderId}. Please complete payment.` 
+          // Handle DPO initialization error
+          let dpoErrorData: any = {};
+          let dpoResponseText = "";
+          try {
+            dpoResponseText = await dpoResponse.text();
+            if (dpoResponseText) {
+              dpoErrorData = JSON.parse(dpoResponseText);
+            }
+          } catch (parseError) {
+            dpoErrorData = { message: dpoResponseText || "Unknown error" };
+          }
+
+          console.error("DPO initialization error:", dpoResponse.status, dpoErrorData);
+          setOrderStatus({
+            error: `Order created but payment initialization failed: ${dpoErrorData.message || 'Unknown error'}. Please contact support.`,
           });
         }
       } else {
-        // Handle DPO initialization error
-        let dpoErrorData: any = {};
-        let dpoResponseText = "";
-        try {
-          dpoResponseText = await dpoResponse.text();
-          if (dpoResponseText) {
-            dpoErrorData = JSON.parse(dpoResponseText);
-          }
-        } catch (parseError) {
-          dpoErrorData = { message: dpoResponseText || "Unknown error" };
-        }
-
-        console.error("DPO initialization error:", dpoResponse.status, dpoErrorData);
-        setOrderStatus({
-          error: `Order created but payment initialization failed: ${dpoErrorData.message || 'Unknown error'}. Please contact support.`,
+        // MTN Mobile Money - Manual payment
+        setOrderStatus({ 
+          success: `Order created successfully! Order ID: ${orderId}. Please complete payment by dialing *182*8*1*079559# and sending ${formatRWF(subtotal)} RWF. You'll receive confirmation via email/SMS.` 
         });
+        
+        // Store order details for reference
+        localStorage.setItem("pendingOrderId", String(orderId || ""));
+        localStorage.setItem("pendingOrderAmount", String(subtotal));
+        localStorage.setItem("momoCode", "*182*8*1*079559#");
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -460,7 +477,7 @@ const CheckoutPage = () => {
               </svg>
               <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
-            <p className="text-gray-600">Complete your order with DPO payment</p>
+            <p className="text-gray-600">Complete your order with your preferred payment method</p>
           </div>
         </div>
         
@@ -574,98 +591,98 @@ const CheckoutPage = () => {
                     <h2 className="text-xl font-bold text-blue-700 mb-4 flex items-center">
                       <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                                </svg>
                       Customer Information
                     </h2>
-                    
-                    {/* Guest User Fields - Name & Email */}
-                    {!isUserLoggedIn() && (
+                      
+                      {/* Guest User Fields - Name & Email */}
+                      {!isUserLoggedIn() && (
                       <div className="grid md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-800 mb-2">
-                            Full Name <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={customerName}
-                            onChange={(e) => {
-                              setCustomerName(e.target.value);
-                              if (customerErrors.name) {
-                                setCustomerErrors(prev => ({ ...prev, name: undefined }));
-                              }
-                            }}
-                            placeholder="John Doe"
-                            className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
-                              customerErrors.name 
-                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
-                                : customerName.trim()
-                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                            }`}
-                          />
-                          {customerErrors.name && (
-                            <p className="mt-1 text-xs text-red-600">{customerErrors.name}</p>
-                          )}
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                Full Name <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={customerName}
+                                onChange={(e) => {
+                                  setCustomerName(e.target.value);
+                                  if (customerErrors.name) {
+                                    setCustomerErrors(prev => ({ ...prev, name: undefined }));
+                                  }
+                                }}
+                                placeholder="John Doe"
+                                className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
+                                  customerErrors.name 
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                    : customerName.trim()
+                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
+                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                }`}
+                              />
+                              {customerErrors.name && (
+                                <p className="mt-1 text-xs text-red-600">{customerErrors.name}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                Email Address <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                value={customerEmail}
+                                onChange={(e) => {
+                                  setCustomerEmail(e.target.value);
+                                  if (customerErrors.email) {
+                                    setCustomerErrors(prev => ({ ...prev, email: undefined }));
+                                  }
+                                }}
+                                placeholder="john@example.com"
+                                className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
+                                  customerErrors.email 
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
+                                    : customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail)
+                                      ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
+                                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                }`}
+                              />
+                              {customerErrors.email && (
+                                <p className="mt-1 text-xs text-red-600">{customerErrors.email}</p>
+                              )}
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-800 mb-2">
-                            Email Address <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="email"
-                            value={customerEmail}
-                            onChange={(e) => {
-                              setCustomerEmail(e.target.value);
-                              if (customerErrors.email) {
-                                setCustomerErrors(prev => ({ ...prev, email: undefined }));
-                              }
-                            }}
-                            placeholder="john@example.com"
-                            className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 font-medium ${
-                              customerErrors.email 
-                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
-                                : customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail)
-                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
-                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                            }`}
-                          />
-                          {customerErrors.email && (
-                            <p className="mt-1 text-xs text-red-600">{customerErrors.email}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
+                      )}
+                      
                     {/* Phone Number */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
-                        <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        Phone Number <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={customerPhone}
-                        onChange={(e) => {
-                          setCustomerPhone(e.target.value);
-                          if (customerErrors.phone) {
-                            setCustomerErrors(prev => ({ ...prev, phone: undefined }));
-                          }
-                        }}
-                        placeholder="e.g., +250788123456"
+                        <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
+                          <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          Phone Number <span className="text-red-500 ml-1">*</span>
+                        </label>
+                          <input
+                            type="tel"
+                            value={customerPhone}
+                            onChange={(e) => {
+                              setCustomerPhone(e.target.value);
+                              if (customerErrors.phone) {
+                                setCustomerErrors(prev => ({ ...prev, phone: undefined }));
+                              }
+                            }}
+                            placeholder="e.g., +250788123456"
                         className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all duration-200 ${
-                          customerErrors.phone 
-                            ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                            : customerPhone.trim()
-                              ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                              : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                        }`}
-                      />
-                      {customerErrors.phone && (
+                              customerErrors.phone 
+                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                : customerPhone.trim()
+                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                            }`}
+                          />
+                          {customerErrors.phone && (
                         <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
-                      )}
-                    </div>
+                          )}
+                        </div>
                   </div>
 
                   {/* Delivery Address */}
@@ -675,7 +692,7 @@ const CheckoutPage = () => {
                         <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                            </svg>
                         Delivery Address
                       </h2>
                       {isUserLoggedIn() && (addressData.province || addressData.district) && (
@@ -684,16 +701,16 @@ const CheckoutPage = () => {
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                           From Account
-                        </div>
-                      )}
-                    </div>
-                    <AddressSelector
-                      value={addressData}
-                      onChange={setAddressData}
-                      errors={addressErrors}
-                      required={true}
-                      disabled={isSubmitting}
-                    />
+                          </div>
+                        )}
+                      </div>
+                          <AddressSelector
+                            value={addressData}
+                            onChange={setAddressData}
+                            errors={addressErrors}
+                            required={true}
+                            disabled={isSubmitting}
+                          />
                     {isUserLoggedIn() && (addressData.province || addressData.district) && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-start">
@@ -705,10 +722,10 @@ const CheckoutPage = () => {
                             <p className="text-xs text-blue-600">We've loaded your saved address. You can modify it if needed.</p>
                           </div>
                         </div>
+                    </div>
+                  )}
                       </div>
-                    )}
-                  </div>
-
+                      
                   {/* Payment Method */}
                   <div className="bg-green-50 p-6 rounded-xl border border-green-200">
                     <h2 className="text-xl font-bold text-green-700 mb-4 flex items-center">
@@ -717,72 +734,158 @@ const CheckoutPage = () => {
                       </svg>
                       Payment Method
                     </h2>
-                    <div className="space-y-3">
-                      <div className="flex items-center p-4 border-2 border-green-300 rounded-xl bg-green-100">
-                        <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
-                          <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <div className="font-semibold text-gray-900 flex items-center">
-                            DPO Payment
-                            <span className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded-full">Selected</span>
-                          </div>
-                          <div className="text-sm text-gray-600">Secure online payment gateway</div>
-                        </div>
+                    <div className="space-y-4">
+                      {/* MTN Mobile Money Option */}
+                      <label className="flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-green-100 transition-colors">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="momo"
+                          checked={paymentMethod === "momo"}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center">
+                            <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 rounded mr-3" />
+                            <div>
+                              <div className="font-semibold text-gray-900">MTN Mobile Money</div>
+                              <div className="text-sm text-gray-600">Manual payment via USSD</div>
                       </div>
+                            {paymentMethod === "momo" && (
+                              <span className="ml-auto px-2 py-1 bg-green-600 text-white text-xs rounded-full">Selected</span>
+                            )}
+                          </div>
+                        </div>
+                      </label>
+
+                      {/* DPO Payment Option */}
+                      <label className="flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-green-100 transition-colors">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="dpo"
+                          checked={paymentMethod === "dpo"}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">DPO Payment</div>
+                              <div className="text-sm text-gray-600">Online payment gateway</div>
+                            </div>
+                            {paymentMethod === "dpo" && (
+                              <span className="ml-auto px-2 py-1 bg-green-600 text-white text-xs rounded-full">Selected</span>
+                            )}
+                          </div>
+                        </div>
+                      </label>
                       
-                      {/* DPO Payment Info */}
-                      <div className="bg-white p-4 rounded-lg border border-green-200">
-                        <div className="flex items-start">
-                          <svg className="w-5 h-5 text-green-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {/* Payment Method Info */}
+                      {paymentMethod === "momo" && (
+                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                          <div className="flex items-start">
+                            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <div>
-                            <h4 className="font-semibold text-gray-900 text-sm mb-1">How DPO Payment Works:</h4>
-                            <ul className="text-xs text-gray-600 space-y-1">
-                              <li>• You'll be redirected to DPO's secure payment page</li>
-                              <li>• Choose your preferred payment method (Card, Mobile Money, etc.)</li>
-                              <li>• Complete payment and return to our site</li>
-                              <li>• Your order will be processed automatically</li>
-                            </ul>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 text-sm mb-2">How MTN Mobile Money Works:</h4>
+                              <div className="space-y-2 text-xs text-gray-700">
+                          <div className="flex items-start">
+                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">1</span>
+                            <span>Dial <strong>*182*8*1*079559#</strong> on your phone</span>
                           </div>
+                          <div className="flex items-start">
+                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">2</span>
+                            <span>Enter amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
+                          </div>
+                          <div className="flex items-start">
+                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">3</span>
+                            <span>Enter your MTN Mobile Money PIN</span>
+                          </div>
+                          <div className="flex items-start">
+                                  <span className="bg-yellow-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5">4</span>
+                            <span>Confirm the transaction</span>
+                          </div>
+                                <div className="mt-3 p-2 bg-yellow-100 rounded border border-yellow-300">
+                                  <p className="text-xs font-medium text-yellow-800">
+                                    <strong>Note:</strong> After payment, your order will be processed manually. You'll receive confirmation via email/SMS.
+                                  </p>
                         </div>
                       </div>
+                          </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  
+                      {paymentMethod === "dpo" && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <div className="flex items-start">
+                            <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                           <div>
+                              <h4 className="font-semibold text-gray-900 text-sm mb-1">How DPO Payment Works:</h4>
+                              <ul className="text-xs text-gray-600 space-y-1">
+                                <li>• You'll be redirected to DPO's secure payment page</li>
+                                <li>• Choose your preferred payment method (Card, Mobile Money, etc.)</li>
+                                <li>• Complete payment and return to our site</li>
+                                <li>• Your order will be processed automatically</li>
+                              </ul>
+                           </div>
+                           </div>
+                         </div>
+                      )}
+                      </div>
+                          </div>
 
                   {/* Submit Button */}
                   <div className="flex justify-end">
-                    <button
-                      type="submit"
+                      <button
+                        type="submit"
                       className={`group flex items-center px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl ${
-                        isSubmitting
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105 hover:shadow-2xl'
-                      }`}
-                      disabled={isSubmitting}
-                    >
+                          isSubmitting
+                            ? 'bg-gray-400 text-white cursor-not-allowed'
+                            : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105 hover:shadow-2xl'
+                        }`}
+                        disabled={isSubmitting}
+                      >
                       {isSubmitting ? (
                         <>
                           <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full mr-3"></div>
-                          <span>Processing Payment...</span>
+                          <span>Processing Order...</span>
                         </>
                       ) : (
                         <>
-                          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                          </svg>
-                          Pay with DPO
+                          {paymentMethod === "momo" ? (
+                            <>
+                              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              Complete Order (MoMo)
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                              Pay with DPO
+                            </>
+                          )}
                           <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                           </svg>
                         </>
                       )}
-                    </button>
+                      </button>
                   </div>
-
+                  
                   {/* Status Messages */}
                   {orderStatus.error && (
                     <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md">
