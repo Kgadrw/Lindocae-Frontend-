@@ -54,14 +54,11 @@ const CheckoutPage = () => {
   const [customerName, setCustomerName] = useState("");
   
   // Payment confirmation info
-  const [senderName, setSenderName] = useState("");
-  const [senderAddress, setSenderAddress] = useState("");
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   
   // Form validation errors
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [customerErrors, setCustomerErrors] = useState<{name?: string, email?: string, phone?: string}>({});
-  const [paymentErrors, setPaymentErrors] = useState<{senderName?: string, senderAddress?: string}>({});
 
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -254,13 +251,8 @@ const CheckoutPage = () => {
   };
 
   const validatePaymentInfo = () => {
-    const errors: {senderName?: string, senderAddress?: string} = {};
-    
-    if (!senderName.trim()) errors.senderName = "Sender name is required";
-    if (!senderAddress.trim()) errors.senderAddress = "Sender address is required";
-    
-    setPaymentErrors(errors);
-    return Object.keys(errors).length === 0;
+    // No validation needed for payment info since we removed the fields
+    return true;
   };
 
   const handleNextStep = () => {
@@ -272,12 +264,11 @@ const CheckoutPage = () => {
       console.log('Payment method selected, moving to address step');
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      console.log('Validating customer info, address, and sender info:', { customerName, customerEmail, customerPhone, addressData, senderName });
+      console.log('Validating customer info and address:', { customerName, customerEmail, customerPhone, addressData });
       const customerValid = validateCustomerInfo();
       const addressValid = validateAddress();
-      const senderValid = senderName.trim() !== "";
       
-      if (customerValid && addressValid && senderValid) {
+      if (customerValid && addressValid) {
         console.log('All info valid, moving to confirmation step');
         setCurrentStep(3);
       } else {
@@ -285,8 +276,6 @@ const CheckoutPage = () => {
           setOrderStatus({ error: "Please fill in all customer information correctly." });
         } else if (!addressValid) {
           setOrderStatus({ error: "Please complete all delivery address fields." });
-        } else if (!senderValid) {
-          setOrderStatus({ error: "Please provide the sender name for payment." });
         }
       }
     }
@@ -306,7 +295,7 @@ const CheckoutPage = () => {
     setIsSubmitting(true);
 
     // Final validation
-    if (!validateCustomerInfo() || !validateAddress() || !validatePaymentInfo()) {
+    if (!validateCustomerInfo() || !validateAddress()) {
       setOrderStatus({ error: "Please complete all steps correctly." });
       setIsSubmitting(false);
       return;
@@ -371,8 +360,6 @@ const CheckoutPage = () => {
   items: orderItems,
   totalAmount,
   // MTN Mobile Money payment details
-  senderName,
-  senderAddress,
   momoCode: "*182*8*1*079559#"
 };
 
@@ -804,19 +791,18 @@ const CheckoutPage = () => {
                         </div>
                       )}
                       
-                      {/* Contact & Sender Information */}
+                      {/* Contact Information */}
                       <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4">
                         <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center">
                           <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
-                          Contact & Sender Information
+                          Contact Information
                         </h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-800 mb-1">
-                              Phone Number <span className="text-red-500">*</span>
-                        </label>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-800 mb-1">
+                            Phone Number <span className="text-red-500">*</span>
+                          </label>
                           <input
                             type="tel"
                             value={customerPhone}
@@ -826,8 +812,8 @@ const CheckoutPage = () => {
                                 setCustomerErrors(prev => ({ ...prev, phone: undefined }));
                               }
                             }}
-                              placeholder="+250788123456"
-                              className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
+                            placeholder="+250788123456"
+                            className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
                               customerErrors.phone 
                                 ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
                                 : customerPhone.trim()
@@ -836,36 +822,9 @@ const CheckoutPage = () => {
                             }`}
                           />
                           {customerErrors.phone && (
-                              <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
-                            )}
-                            </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-800 mb-1">
-                              Sender Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={senderName}
-                              onChange={(e) => {
-                                setSenderName(e.target.value);
-                                if (paymentErrors.senderName) {
-                                  setPaymentErrors(prev => ({ ...prev, senderName: undefined }));
-                                }
-                              }}
-                              placeholder="Name on MTN account"
-                              className={`w-full px-3 py-2 border rounded-lg outline-none transition-all duration-200 text-sm ${
-                                paymentErrors.senderName 
-                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                  : senderName.trim()
-                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                              }`}
-                            />
-                            {paymentErrors.senderName && (
-                              <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
+                            <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
                           )}
                         </div>
-                          </div>
                       </div>
                         
                       {/* Delivery Address Section - Compact */}
@@ -889,33 +848,6 @@ const CheckoutPage = () => {
                         <p className="text-gray-600">Review your order and complete payment</p>
                       </div>
                       
-                      {/* Payment Instructions */}
-                      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 p-4 rounded-xl text-white shadow-lg mb-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center">
-                            <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3 border border-white shadow-sm" />
-                            <div>
-                              <h3 className="text-lg font-bold">MTN Mobile Money</h3>
-                              <p className="text-yellow-100 text-sm">Selected Payment Method</p>
-                        </div>
-                          </div>
-                          <div className="bg-white bg-opacity-20 rounded-lg p-2">
-                            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                      </div>
-                      
-                        <div className="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
-                          <div className="text-center">
-                            <div className="text-sm font-semibold mb-1 text-yellow-100">Payment Instructions</div>
-                            <div className="text-lg font-bold mb-2">Send {formatRWF(subtotal)} RWF</div>
-                            <div className="text-xl font-mono font-bold bg-white bg-opacity-30 px-3 py-2 rounded-lg">
-                              *182*8*1*079559#
-                          </div>
-                          </div>
-                        </div>
-                      </div>
                       
                       {/* Order Summary */}
                       <div className="bg-green-50 border border-green-300 rounded-lg p-4 shadow-sm">
