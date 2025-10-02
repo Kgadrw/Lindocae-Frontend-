@@ -370,8 +370,8 @@ const CheckoutPage = () => {
 
       // Prepare shipping address in the format backend expects
       const shippingAddress = {
-        province: addressData.province,
-        district: addressData.district,
+  province: addressData.province,
+  district: addressData.district,
         sector: addressData.sector?.trim() || "",
         cell: addressData.cell?.trim() || "",
         village: addressData.village?.trim() || "",
@@ -385,14 +385,14 @@ const CheckoutPage = () => {
       const orderData = {
         paymentMethod: "mobile_money", // Backend expects this format
         shippingAddress: shippingAddress,
-        items: orderItems,
+  items: orderItems,
         totalAmount: Number(subtotal), // Ensure it's a number
         status: "pending",
         customerName: customerName.trim(),
         customerEmail: customerEmail.trim(),
         customerPhone: customerPhone.trim(),
-        momoCode: "*182*8*1*079559#"
-      };
+  momoCode: "*182*8*1*079559#"
+};
 
       console.log("Order data being sent to API (formatted):", orderData);
       console.log("Cart items:", cartItems);
@@ -523,8 +523,8 @@ const CheckoutPage = () => {
             const existingOrders = JSON.parse(localStorage.getItem('fallbackOrders') || '[]');
             existingOrders.push(fallbackOrder);
             localStorage.setItem('fallbackOrders', JSON.stringify(existingOrders));
-            
-            setOrderStatus({
+
+        setOrderStatus({
               error: `${errorMessage} Your order has been saved locally and will be processed when the service is restored.`,
             });
           } catch (storageError) {
@@ -548,33 +548,33 @@ const CheckoutPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-6 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-3 sm:py-6 px-2 sm:px-4">
       <div className="w-full max-w-7xl mx-auto">
         {/* Header with Back Button */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <button
             onClick={() => router.push('/cart')}
-            className="flex items-center text-blue-600 hover:text-blue-700 mb-4 font-medium transition-colors group"
+            className="flex items-center text-blue-600 hover:text-blue-700 mb-3 sm:mb-4 font-medium transition-colors group text-sm sm:text-base"
           >
-            <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Cart
           </button>
           <div className="text-center">
             <div className="flex items-center justify-center mb-2">
-              <svg className="w-8 h-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
-            <p className="text-gray-600">Complete your order in 3 simple steps • Choose Payment → Enter Address → Confirm</p>
+            <p className="text-gray-600 text-xs sm:text-sm lg:text-base px-2">Complete your order in 3 simple steps • Choose Payment → Enter Address → Confirm</p>
           </div>
         </div>
         
         {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-2 md:space-x-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-center space-x-1 sm:space-x-2 md:space-x-4">
             {[1, 2, 3].map((step) => {
               const stepNames = ['Payment Method', 'Delivery Info', 'Confirmation'];
               const stepDescriptions = ['Choose payment', 'Contact & address', 'Review & confirm'];
@@ -585,35 +585,35 @@ const CheckoutPage = () => {
                 <div key={step} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div className={`
-                      w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 shadow-lg
+                      w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 shadow-lg
                       ${isCompleted 
                         ? 'bg-green-500 text-white scale-105' 
                         : isActive 
-                          ? 'bg-blue-600 text-white ring-4 ring-blue-200 scale-110' 
+                          ? 'bg-blue-600 text-white ring-2 sm:ring-4 ring-blue-200 scale-110' 
                           : 'bg-gray-200 text-gray-500'
                       }
                     `}>
                       {isCompleted ? (
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       ) : (
-                        step
+                        <span className="text-sm sm:text-base">{step}</span>
                       )}
                     </div>
-                    <div className="mt-2 text-center">
-                      <span className={`block text-sm font-semibold ${
+                    <div className="mt-1 sm:mt-2 text-center">
+                      <span className={`block text-xs sm:text-sm font-semibold ${
                         isActive ? 'text-blue-700' : isCompleted ? 'text-green-600' : 'text-gray-500'
                       }`}>
                         {stepNames[step - 1]}
                       </span>
-                      <span className="block text-xs text-gray-500 mt-0.5">
+                      <span className="block text-xs text-gray-500 mt-0.5 hidden sm:block">
                         {stepDescriptions[step - 1]}
                       </span>
                     </div>
                   </div>
                   {step < 3 && (
-                    <div className={`w-8 md:w-16 h-1 mx-2 rounded-full transition-all duration-300 ${
+                    <div className={`w-4 sm:w-8 md:w-16 h-1 mx-1 sm:mx-2 rounded-full transition-all duration-300 ${
                       currentStep > step ? 'bg-green-500' : 'bg-gray-200'
                     }`} />
                   )}
@@ -623,15 +623,15 @@ const CheckoutPage = () => {
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-white">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl overflow-hidden border border-white">
           <div className="flex flex-col lg:flex-row">
             {/* Left: Order Summary */}
-            <div className="lg:w-2/5 bg-gradient-to-br from-blue-50 to-purple-50 p-6 border-r-2 border-blue-200 lg:sticky lg:top-6 lg:self-start">
-              <div className="flex items-center mb-4">
-                <svg className="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="lg:w-2/5 bg-gradient-to-br from-blue-50 to-purple-50 p-4 sm:p-6 border-b-2 lg:border-b-0 lg:border-r-2 border-blue-200 lg:sticky lg:top-6 lg:self-start">
+              <div className="flex items-center mb-3 sm:mb-4">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <h2 className="text-xl font-bold text-blue-700">Order Summary</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-blue-700">Order Summary</h2>
               </div>
               {isLoadingCart ? (
                 <div className="text-center text-gray-500 py-8">
@@ -654,10 +654,10 @@ const CheckoutPage = () => {
               ) : (
                 <>
                   {/* Order Items */}
-                  <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2 sm:space-y-3 mb-4 max-h-48 sm:max-h-64 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
                     {cartItems.map((item, idx) => (
-                      <div key={`cart-${String((item as any)?.id ?? "")}-${idx}`} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                      <div key={`cart-${String((item as any)?.id ?? "")}-${idx}`} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                           {(() => {
                             let image = "";
                             if (Array.isArray(item.image) && item.image.length > 0) image = item.image[0];
@@ -674,14 +674,14 @@ const CheckoutPage = () => {
                           })()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 text-sm truncate">{item.name || "Product"}</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Qty: {item.quantity || 1}</span>
-                            <span className="text-xs text-gray-400">×</span>
+                          <div className="font-semibold text-gray-900 text-xs sm:text-sm truncate">{item.name || "Product"}</div>
+                          <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-1.5 sm:px-2 py-0.5 rounded-full">Qty: {item.quantity || 1}</span>
+                            <span className="text-xs text-gray-400 hidden sm:inline">×</span>
                             <span className="text-xs text-gray-600">{formatRWF(item.price || 0)} RWF</span>
                           </div>
                         </div>
-                        <div className="font-bold text-blue-600 text-sm whitespace-nowrap">
+                        <div className="font-bold text-blue-600 text-xs sm:text-sm whitespace-nowrap">
                           {formatRWF((item.price || 0) * (item.quantity || 1))} RWF
                         </div>
                       </div>
@@ -689,9 +689,9 @@ const CheckoutPage = () => {
                   </div>
                   
                   {/* Price Summary */}
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
+                  <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm">
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-gray-600 flex items-center">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -743,7 +743,7 @@ const CheckoutPage = () => {
             </div>
 
             {/* Right: Step Content */}
-            <div className="lg:w-3/5 p-6 bg-white">
+            <div className="lg:w-3/5 p-4 sm:p-6 bg-white">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout}>
                   {/* Step 1: Payment Method Selection */}
@@ -751,18 +751,18 @@ const CheckoutPage = () => {
                     <div className="animate-fade-in">
                       {/* Header */}
                       <div className="text-center mb-4">
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-2">Choose Payment Method</h2>
-                        <p className="text-gray-600">Select how you'd like to pay for your order</p>
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-2">Choose Payment Method</h2>
+                        <p className="text-gray-600 text-sm sm:text-base">Select how you'd like to pay for your order</p>
                       </div>
                       
                       {/* MTN Mobile Money Payment Card - Compact */}
-                      <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-4 rounded-xl text-white shadow-lg border-2 border-white cursor-pointer" onClick={() => setPaymentMethod("mtn")}>
+                      <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white shadow-lg border-2 border-white cursor-pointer" onClick={() => setPaymentMethod("mtn")}>
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center">
-                            <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3 border border-white shadow-sm" />
+                            <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mr-2 sm:mr-3 border border-white shadow-sm" />
                             <div>
-                              <h3 className="text-lg font-bold">MTN Mobile Money</h3>
-                              <p className="text-yellow-100 text-sm">Fast & Secure Payment</p>
+                              <h3 className="text-base sm:text-lg font-bold">MTN Mobile Money</h3>
+                              <p className="text-yellow-100 text-xs sm:text-sm">Fast & Secure Payment</p>
                             </div>
                           </div>
                           <div className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${paymentMethod === "mtn" ? "bg-white" : ""}`}>
@@ -774,15 +774,15 @@ const CheckoutPage = () => {
                               </div>
                             </div>
                         
-                        <div className="bg-white rounded-lg p-3 shadow-lg">
-                          <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white rounded-lg p-2 sm:p-3 shadow-lg">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-4">
                             <div className="text-center">
-                              <div className="text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
-                              <div className="text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
+                              <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">Total Amount</div>
+                              <div className="text-lg sm:text-xl font-bold text-blue-600">{formatRWF(subtotal)} RWF</div>
                           </div>
                             <div className="text-center">
-                              <div className="text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
-                              <div className="text-lg font-mono font-bold bg-blue-50 px-2 py-1 rounded text-blue-600 border border-blue-200">
+                              <div className="text-xs sm:text-sm font-semibold mb-1 text-gray-600">USSD Code</div>
+                              <div className="text-sm sm:text-lg font-mono font-bold bg-blue-50 px-1 sm:px-2 py-1 rounded text-blue-600 border border-blue-200">
                                 *182*8*1*079559#
                               </div>
                             </div>
@@ -887,7 +887,7 @@ const CheckoutPage = () => {
                         <div>
                           <label className="block text-xs font-medium text-gray-800 mb-1">
                             Phone Number <span className="text-red-500">*</span>
-                          </label>
+                        </label>
                           <input
                             type="tel"
                             value={customerPhone}
@@ -988,18 +988,18 @@ const CheckoutPage = () => {
                   )}
                   
                   {/* Navigation Buttons */}
-                  <div className="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-center pt-4 sm:pt-6 border-t border-gray-200 mt-6 sm:mt-8 gap-3 sm:gap-0">
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className={`group flex items-center px-6 py-3 border-2 rounded-xl font-semibold transition-all duration-200 ${
+                      className={`group flex items-center px-4 sm:px-6 py-2.5 sm:py-3 border-2 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 text-sm sm:text-base ${
                         currentStep === 1 
                           ? 'text-gray-400 border-gray-200 cursor-not-allowed bg-gray-50' 
                           : 'text-gray-700 border-gray-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 shadow-sm hover:shadow-md'
                       }`}
                       disabled={currentStep === 1}
                     >
-                      <svg className={`w-5 h-5 mr-2 transition-transform ${currentStep > 1 ? 'group-hover:-translate-x-1' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 transition-transform ${currentStep > 1 ? 'group-hover:-translate-x-1' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                       Previous
@@ -1009,17 +1009,18 @@ const CheckoutPage = () => {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="group flex items-center px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                        className="group flex items-center px-6 sm:px-8 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base w-full sm:w-auto justify-center"
                       >
-                        {currentStep === 1 ? 'Continue to Address' : currentStep === 2 ? 'Continue to Confirmation' : 'Complete Order'}
-                        <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span className="hidden sm:inline">{currentStep === 1 ? 'Continue to Address' : currentStep === 2 ? 'Continue to Confirmation' : 'Complete Order'}</span>
+                        <span className="sm:hidden">{currentStep === 1 ? 'Continue' : currentStep === 2 ? 'Review' : 'Complete'}</span>
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
                     ) : (
                       <button
                         type="submit"
-                        className={`group flex items-center px-8 py-3.5 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl ${
+                        className={`group flex items-center px-6 sm:px-8 py-3 sm:py-3.5 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg transition-all duration-300 shadow-xl w-full sm:w-auto justify-center ${
                           isSubmitting
                             ? 'bg-gray-400 text-white cursor-not-allowed'
                             : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105 hover:shadow-2xl'
@@ -1028,12 +1029,12 @@ const CheckoutPage = () => {
                       >
                         {isSubmitting ? (
                           <>
-                            <div className="animate-spin w-5 h-5 border-3 border-white border-t-transparent rounded-full mr-3"></div>
-                            <span>Processing Payment...</span>
+                            <div className="animate-spin w-4 h-4 sm:w-5 sm:h-5 border-2 sm:border-3 border-white border-t-transparent rounded-full mr-2 sm:mr-3"></div>
+                            <span className="text-sm sm:text-base">Processing Payment...</span>
                           </>
                         ) : (
                           <>
-                            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Complete Order
