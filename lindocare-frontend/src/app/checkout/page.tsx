@@ -732,27 +732,7 @@ const CheckoutPage = () => {
                       {/* Header */}
                       <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-2">Delivery Information</h2>
-                        {isUserLoggedIn() && customerName && customerEmail ? (
-                          <div className="mt-2 inline-block">
-                            <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-300 rounded-lg p-3 px-5 shadow-sm">
-                              <div className="flex items-center justify-center">
-                                <div className="flex items-center space-x-3">
-                                  <div className="p-2 bg-green-100 rounded-full">
-                                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                  <div className="text-left">
-                                    <div className="text-sm font-semibold text-gray-800">{customerName}</div>
-                                    <div className="text-xs text-gray-600">{customerEmail}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-gray-600">Enter your contact details and delivery address</p>
-                        )}
+                        <p className="text-gray-600">Enter your contact details and delivery address</p>
                       </div>
                       
                       {/* Guest User Fields - Compact */}
