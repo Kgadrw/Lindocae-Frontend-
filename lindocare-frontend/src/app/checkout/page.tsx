@@ -14,7 +14,7 @@ import {
 } from "../../utils/serverStorage";
 import { normalizeImageUrl } from "../../utils/image";
 import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
-import { getUserInfo, saveUserPurchaseInfo } from "../../utils/userInfo";
+import { getUserInfo } from "../../utils/userInfo";
 
 interface Product {
   id: string | number;
@@ -53,35 +53,14 @@ const CheckoutPage = () => {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerName, setCustomerName] = useState("");
   
-  // Payment confirmation info
-  const [senderName, setSenderName] = useState("");
-  const [senderAddress, setSenderAddress] = useState("");
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  
   // Form validation errors
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [customerErrors, setCustomerErrors] = useState<{name?: string, email?: string, phone?: string}>({});
-  const [paymentErrors, setPaymentErrors] = useState<{senderName?: string, senderAddress?: string}>({});
-
   const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentRedirectUrl, setPaymentRedirectUrl] = useState("");
-  const [users, setUsers] = useState<any[]>([]); // optional (kept as in your original)
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [isLoadingUserInfo, setIsLoadingUserInfo] = useState(true);
   const router = useRouter();
-
-  // Fetch users for header (unchanged; safe to remove if unused)
-  useEffect(() => {
-    fetch("https://lindo-project.onrender.com/user/getAllUsers")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setUsers(data);
-        else if (data && Array.isArray(data.users)) setUsers(data.users);
-        else setUsers([]);
-      })
-      .catch(() => setUsers([]));
-  }, []);
 
   // Load user information automatically if logged in
   useEffect(() => {
@@ -216,21 +195,6 @@ const CheckoutPage = () => {
     loadCart();
   }, []);
 
-  // Debug: Log cart items whenever they change
-  useEffect(() => {
-    console.log("Checkout: Cart items updated:", cartItems);
-    console.log("Checkout: Cart items length:", cartItems.length);
-    if (cartItems.length > 0) {
-      console.log("Checkout: First cart item details:", {
-        id: cartItems[0].id,
-        name: cartItems[0].name,
-        price: cartItems[0].price,
-        image: cartItems[0].image,
-        quantity: cartItems[0].quantity,
-      });
-    }
-  }, [cartItems]);
-
   const subtotal = cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
     0
@@ -297,124 +261,143 @@ const CheckoutPage = () => {
     setIsSubmitting(true);
 
     // Final validation
-    if (!validateCustomerInfo() || !validateAddress() || !validatePaymentInfo()) {
-      setOrderStatus({ error: "Please complete all steps correctly." });
+    if (!validateCustomerInfo() || !validateAddress()) {
+      setOrderStatus({ error: "Please complete all required fields correctly." });
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // **SAVE USER PURCHASE INFO TO DATABASE FIRST**
-      console.log('Saving user purchase info to database...');
-      
-      // Calculate total amount from cart items
-      const totalAmount = cartItems.reduce((sum, item) => {
-        const itemTotal = (item.price || 0) * (item.quantity || 1);
-        return sum + itemTotal;
-      }, 0);
-      
-      // Prepare cart items for database storage
-      const cartItemsForDB = cartItems.map((item) => ({
-        id: String(item.id),
-        name: item.name || 'Product',
-        price: item.price || 0,
-        quantity: item.quantity || 1,
-      }));
-      
-      // Save purchase information to database before proceeding
-      const saveResult = await saveUserPurchaseInfo({
-        userName: customerName,
-        userEmail: customerEmail,
-        cartItems: cartItemsForDB,
-        phone: customerPhone,
-        address: addressData,
-        totalAmount,
-      });
-      
-      if (!saveResult.success) {
-        console.warn('Failed to save purchase info to database:', saveResult.error);
-        // Continue with checkout even if save fails, but log the error
-      } else {
-        console.log('Purchase info saved successfully to database, Order ID:', saveResult.orderId);
-      }
+      // Step 1: Create Order
+      const orderData = {
+        paymentMethod: paymentMethod,
+        shippingAddress: {
+          province: addressData.province,
+          district: addressData.district,
+          sector: addressData.sector,
+          cell: addressData.cell,
+          village: addressData.village,
+          street: addressData.street,
+          customerName: customerName,
+          customerEmail: customerEmail,
+          customerPhone: customerPhone
+        },
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        customerName: customerName
+      };
 
+      console.log("Creating order:", orderData);
+
+      // Get auth token if available
       const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
 
-      // Prepare order items for the API
-      const orderItems = cartItems.map((item) => ({
-        productId: item.id,
-        quantity: item.quantity || 1,
-        price: item.price || 0,
-      }));
-
-      // Prepare order data with new address structure
-     const orderData = {
-  paymentMethod: paymentMethod || "mtn",
-  province: addressData.province,
-  district: addressData.district,
-  sector: addressData.sector,
-  cell: addressData.cell,
-  village: addressData.village,
-  street: addressData.street,
-  customerEmail,
-  customerPhone,
-  customerName,
-  items: orderItems,
-  totalAmount,
-  // MTN Mobile Money payment details
-  senderName,
-  senderAddress,
-  momoCode: "*182*8*1*079559#"
-};
-
-      console.log("Order data being sent to API (formatted):", orderData);
-      console.log("Cart items:", cartItems);
-      console.log("Total amount calculated:", totalAmount);
-
-      // Optional auth token from localStorage (include if present)
-      let openLock: string | null = null;
-      try {
-        const stored = localStorage.getItem("userData");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          openLock = parsed?.user?.tokens?.accessToken || null;
-        }
-      } catch {
-        console.warn("Could not parse user token; proceeding without Authorization header.");
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-      console.log("Access token present:", !!openLock);
 
       const orderResponse = await fetch(
         "https://lindo-project.onrender.com/orders/createOrder",
         {
           method: "POST",
-          headers: {
-            accept: "application/json",
-            "Content-Type": "application/json",
-            ...(openLock ? { Authorization: `Bearer ${openLock}` } : {}),
-          },
+          headers,
           body: JSON.stringify(orderData),
         }
       );
 
       console.log("Order response status:", orderResponse.status);
 
-      if (orderResponse.ok) {
-        const orderResult = await orderResponse.json();
-        console.log("Order created:", orderResult);
+      if (!orderResponse.ok) {
+        // Handle order creation error
+        let errorData: any = {};
+        let responseText = "";
+        try {
+          responseText = await orderResponse.text();
+          if (responseText) {
+            errorData = JSON.parse(responseText);
+          }
+        } catch (parseError) {
+          errorData = { message: responseText || "Unknown error" };
+        }
 
-        const orderId = orderResult.order?._id || orderResult.orderId;
-
-        // Prepare name for DPO init from full name safely
-        const [firstNameRaw, ...restName] = customerName.trim().split(/\s+/);
-        const firstName = firstNameRaw || "Customer";
-        const lastName = restName.join(" ") || firstName;
-
-        // MTN Mobile Money payment processing
-        setOrderStatus({ 
-          success: `Order created successfully! Please send ${formatRWF(totalAmount)} RWF to *182*8*1*079559# and complete payment confirmation.` 
+        console.error("Order creation error:", orderResponse.status, errorData);
+        setOrderStatus({
+          error: errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
         });
-        
+        setIsSubmitting(false);
+        return;
+      }
+
+      const orderResult = await orderResponse.json();
+      console.log("Order created successfully:", orderResult);
+      const orderId = orderResult.order?._id || orderResult.orderId;
+
+      // Step 2: Initialize DPO Payment
+      const firstName = customerName.split(' ')[0] || customerName;
+      const lastName = customerName.split(' ').slice(1).join(' ') || firstName;
+      
+      const dpoData = {
+        orderId: orderId,
+        totalAmount: subtotal,
+        currency: "RWF",
+        email: customerEmail,
+        phone: customerPhone,
+        firstName: firstName,
+        lastName: lastName,
+        serviceDescription: `Payment for order #${orderId}`,
+        callbackUrl: `${window.location.origin}/payment-success`
+      };
+
+      console.log("Initializing DPO payment:", dpoData);
+
+      const dpoResponse = await fetch(
+        "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
+        {
+          method: "POST",
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(dpoData),
+        }
+      );
+
+      console.log("DPO response status:", dpoResponse.status);
+
+      if (dpoResponse.ok) {
+        const dpoResult = await dpoResponse.json();
+        console.log("DPO payment initialized:", dpoResult);
+
+        // Save address for future use (for logged-in users)
+        if (isUserLoggedIn()) {
+          try {
+            const token = getAuthToken();
+            if (token) {
+              await fetch(
+                "https://lindo-project.onrender.com/user/address",
+                {
+                  method: "POST",
+                  headers: {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    address: addressData
+                  }),
+                }
+              );
+              console.log('Address saved for future use');
+            }
+          } catch (addressSaveError) {
+            console.log('Could not save address (not critical):', addressSaveError);
+          }
+        }
+
         // Clear cart after successful order creation
               try {
                 if (isUserLoggedIn()) await clearCartServer();
@@ -433,29 +416,21 @@ const CheckoutPage = () => {
           error: "Authorization failed. Please log in and try again.",
         });
       } else {
-        // Enhanced error handling to see exact API response
-        let errorData: any = {};
-        let responseText = "";
+        // Handle DPO initialization error
+        let dpoErrorData: any = {};
+        let dpoResponseText = "";
         try {
-          responseText = await orderResponse.text();
-          if (responseText) {
-            errorData = JSON.parse(responseText);
+          dpoResponseText = await dpoResponse.text();
+          if (dpoResponseText) {
+            dpoErrorData = JSON.parse(dpoResponseText);
           }
         } catch (parseError) {
-          errorData = { message: responseText || "Unknown error" };
+          dpoErrorData = { message: dpoResponseText || "Unknown error" };
         }
 
-        console.error(
-          "Order creation error status:",
-          orderResponse.status,
-          orderResponse.statusText
-        );
-        console.error("Order creation error body (text):", responseText || "<empty body>");
-        console.error("Order creation error parsed object:", errorData);
-
+        console.error("DPO initialization error:", dpoResponse.status, dpoErrorData);
         setOrderStatus({
-          error:
-            errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
+          error: `Order created but payment initialization failed: ${dpoErrorData.message || 'Unknown error'}. Please contact support.`,
         });
       }
     } catch (err) {
@@ -468,7 +443,7 @@ const CheckoutPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-4">
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="w-full max-w-6xl mx-auto">
         {/* Header with Back Button */}
         <div className="mb-6">
           <button
@@ -638,30 +613,12 @@ const CheckoutPage = () => {
                         <span className="text-blue-600 text-xl">{formatRWF(subtotal)} RWF</span>
                       </div>
                     </div>
-                    {/* Trust Badges */}
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          Secure
-                        </div>
-                        <div className="flex items-center">
-                          <svg className="w-4 h-4 text-blue-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-                          </svg>
-                          Free Delivery
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </>
               )}
             </div>
 
-            {/* Right: Step Content */}
+            {/* Right: Checkout Form */}
             <div className="lg:w-3/5 p-6 bg-white">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout} className="space-y-6">
@@ -1121,7 +1078,7 @@ const CheckoutPage = () => {
                   
                   {/* Status Messages */}
                   {orderStatus.error && (
-                    <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md animate-fade-in">
+                    <div className="mt-6 p-5 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md">
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
                           <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -1136,7 +1093,7 @@ const CheckoutPage = () => {
                     </div>
                   )}
                   {orderStatus.success && (
-                    <div className="mt-6 p-5 bg-green-50 border-l-4 border-green-500 rounded-lg shadow-md animate-fade-in">
+                    <div className="mt-6 p-5 bg-green-50 border-l-4 border-green-500 rounded-lg shadow-md">
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
                           <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
