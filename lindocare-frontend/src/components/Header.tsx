@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Heart, ShoppingCart, Home, List, MapPin, Lock } from 'lucide-react';
+import { Heart, ShoppingCart, Home, List, MapPin, Lock, User, Trash2 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   fetchUserCart,
@@ -13,8 +13,6 @@ import {
   isUserLoggedIn
 } from '../utils/serverStorage';
 import { normalizeImageUrl } from '../utils/image';
-
-
 
 
 // Move updateUser outside so it can be called from anywhere
@@ -47,8 +45,34 @@ function getLoggedInUserId(): string | null {
 
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("token") || null;
+  
+  try {
+    // Try userData first (most common storage method)
+    const userData = localStorage.getItem("userData");
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      const token = parsed.user?.tokens?.accessToken;
+      if (token) {
+        console.log("Found token in userData:", token.substring(0, 20) + "...");
+        return token;
+      }
+    }
+
+    // Fallback to direct token storage
+    const directToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
+    if (directToken) {
+      console.log("Found direct token:", directToken.substring(0, 20) + "...");
+      return directToken;
+    }
+
+    console.log("No authentication token found in localStorage");
+    return null;
+  } catch (error) {
+    console.error("Error getting auth token:", error);
+    return null;
+  }
 }
+
 
 // Fixed wishlist fetch function
 async function fetchWishlistCountFromBackend() {
@@ -210,16 +234,38 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         setUser({ name, avatar });
       }
     }
+    function handleAvatarUpdate(event: CustomEvent) {
+      const { email, avatar } = event.detail;
+      console.log('Avatar update received:', { email, avatar: avatar ? 'has image' : 'no image' });
+      
+      // Always refresh user data completely to avoid state dependency issues
+      updateUser(setUser);
+    }
     
     // Initial user update
     updateUser(setUser);
     
+    // Debug: Log authentication status
+    const token = getAuthToken();
+    const userData = localStorage.getItem('userData');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    console.log('Header authentication debug:', {
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : null,
+      hasUserData: !!userData,
+      hasUserEmail: !!userEmail,
+      userEmail: userEmail
+    });
+    
     window.addEventListener('storage', handleStorage);
     window.addEventListener('userLogin', handleUserLogin as EventListener);
+    window.addEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('userLogin', handleUserLogin as EventListener);
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     };
   }, []);
 
@@ -331,6 +377,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       setWishlistCount(wishlistCount);
     }, 100);
   };
+
 
   // Helper to close dropdown and perform an action
   const handleSignOut = () => {
@@ -512,7 +559,8 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   
 
   return (
-    <header className="w-full bg-white border-b px-2  border-gray-200 sticky top-0 z-50">
+    <>
+    <header className="w-full bg-white border-b px-2 border-gray-200 sticky top-0 z-50">
       {/* Top Promo Bar */}
       {/* Simple Modern Mobile Header - Fixed */}
       <div className="block md:hidden bg-white border-b border-gray-100">
@@ -562,9 +610,19 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 onClick={() => setDropdownOpen(v => !v)}
                 className="p-1 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </button>
             ) : (
               <Link href="/login">
@@ -955,9 +1013,19 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center cursor-pointer`}
                 onClick={() => setDropdownOpen(v => !v)}
               >
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 {pathname === '/account' && (
                   <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
                 )}
@@ -987,15 +1055,47 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           {dropdownOpen && user && (
             <div ref={dropdownRef} className="absolute right-0 top-14 z-50 bg-white rounded-2xl shadow-2xl p-0 w-72 flex flex-col border border-gray-200 animate-fade-in" style={{ minWidth: 260 }}>
               <div className="flex flex-col items-center pt-6 pb-2 px-6 border-b border-gray-100">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold border-2 border-gray-200 mb-2">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 mb-2"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gray-600 text-white flex items-center justify-center text-lg font-bold border-2 border-gray-200 mb-2">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span className="font-semibold text-gray-900 text-base mb-1">Welcome back, {user.name}</span>
                 {/* Remove Sign Out button, keep only Logout below */}
               </div>
               <div className="flex flex-col gap-1 py-2 px-2">
-                <div className="border-t border-gray-100 my-2" />
-                <button onMouseDown={handleSignOut} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-50 text-red-600 text-sm font-medium w-full text-left">
+                {isUserLoggedIn() && (
+                  <>
+                    <Link 
+                      href="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-50 text-blue-600 text-sm font-medium w-full text-left"
+                    >
+                      <User size={18} />
+                      Update Profile
+                    </Link>
+                    
+                    <Link 
+                      href="/account/delete"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-50 text-red-600 text-sm font-medium w-full text-left"
+                    >
+                      <Trash2 size={18} />
+                      Delete Account
+                    </Link>
+                    
+                    <div className="border-t border-gray-100 my-2" />
+                  </>
+                )}
+                <button onMouseDown={handleSignOut} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-600 text-sm font-medium w-full text-left">
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                     <polyline points="16,17 21,12 16,7"/>
@@ -1028,9 +1128,19 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           <div className="p-4 border-b border-gray-100">
             {user ? (
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold border border-gray-200">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm font-bold border border-gray-200">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <div className="font-semibold text-gray-900">Welcome back, {user.name}</div>
                   <button 
@@ -1134,6 +1244,8 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 
               </nav>
             </header>
+
+    </>
   );
 };
 

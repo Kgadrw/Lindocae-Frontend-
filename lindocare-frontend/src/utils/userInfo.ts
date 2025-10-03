@@ -2,6 +2,7 @@
 
 const API_BASE = 'https://lindo-project.onrender.com';
 
+
 export interface UserInfo {
   id?: string;
   firstName?: string;
@@ -39,7 +40,7 @@ export function getUserInfoFromStorage(): UserInfo | null {
             ? `${user.firstName} ${user.lastName}` 
             : user.firstName || user.lastName || user.name,
           email: user.email,
-          phone: user.phone || user.phoneNumber,
+          phone: user.phone || user.phoneNumber || user.customerPhone,
           avatar: user.avatar || user.image,
           address: {
             province: user.province,
@@ -111,25 +112,89 @@ export function getAuthToken(): string | null {
   }
 }
 
-// Fetch user information from database using token
-export async function fetchUserInfoFromDatabase(): Promise<UserInfo | null> {
+// Get current user's token from API response
+export async function getCurrentUserToken(): Promise<string | null> {
   const token = getAuthToken();
   if (!token) return null;
 
   try {
-    // Try to get user profile from API
-    const response = await fetch(`${API_BASE}/user/profile`, {
+    // Get user ID from localStorage
+    const userData = localStorage.getItem('userData');
+    let userId = null;
+    
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        userId = parsed.user?._id || parsed.user?.id;
+      } catch (e) {
+        console.log('Error parsing userData for token:', e);
+      }
+    }
+    
+    if (!userId) return token;
+
+    const response = await fetch(`${API_BASE}/user/getUserById/${userId}`, {
       method: 'GET',
       headers: {
-        'accept': 'application/json',
+        'accept': '*/*',
         'Authorization': `Bearer ${token}`,
       },
     });
 
     if (response.ok) {
-      const userData = await response.json();
-      const user = userData.user || userData;
+      const user = await response.json();
+      
+      if (user && user.tokens && user.tokens.accessToken) {
+        console.log('Found current user token in API response');
+        return user.tokens.accessToken;
+      }
+    }
+  } catch (error) {
+    console.error('Error getting current user token:', error);
+  }
 
+  return token; // Fallback to existing token
+}
+
+// Fetch user information from database using user ID
+export async function fetchUserInfoFromDatabase(): Promise<UserInfo | null> {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    // First, try to get current user's ID from localStorage
+    const userData = localStorage.getItem('userData');
+    let userId = null;
+    
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        userId = parsed.user?._id || parsed.user?.id;
+      } catch (e) {
+        console.log('Error parsing userData:', e);
+      }
+    }
+    
+    if (!userId) {
+      console.log('No user ID found in localStorage');
+      return null;
+    }
+
+    console.log('Fetching user by ID:', userId);
+
+    // Get user by ID
+    const response = await fetch(`${API_BASE}/user/getUserById/${userId}`, {
+      method: 'GET',
+      headers: {
+        'accept': '*/*',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      const user = await response.json();
+      console.log('Fetched user by ID:', user);
+      
       return {
         id: user._id || user.id,
         firstName: user.firstName,
@@ -138,16 +203,19 @@ export async function fetchUserInfoFromDatabase(): Promise<UserInfo | null> {
           ? `${user.firstName} ${user.lastName}` 
           : user.firstName || user.lastName || user.name,
         email: user.email,
-        phone: user.phone || user.phoneNumber,
+        phone: user.phone || user.phoneNumber || user.customerPhone,
         avatar: user.avatar || user.image,
         address: {
           province: user.province,
           district: user.district,
           sector: user.sector,
           cell: user.cell,
-          village: user.village
+          village: user.village,
+          street: user.street
         }
       };
+    } else {
+      console.error('Failed to fetch user by ID:', response.status, response.statusText);
     }
 
     // If profile endpoint doesn't exist, try to get from token payload
@@ -262,4 +330,68 @@ export function isUserLoggedIn(): boolean {
   const token = getAuthToken();
   const userInfo = getUserInfoFromStorage();
   return !!(token && userInfo?.email);
+}
+
+// Get current user information for order linking
+export async function getCurrentUserForOrder(): Promise<{
+  userId: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  address: any;
+} | null> {
+  try {
+    console.log('=== GETTING CURRENT USER FOR ORDER ===');
+    
+    // First try to get from database
+    const userInfo = await fetchUserInfoFromDatabase();
+    if (userInfo && userInfo.id && userInfo.email) {
+      console.log('Got user info from database:', userInfo);
+      return {
+        userId: userInfo.id,
+        email: userInfo.email,
+        fullName: userInfo.fullName || `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim(),
+        phone: userInfo.phone || '',
+        address: userInfo.address || {}
+      };
+    } else {
+      console.log('No user info from database, trying localStorage fallback');
+    }
+
+    // Fallback to localStorage
+    const userEmail = localStorage.getItem('userEmail');
+    const userData = localStorage.getItem('userData');
+    
+    if (userEmail && userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        const user = parsed.user;
+        if (user) {
+          console.log('Got user info from localStorage:', user);
+          return {
+            userId: user._id || user.id || '',
+            email: user.email || userEmail,
+            fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || '',
+            phone: user.phone || user.phoneNumber || user.customerPhone || '',
+            address: {
+              province: user.province || '',
+              district: user.district || '',
+              sector: user.sector || '',
+              cell: user.cell || '',
+              village: user.village || '',
+              street: user.street || ''
+            }
+          };
+        }
+      } catch (e) {
+        console.error('Error parsing userData:', e);
+      }
+    }
+
+    console.log('No user information found');
+    return null;
+  } catch (error) {
+    console.error('Error getting current user for order:', error);
+    return null;
+  }
 }

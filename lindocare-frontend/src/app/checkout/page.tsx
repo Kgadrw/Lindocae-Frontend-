@@ -13,8 +13,8 @@ import {
   saveLocalCart,
 } from "../../utils/serverStorage";
 import { normalizeImageUrl } from "../../utils/image";
-import AddressSelector, { AddressData } from "../../components/ui/AddressSelector";
-import { getUserInfo } from "../../utils/userInfo";
+// AddressSelector removed - using registration address data
+import { getUserInfo, getCurrentUserForOrder } from "../../utils/userInfo";
 
 interface Product {
   id: string | number;
@@ -22,6 +22,14 @@ interface Product {
   price: number;
   image: string | string[];
   quantity?: number;
+}
+
+interface AddressData {
+  province: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
 }
 
 // Helper to format RWF with thousands separator
@@ -32,7 +40,7 @@ function formatRWF(amount: number | undefined | null) {
 
 const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("mtn");
+  const [paymentMethod, setPaymentMethod] = useState("dpo");
   
   // Step management - 2 step checkout
   const [currentStep, setCurrentStep] = useState(1);
@@ -44,8 +52,7 @@ const CheckoutPage = () => {
     district: '',
     sector: '',
     cell: '',
-    village: '',
-    street: ''
+    village: ''
   });
 
   // Customer info
@@ -54,9 +61,9 @@ const CheckoutPage = () => {
   const [customerName, setCustomerName] = useState("");
   
   // Form validation errors
-  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
+  // AddressErrors removed - using registration address data
   const [customerErrors, setCustomerErrors] = useState<{name?: string, email?: string, phone?: string}>({});
-  const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string }>({});
+  const [orderStatus, setOrderStatus] = useState<{ success?: string; error?: string; showFallbackOptions?: boolean; orderId?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [isLoadingUserInfo, setIsLoadingUserInfo] = useState(true);
@@ -67,34 +74,66 @@ const CheckoutPage = () => {
     async function loadUserInfo() {
       if (isUserLoggedIn()) {
         try {
+          console.log('=== LOADING USER INFO ON PAGE LOAD ===');
           const userInfo = await getUserInfo();
+          console.log('getUserInfo() result:', userInfo);
           if (userInfo) {
-            console.log('Auto-populated user info:', userInfo);
+            console.log('Auto-populated user info from account:', userInfo);
             // Auto-populate name and email fields
             if (userInfo.fullName) {
+              console.log('Setting customerName to:', userInfo.fullName);
               setCustomerName(userInfo.fullName);
             }
             if (userInfo.email) {
+              console.log('Setting customerEmail to:', userInfo.email);
               setCustomerEmail(userInfo.email);
             }
             if (userInfo.phone) {
+              console.log('Setting customerPhone to:', userInfo.phone);
               setCustomerPhone(userInfo.phone);
             }
             
-            // Auto-populate address information
+            // Auto-populate address information from registration
             if (userInfo.address) {
               setAddressData({
                 province: userInfo.address.province || '',
                 district: userInfo.address.district || '',
                 sector: userInfo.address.sector || '',
                 cell: userInfo.address.cell || '',
-                village: userInfo.address.village || '',
-                street: '' // Street is not stored in registration, so leave empty
+                village: userInfo.address.village || ''
               });
+            }
+          } else {
+            console.log('No user info from API, trying localStorage fallback');
+            // Fallback: try to get basic info from localStorage
+            const email = localStorage.getItem('userEmail');
+            if (email) {
+              setCustomerEmail(email);
+              const name = localStorage.getItem(`userName:${email}`);
+              if (name) {
+                setCustomerName(name);
+              }
+              const phone = localStorage.getItem(`userPhone:${email}`);
+              if (phone) {
+                setCustomerPhone(phone);
+              }
             }
           }
         } catch (error) {
           console.error('Error loading user info:', error);
+          // Fallback: try to get basic info from localStorage
+          const email = localStorage.getItem('userEmail');
+          if (email) {
+            setCustomerEmail(email);
+            const name = localStorage.getItem(`userName:${email}`);
+            if (name) {
+              setCustomerName(name);
+            }
+            const phone = localStorage.getItem(`userPhone:${email}`);
+            if (phone) {
+              setCustomerPhone(phone);
+            }
+          }
         }
       }
       setIsLoadingUserInfo(false);
@@ -210,15 +249,7 @@ const CheckoutPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const validateAddress = () => {
-    const newAddressErrors: Partial<Record<keyof AddressData, string>> = {};
-    
-    // Only street address is required - all other address fields are auto-populated
-    if (!addressData.street.trim()) newAddressErrors.street = "Street address is required";
-    
-    setAddressErrors(newAddressErrors);
-    return Object.keys(newAddressErrors).length === 0;
-  };
+  // Address validation removed - using registration address data
 
   const validatePaymentInfo = () => {
     const errors: {senderName?: string, senderAddress?: string} = {};
@@ -235,15 +266,8 @@ const CheckoutPage = () => {
     setOrderStatus({}); // Clear any previous errors
     
     if (currentStep === 1) {
-      console.log('Validating address:', { addressData });
-      const addressValid = validateAddress();
-      
-      if (addressValid) {
-        console.log('Address valid, moving to payment step');
+      console.log('Using registration address, moving to payment step');
         setCurrentStep(2);
-      } else {
-        setOrderStatus({ error: "Please complete the delivery address field." });
-      }
     }
   };
 
@@ -260,45 +284,244 @@ const CheckoutPage = () => {
     setOrderStatus({});
     setIsSubmitting(true);
 
-    // Final validation
-    if (!validateCustomerInfo() || !validateAddress()) {
+    // Final validation - only validate customer info since address comes from registration
+    if (!validateCustomerInfo()) {
       setOrderStatus({ error: "Please complete all required fields correctly." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Ensure customer information is populated from user account
+    if (isUserLoggedIn() && (!customerEmail || !customerName)) {
+      setOrderStatus({ error: "Unable to retrieve user information. Please refresh the page and try again." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Ensure user is logged in (required for order creation)
+    if (!isUserLoggedIn()) {
+      setOrderStatus({ error: "Please log in to place an order." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Ensure we have cart items
+    if (cartItems.length === 0) {
+      setOrderStatus({ error: "Your cart is empty. Please add items before checkout." });
       setIsSubmitting(false);
       return;
     }
 
     try {
       // Step 1: Create Order
+      // Prepare items for API (same format as cart page)
+      const items = cartItems.map(item => ({
+        productId: String(item.id),
+        quantity: item.quantity || 1,
+        price: item.price,
+      }));
+
+      // Validate items array
+      if (items.length === 0) {
+        setOrderStatus({ error: "No items in cart. Please add items before checkout." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check for invalid items
+      const invalidItems = items.filter(item => !item.productId || !item.price || item.price <= 0);
+      if (invalidItems.length > 0) {
+        console.error("Invalid items found:", invalidItems);
+        setOrderStatus({ error: "Some items in your cart have invalid data. Please refresh and try again." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate shipping address - only required fields according to API spec
+      if (!addressData.province || !addressData.district || !addressData.sector || !addressData.cell || !addressData.village) {
+        setOrderStatus({ error: "Please complete your address information (province, district, sector, cell, village)." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Fetch user account data for order details using unified system
+      let userAccountData = null;
+      try {
+        console.log("=== FETCHING USER ACCOUNT DATA ===");
+        userAccountData = await getCurrentUserForOrder();
+        console.log("Fetched user account data:", userAccountData);
+        console.log("Type of userAccountData:", typeof userAccountData);
+        console.log("Is userAccountData null?", userAccountData === null);
+        console.log("Is userAccountData undefined?", userAccountData === undefined);
+      } catch (error) {
+        console.error("Error fetching user account data:", error);
+        console.error("Error details:", error.message);
+      }
+
+      // Use the correct API format with shippingAddress as an object (matching provided API spec)
       const orderData = {
         paymentMethod: paymentMethod,
+        userId: userAccountData?.userId || "", // Link order to user account
         shippingAddress: {
-          province: addressData.province,
-          district: addressData.district,
-          sector: addressData.sector,
-          cell: addressData.cell,
-          village: addressData.village,
-          street: addressData.street,
-          customerName: customerName,
-          customerEmail: customerEmail,
-          customerPhone: customerPhone
-        },
-        customerEmail: customerEmail,
-        customerPhone: customerPhone,
-        customerName: customerName
+          province: addressData.province || userAccountData?.address?.province || "",
+          district: addressData.district || userAccountData?.address?.district || "",
+          sector: addressData.sector || userAccountData?.address?.sector || "",
+          cell: addressData.cell || userAccountData?.address?.cell || "",
+          village: addressData.village || userAccountData?.address?.village || "",
+          customerName: userAccountData?.fullName || customerName,
+          customerEmail: userAccountData?.email || customerEmail,
+          customerPhone: userAccountData?.phone || customerPhone
+        }
       };
 
-      console.log("Creating order:", orderData);
+      // Final validation of order data
+      if (!paymentMethod || items.length === 0) {
+        setOrderStatus({ error: "Missing required order information. Please check your cart and payment method." });
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Get auth token if available
+      // Validate customer information in shipping address
+      if (!orderData.shippingAddress.customerName || !orderData.shippingAddress.customerEmail || !orderData.shippingAddress.customerPhone) {
+        setOrderStatus({ 
+          error: "Missing customer information. Please ensure your profile is complete with name, email, and phone number." 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate user account data with detailed logging
+      console.log("=== USER ACCOUNT DATA VALIDATION ===");
+      console.log("userAccountData exists:", !!userAccountData);
+      if (userAccountData) {
+        console.log("userAccountData.userId:", userAccountData.userId);
+        console.log("userAccountData.email:", userAccountData.email);
+        console.log("userAccountData.fullName:", userAccountData.fullName);
+        console.log("userAccountData.phone:", userAccountData.phone);
+        console.log("userAccountData.address:", userAccountData.address);
+        console.log("Full userAccountData object:", userAccountData);
+      }
+
+      // Check what's missing
+      const missingFields = [];
+      if (!userAccountData) {
+        missingFields.push("userAccountData is null/undefined");
+      } else {
+        if (!userAccountData.email) missingFields.push("email");
+        if (!userAccountData.fullName) {
+          missingFields.push("fullName");
+        }
+        if (!userAccountData.phone) missingFields.push("phone");
+        if (!userAccountData.userId) missingFields.push("userId");
+      }
+
+      if (missingFields.length > 0) {
+        console.error("Missing user account fields:", missingFields);
+        
+        // Try to use form data as fallback
+        console.log("=== TRYING FORM DATA FALLBACK ===");
+        console.log("customerName from form:", customerName);
+        console.log("customerEmail from form:", customerEmail);
+        console.log("customerPhone from form:", customerPhone);
+        
+        if (!customerName || !customerEmail) {
+          setOrderStatus({ 
+            error: `Missing required user account information: ${missingFields.join(", ")}. Please complete your profile or refresh the page.` 
+          });
+          setIsSubmitting(false);
+          return;
+        } else {
+          console.log("Using form data as fallback for missing user account data");
+          // Update userAccountData with form data
+          userAccountData = {
+            ...userAccountData,
+            userId: userAccountData?.userId || '',
+            fullName: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            address: userAccountData?.address || {}
+          };
+        }
+      }
+
+      console.log("Creating order with items:", items);
+      console.log("Items array length:", items.length);
+      console.log("Items array details:", items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        productIdType: typeof item.productId
+      })));
+      console.log("Shipping address object:", orderData.shippingAddress);
+      console.log("User account data used:", {
+        name: userAccountData?.fullName,
+        email: userAccountData?.email,
+        phone: userAccountData?.phone,
+        address: userAccountData?.address
+      });
+      console.log("Full order data:", orderData);
+
+      // Get auth token - this is required for order creation
       const token = getAuthToken();
+      console.log("Auth token available:", !!token);
+      
+      if (!token) {
+        setOrderStatus({ error: "Authentication required. Please log in to place an order." });
+        setIsSubmitting(false);
+        return;
+      }
+      
       const headers: Record<string, string> = {
         'accept': 'application/json',
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      console.log("Request headers:", headers);
+      console.log("Request body:", JSON.stringify(orderData, null, 2));
+      console.log("Request body size:", JSON.stringify(orderData).length, "characters");
+      console.log("Shipping address validation:", {
+        hasProvince: !!orderData.shippingAddress.province,
+        hasDistrict: !!orderData.shippingAddress.district,
+        hasSector: !!orderData.shippingAddress.sector,
+        hasCell: !!orderData.shippingAddress.cell,
+        hasVillage: !!orderData.shippingAddress.village,
+        hasCustomerName: !!orderData.shippingAddress.customerName,
+        hasCustomerEmail: !!orderData.shippingAddress.customerEmail,
+        hasCustomerPhone: !!orderData.shippingAddress.customerPhone
+      });
+      
+      console.log("Customer information in order:", {
+        customerName: orderData.shippingAddress.customerName,
+        customerEmail: orderData.shippingAddress.customerEmail,
+        customerPhone: orderData.shippingAddress.customerPhone
+      });
+
+      console.log("=== ORDER DATA BEING SENT ===");
+      console.log("Full orderData:", JSON.stringify(orderData, null, 2));
+      console.log("Order data keys:", Object.keys(orderData));
+      console.log("Shipping address keys:", Object.keys(orderData.shippingAddress));
+      console.log("Shipping address values:", orderData.shippingAddress);
+      
+      // Pre-request validation
+      console.log("=== PRE-REQUEST VALIDATION ===");
+      const validationIssues = [];
+      if (!orderData.paymentMethod) validationIssues.push("paymentMethod is missing");
+      if (!orderData.userId) validationIssues.push("userId is missing");
+      if (!orderData.shippingAddress.province) validationIssues.push("province is missing");
+      if (!orderData.shippingAddress.district) validationIssues.push("district is missing");
+      if (!orderData.shippingAddress.customerName) validationIssues.push("customerName is missing");
+      if (!orderData.shippingAddress.customerEmail) validationIssues.push("customerEmail is missing");
+      if (!orderData.shippingAddress.customerPhone) validationIssues.push("customerPhone is missing");
+      
+      if (validationIssues.length > 0) {
+        console.error("Validation issues found:", validationIssues);
+        setOrderStatus({ error: `Missing required fields: ${validationIssues.join(", ")}` });
+        setIsSubmitting(false);
+        return;
       }
+      
+      console.log("All validation checks passed");
 
       const orderResponse = await fetch(
         "https://lindo-project.onrender.com/orders/createOrder",
@@ -310,49 +533,83 @@ const CheckoutPage = () => {
       );
 
       console.log("Order response status:", orderResponse.status);
+      console.log("Order response headers:", Object.fromEntries(orderResponse.headers.entries()));
 
-      if (!orderResponse.ok) {
-        // Handle order creation error
-        let errorData: any = {};
-        let responseText = "";
-        try {
-          responseText = await orderResponse.text();
-          if (responseText) {
-            errorData = JSON.parse(responseText);
-          }
-        } catch (parseError) {
-          errorData = { message: responseText || "Unknown error" };
+      // Check for success (201 like cart page expects)
+      if (orderResponse.status === 201) {
+        const orderResult = await orderResponse.json();
+        console.log("Order created successfully:", orderResult);
+        const orderId = orderResult.order?._id || orderResult.orderId || orderResult._id;
+
+      // Step 2: Initialize DPO Payment
+      if (paymentMethod === "dpo") {
+        // For DPO payment, initialize payment gateway
+        console.log("DPO payment selected - initializing payment gateway");
+        
+        // Validate required fields before payment initialization
+        if (!orderId) {
+          setOrderStatus({ error: "Order ID is missing. Please try again." });
+          setIsSubmitting(false);
+          return;
         }
-
-        console.error("Order creation error:", orderResponse.status, errorData);
-        setOrderStatus({
-          error: errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
-        });
+          
+        if (subtotal <= 0) {
+          setOrderStatus({ error: "Invalid order amount. Please try again." });
         setIsSubmitting(false);
         return;
       }
 
-      const orderResult = await orderResponse.json();
-      console.log("Order created successfully:", orderResult);
-      const orderId = orderResult.order?._id || orderResult.orderId;
-
-      // Step 2: Initialize DPO Payment
-      const firstName = customerName.split(' ')[0] || customerName;
-      const lastName = customerName.split(' ').slice(1).join(' ') || firstName;
-      
+        // DPO API requires all these fields according to the error message
       const dpoData = {
         orderId: orderId,
         totalAmount: subtotal,
         currency: "RWF",
-        email: customerEmail,
-        phone: customerPhone,
-        firstName: firstName,
-        lastName: lastName,
         serviceDescription: `Payment for order #${orderId}`,
-        callbackUrl: `${window.location.origin}/payment-success`
+        callbackUrl: `${window.location.origin}/payment-success`,
+        email: userAccountData?.email || customerEmail,
+        phone: userAccountData?.phone || customerPhone,
+        firstName: userAccountData?.fullName?.split(' ')[0] || customerName?.split(' ')[0] || "Customer"
       };
 
-      console.log("Initializing DPO payment:", dpoData);
+        console.log("Initializing DPO payment with data:", dpoData);
+        console.log("DPO API validation:", {
+          orderId: orderId,
+          totalAmount: subtotal,
+          currency: "RWF",
+          serviceDescription: `Payment for order #${orderId}`,
+          callbackUrl: `${window.location.origin}/payment-success`,
+          email: dpoData.email,
+          phone: dpoData.phone,
+          firstName: dpoData.firstName
+        });
+          
+        // Validate all required DPO fields according to API specification
+        const missingDpoFields = [];
+        if (!dpoData.orderId) missingDpoFields.push("orderId");
+        if (!dpoData.totalAmount || dpoData.totalAmount <= 0) missingDpoFields.push("totalAmount");
+        if (!dpoData.currency) missingDpoFields.push("currency");
+        if (!dpoData.serviceDescription) missingDpoFields.push("serviceDescription");
+        if (!dpoData.callbackUrl) missingDpoFields.push("callbackUrl");
+        if (!dpoData.email) missingDpoFields.push("email");
+        if (!dpoData.phone) missingDpoFields.push("phone");
+        if (!dpoData.firstName) missingDpoFields.push("firstName");
+          
+        if (missingDpoFields.length > 0) {
+          console.error("Missing required DPO fields:", missingDpoFields);
+          setOrderStatus({ 
+            error: `Missing required fields for payment: ${missingDpoFields.join(", ")}. Please contact support.` 
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+      console.log("=== DPO REQUEST DETAILS ===");
+      console.log("DPO URL:", "https://lindo-project.onrender.com/dpo/initialize/dpoPayment");
+      console.log("DPO Request Headers:", {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      });
+      console.log("DPO Request Body:", JSON.stringify(dpoData, null, 2));
 
       const dpoResponse = await fetch(
         "https://lindo-project.onrender.com/dpo/initialize/dpoPayment",
@@ -366,11 +623,18 @@ const CheckoutPage = () => {
         }
       );
 
+      console.log("=== DPO RESPONSE DETAILS ===");
       console.log("DPO response status:", dpoResponse.status);
+      console.log("DPO response statusText:", dpoResponse.statusText);
+      console.log("DPO response headers:", Object.fromEntries(dpoResponse.headers.entries()));
 
       if (dpoResponse.ok) {
         const dpoResult = await dpoResponse.json();
         console.log("DPO payment initialized:", dpoResult);
+
+          // Check if we have the expected response format
+          if (dpoResult.redirectUrl) {
+            console.log("DPO payment successful, redirecting to:", dpoResult.redirectUrl);
 
         // Save address for future use (for logged-in users)
         if (isUserLoggedIn()) {
@@ -407,32 +671,139 @@ const CheckoutPage = () => {
         
         // Store order details for reference
                 localStorage.setItem("pendingOrderId", String(orderId || ""));
-                localStorage.setItem("pendingOrderAmount", String(totalAmount));
-        localStorage.setItem("momoCode", "*182*8*1*079559#");
-      } else if (orderResponse.status === 401) {
-        const errorText = await orderResponse.text();
-        console.error("Order creation 401 error response:", errorText);
+            localStorage.setItem("pendingOrderAmount", String(subtotal));
+            if (dpoResult.order && dpoResult.order.dpoTransactionToken) {
+              localStorage.setItem("dpoToken", dpoResult.order.dpoTransactionToken);
+            }
+            
+            // Redirect to DPO payment gateway
+            window.location.href = dpoResult.redirectUrl;
+            return;
+          } else {
+            console.error("Unexpected DPO response format:", dpoResult);
         setOrderStatus({
-          error: "Authorization failed. Please log in and try again.",
+              error: "Payment initialization succeeded but received unexpected response format. Please contact support."
         });
-      } else {
-        // Handle DPO initialization error
-        let dpoErrorData: any = {};
-        let dpoResponseText = "";
+          }
+              
+        } else {
+          // Handle DPO initialization error
+          console.log("=== DPO ERROR HANDLING ===");
+          let dpoErrorData: any = {};
+          let dpoResponseText = "";
+          try {
+            dpoResponseText = await dpoResponse.text();
+            console.log("DPO error response text:", dpoResponseText);
+            console.log("DPO error response length:", dpoResponseText.length);
+            if (dpoResponseText) {
+              try {
+                dpoErrorData = JSON.parse(dpoResponseText);
+                console.log("DPO error data parsed:", dpoErrorData);
+              } catch (jsonError) {
+                console.log("Failed to parse DPO error as JSON:", jsonError);
+                dpoErrorData = { message: dpoResponseText, rawResponse: dpoResponseText };
+              }
+            } else {
+              console.log("DPO error response is empty");
+              dpoErrorData = { message: "Empty response from DPO server" };
+            }
+          } catch (parseError) {
+            console.error("Error getting DPO response text:", parseError);
+            dpoErrorData = { message: "Failed to get response from DPO server", parseError: parseError.message };
+          }
+
+          console.error("=== DPO INITIALIZATION ERROR SUMMARY ===");
+          console.error("Status:", dpoResponse.status);
+          console.error("Status Text:", dpoResponse.statusText);
+          console.error("Error Data:", dpoErrorData);
+          console.error("Request Data:", JSON.stringify(dpoData, null, 2));
+          console.error("Response Text:", dpoResponseText);
+          console.error("=== TROUBLESHOOTING INFO ===");
+          console.error("This appears to be a server-side DPO API issue.");
+          console.error("Possible causes:");
+          console.error("1. DPO API credentials not configured");
+          console.error("2. DPO service endpoint issues");
+          console.error("3. Server authentication problems");
+          console.error("4. DPO API rate limiting or restrictions");
+          
+          // Provide user-friendly error messages and fallback options
+          let userErrorMessage = "";
+          let showFallbackOptions = false;
+          
+          if (dpoResponse.status === 403 || dpoErrorData.message?.includes("403")) {
+            userErrorMessage = "Payment service is temporarily unavailable. Your order has been created successfully!";
+            showFallbackOptions = true;
+          } else if (dpoResponse.status === 500 || dpoErrorData.message?.includes("Failed to initiate payment")) {
+            userErrorMessage = "Payment gateway is experiencing issues. Your order has been created successfully!";
+            showFallbackOptions = true;
+          } else {
+            userErrorMessage = `Payment initialization failed: ${dpoErrorData.message || 'Unknown error'} (Status: ${dpoResponse.status}). Your order has been created successfully!`;
+            showFallbackOptions = true;
+          }
+          
+          setOrderStatus({
+            error: userErrorMessage,
+            showFallbackOptions: showFallbackOptions,
+            orderId: orderId
+          });
+        }
+      }
+        
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!orderResponse.ok) {
+        // Handle order creation error
+        let errorData: any = {};
+        let responseText = "";
         try {
-          dpoResponseText = await dpoResponse.text();
-          if (dpoResponseText) {
-            dpoErrorData = JSON.parse(dpoResponseText);
+          responseText = await orderResponse.text();
+          console.log("Order creation error response text:", responseText);
+          console.log("Response text length:", responseText.length);
+          console.log("Response text type:", typeof responseText);
+          
+          if (responseText && responseText.trim()) {
+            try {
+              errorData = JSON.parse(responseText);
+              console.log("Parsed error data:", errorData);
+            } catch (jsonParseError) {
+              console.log("Failed to parse as JSON:", jsonParseError);
+              errorData = { message: responseText };
+            }
+          } else {
+            console.log("Empty response text");
+            errorData = { message: `Server error (${orderResponse.status})` };
           }
         } catch (parseError) {
-          dpoErrorData = { message: dpoResponseText || "Unknown error" };
+          console.log("Failed to get response text:", parseError);
+          errorData = { message: `Network error (${orderResponse.status})` };
         }
 
-        console.error("DPO initialization error:", dpoResponse.status, dpoErrorData);
+        console.error("=== ORDER CREATION ERROR DETAILS ===");
+        console.error("Status:", orderResponse.status);
+        console.error("Status Text:", orderResponse.statusText);
+        console.error("Error Data:", errorData);
+        console.error("Request Data:", JSON.stringify(orderData, null, 2));
+        console.error("Response Headers:", Object.fromEntries(orderResponse.headers.entries()));
+        console.error("=== FIELD VALIDATION CHECK ===");
+        console.error("paymentMethod:", orderData.paymentMethod);
+        console.error("userId:", orderData.userId);
+        console.error("shippingAddress.province:", orderData.shippingAddress.province);
+        console.error("shippingAddress.district:", orderData.shippingAddress.district);
+        console.error("shippingAddress.sector:", orderData.shippingAddress.sector);
+        console.error("shippingAddress.cell:", orderData.shippingAddress.cell);
+        console.error("shippingAddress.village:", orderData.shippingAddress.village);
+        console.error("shippingAddress.customerName:", orderData.shippingAddress.customerName);
+        console.error("shippingAddress.customerEmail:", orderData.shippingAddress.customerEmail);
+        console.error("shippingAddress.customerPhone:", orderData.shippingAddress.customerPhone);
         setOrderStatus({
-          error: `Order created but payment initialization failed: ${dpoErrorData.message || 'Unknown error'}. Please contact support.`,
+          error: errorData.message || `Failed to create order (${orderResponse.status}). Please try again.`,
         });
+        setIsSubmitting(false);
+        return;
       }
+
     } catch (err) {
       console.error("Checkout error:", err);
       setOrderStatus({ error: "Network error. Please try again." });
@@ -462,16 +833,16 @@ const CheckoutPage = () => {
               </svg>
               <h1 className="text-3xl font-bold text-blue-700">Secure Checkout</h1>
             </div>
-            <p className="text-gray-600">Complete your order in 3 simple steps • MTN Mobile Money Payment</p>
+            <p className="text-gray-600">Complete your order in 2 simple steps • Secure DPO Payment</p>
           </div>
         </div>
         
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-2 md:space-x-4">
-            {[1, 2, 3].map((step) => {
-              const stepNames = ['Delivery Info', 'Payment', 'Confirm'];
-              const stepDescriptions = ['Contact & address', 'MTN Mobile Money', 'Payment details'];
+            {[1, 2].map((step) => {
+              const stepNames = ['Delivery Info', 'Payment'];
+              const stepDescriptions = ['Delivery Address', 'DPO Payment'];
               const isCompleted = currentStep > step;
               const isActive = currentStep === step;
               
@@ -622,34 +993,24 @@ const CheckoutPage = () => {
             <div className="lg:w-3/5 p-6 bg-white">
               {cartItems.length > 0 && (
                 <form onSubmit={handleCheckout} className="space-y-6">
-                  {/* Step 1: Street Address */}
+                  {/* Step 1: Address Display */}
                   {currentStep === 1 && (
                     <div className="space-y-6">
                       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                         <h2 className="text-xl font-semibold text-gray-950 mb-4">Delivery Address</h2>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-950 mb-2">
-                            Street Address *
-                          </label>
-                          <input
-                            type="text"
-                            value={addressData.street}
-                            onChange={(e) => {
-                              setAddressData(prev => ({ ...prev, street: e.target.value }));
-                              if (addressErrors.street) {
-                                setAddressErrors(prev => ({ ...prev, street: undefined }));
-                              }
-                            }}
-                            placeholder="Enter your street address"
-                            className={`w-full px-4 py-3 border rounded-lg outline-none transition-all ${
-                              addressErrors.street 
-                                ? 'border-red-400 bg-red-50 focus:border-red-500' 
-                                : 'border-gray-300 focus:border-blue-500'
-                            }`}
-                          />
-                          {addressErrors.street && (
-                            <p className="mt-1 text-sm text-red-600">{addressErrors.street}</p>
-                          )}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-2">Your registered address will be used for delivery:</p>
+                          <div className="text-sm text-gray-800">
+                            {addressData.province && addressData.district && addressData.sector && addressData.cell && addressData.village ? (
+                              <span>
+                                {[addressData.village, addressData.cell, addressData.sector, addressData.district, addressData.province]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 italic">Loading your address...</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -661,75 +1022,34 @@ const CheckoutPage = () => {
                       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                         <h2 className="text-xl font-semibold text-gray-950 mb-4">Payment Method</h2>
                         
-                        {/* Payment Options */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* MTN Mobile Money */}
-                          <div 
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                              paymentMethod === 'mtn' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => setPaymentMethod('mtn')}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <input
-                                type="radio"
-                                name="payment"
-                                value="mtn"
-                                checked={paymentMethod === 'mtn'}
-                                onChange={() => setPaymentMethod('mtn')}
-                                className="w-4 h-4 text-blue-600"
-                              />
-                              <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 rounded" />
-                              <span className="font-medium text-gray-950">MTN Mobile Money</span>
-                            </div>
-                          </div>
-
-                          {/* DPO Payment */}
-                          <div 
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                              paymentMethod === 'dpo' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => setPaymentMethod('dpo')}
-                          >
+                        {/* Payment Method - DPO Only */}
+                        <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg">
                             <div className="flex items-center space-x-3">
                               <input
                                 type="radio"
                                 name="payment"
                                 value="dpo"
-                                checked={paymentMethod === 'dpo'}
-                                onChange={() => setPaymentMethod('dpo')}
+                              checked={true}
+                              readOnly
                                 className="w-4 h-4 text-blue-600"
                               />
                               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
                                 <span className="text-white font-bold text-xs">DPO</span>
                               </div>
-                              <span className="font-medium text-gray-950">DPO Payment</span>
-                            </div>
+                            <span className="font-medium text-gray-950">DPO Payment Gateway</span>
                           </div>
                         </div>
                         
                         {/* Payment Instructions */}
-                        {paymentMethod === 'mtn' && (
-                          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <h4 className="font-semibold text-gray-950 mb-2">How to Pay:</h4>
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="font-semibold text-gray-950 mb-2">Payment Process:</h4>
                             <div className="space-y-2 text-sm text-gray-950">
-                              <p>1. Dial <strong>*182*8*1*079559#</strong> on your phone</p>
-                              <p>2. Enter amount: <strong>{formatRWF(subtotal)} RWF</strong></p>
-                              <p>3. Enter your MTN Mobile Money PIN</p>
-                              <p>4. Confirm the transaction</p>
+                            <p>1. Click "Complete Order" to proceed</p>
+                            <p>2. You will be redirected to DPO payment gateway</p>
+                            <p>3. Complete your payment securely</p>
+                            <p>4. Return to our site for confirmation</p>
                             </div>
                           </div>
-                        )}
-                        
-                        {paymentMethod === 'dpo' && (
-                          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-gray-950">You will be redirected to DPO payment gateway to complete your payment.</p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
@@ -885,50 +1205,8 @@ const CheckoutPage = () => {
                       )}
                         
                         {/* Delivery Address Section - Hidden for all users */}
-                        {false && (
-                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-300">
-                          <AddressSelector
-                            value={addressData}
-                            onChange={setAddressData}
-                            errors={addressErrors}
-                            required={true}
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                        )}
+                        {/* AddressSelector removed - using registration address data */}
                         
-                        {/* Street Address Input - Required for all users */}
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-300">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Street Address *
-                          </label>
-                          <input
-                            type="text"
-                            value={addressData.street}
-                            onChange={(e) => {
-                              setAddressData(prev => ({ ...prev, street: e.target.value }));
-                              if (addressErrors.street) {
-                                setAddressErrors(prev => ({ ...prev, street: undefined }));
-                              }
-                            }}
-                            placeholder="Enter your street address"
-                            className={`w-full px-4 py-2.5 border-2 rounded-lg outline-none transition-all duration-200 ${
-                              addressErrors.street 
-                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                : addressData.street.trim()
-                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                            }`}
-                          />
-                          {addressErrors.street && (
-                            <div className="mt-1.5 flex items-center text-xs text-red-600 bg-red-100 p-1.5 rounded">
-                              <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                              {addressErrors.street}
-                            </div>
-                          )}
-                      </div>
                     </div>
                   )}
                   
@@ -1086,8 +1364,29 @@ const CheckoutPage = () => {
                         </svg>
                         </div>
                         <div className="ml-3 flex-1">
-                          <h3 className="text-sm font-bold text-red-800 mb-1">Error</h3>
+                          <h3 className="text-sm font-bold text-red-800 mb-1">Payment Issue</h3>
                           <p className="text-sm text-red-700">{orderStatus.error}</p>
+                          
+                          {/* Fallback Payment Options */}
+                          {orderStatus.showFallbackOptions && (
+                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                              <h4 className="text-sm font-bold text-blue-800 mb-2">Alternative Payment Options:</h4>
+                              <div className="space-y-2 text-sm text-blue-700">
+                                <p><strong>Order ID:</strong> {orderStatus.orderId}</p>
+                                <p><strong>Amount:</strong> {formatRWF(subtotal)} RWF</p>
+                                <div className="mt-3 space-y-1">
+                                  <p>1. <strong>Bank Transfer:</strong> Contact us for bank details</p>
+                                  <p>2. <strong>Mobile Money:</strong> Use code *182*8*1*079559#</p>
+                                  <p>3. <strong>Cash on Delivery:</strong> Pay when you receive your order</p>
+                                </div>
+                                <div className="mt-3 p-2 bg-yellow-100 border border-yellow-300 rounded">
+                                  <p className="text-xs text-yellow-800">
+                                    <strong>Note:</strong> Please include your Order ID when making payment and contact our support team to confirm.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1118,3 +1417,4 @@ const CheckoutPage = () => {
 };
 
 export default CheckoutPage;
+

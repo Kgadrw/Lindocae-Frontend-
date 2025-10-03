@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, CheckCircle, XCircle, User, Mail, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
@@ -44,7 +45,7 @@ const LoginPage: React.FC = () => {
 
         // Store profile picture if available
         if (data.user.image) {
-          localStorage.setItem(`userImage:${email}`, data.user.image);
+          localStorage.setItem(`userAvatar:${email}`, data.user.image);
         }
 
         // Store address information if available
@@ -67,6 +68,10 @@ const LoginPage: React.FC = () => {
         // Trigger updates in other tabs/components
         try {
           window.dispatchEvent(new StorageEvent("storage", { key: "userEmail" }));
+          // Also trigger user login event with avatar
+          window.dispatchEvent(new CustomEvent("userLogin", { 
+            detail: { email, name, avatar: data.user.image || null } 
+          }));
         } catch (e) {
           localStorage.setItem("userEmail", email);
         }
@@ -99,7 +104,7 @@ const LoginPage: React.FC = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <User size={32} className="text-blue-600" />
+              <User size={32} className="text-gray-600" />
               <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
             </div>
             <p className="text-gray-600">Sign in to your Lindo account</p>
@@ -118,7 +123,7 @@ const LoginPage: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                   placeholder="your.email@example.com"
                   required
                 />
@@ -127,16 +132,24 @@ const LoginPage: React.FC = () => {
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-gray-600 hover:text-gray-700 font-medium"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                   placeholder="Enter your password"
                   required
                 />
@@ -168,7 +181,7 @@ const LoginPage: React.FC = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gray-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={loading}
             >
               {loading ? (
@@ -191,7 +204,7 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => router.push("/register")}
-                  className="text-blue-600 hover:text-blue-700 font-semibold underline"
+                  className="text-gray-600 hover:text-gray-700 font-semibold underline"
                 >
                   Create Account
                 </button>

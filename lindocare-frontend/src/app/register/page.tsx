@@ -25,6 +25,7 @@ const RegisterPage: React.FC = () => {
   const [selectedSector, setSelectedSector] = useState<string>("");
   const [selectedCell, setSelectedCell] = useState<string>("");
   const [selectedVillage, setSelectedVillage] = useState<string>("");
+  const [street, setStreet] = useState<string>("");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,18 +53,19 @@ const RegisterPage: React.FC = () => {
       formData.append("password", password);
       formData.append("gender", gender);
       formData.append("customerPhone", customerPhone);
-      formData.append("role", "vendor");
+      formData.append("role", "user");
       formData.append("province", selectedProvince);
       formData.append("district", selectedDistrict);
       formData.append("sector", selectedSector);
       formData.append("cell", selectedCell);
       formData.append("village", selectedVillage);
+      formData.append("street", street);
       
       if (image) {
         formData.append("image", image);
       }
 
-      const res = await fetch("https://lindo-project.onrender.com/user/Register", {
+      const res = await fetch("https://lindo-project.onrender.com/user/register", {
         method: "POST",
         body: formData,
       });
@@ -277,6 +279,28 @@ const RegisterPage: React.FC = () => {
                       required
                     />
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Street Address */}
+            <div className="bg-blue-50 p-8 rounded-xl border border-blue-200">
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin size={20} className="text-blue-600" />
+                <h3 className="text-lg font-semibold text-blue-900">Street Address</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Street Address
+                  </label>
+                  <input
+                    type="text"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your street address (e.g., KG 123 St)"
+                  />
                 </div>
               </div>
             </div>
