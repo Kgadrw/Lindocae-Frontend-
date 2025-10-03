@@ -1,10 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { getCurrentUserEmail } from '../../../components/Header';
-import LoginModal from '../../../components/LoginModal';
 import Head from 'next/head';
 import Image from 'next/image';
 import {
@@ -55,6 +54,7 @@ function getUserIdFromToken() {
 const colors = ['#fff', '#e5e7eb', '#f87171', '#60a5fa', '#fbbf24', '#34d399'];
 
 const CategoryPage = () => {
+  const router = useRouter();
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -63,8 +63,6 @@ const CategoryPage = () => {
   const [isClient, setIsClient] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [loginMsg, setLoginMsg] = useState('');
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -233,8 +231,7 @@ const CategoryPage = () => {
         // Guest: add to localStorage
         const email = getCurrentUserEmail();
         if (!email) {
-          setLoginMsg('Please log in to add items to cart');
-          setLoginOpen(true);
+          router.push('/login');
           return;
         }
         
@@ -283,7 +280,6 @@ const CategoryPage = () => {
         <meta name="description" content={category?.description || 'Browse products by category.'} />
       </Head>
     <div className="min-h-screen bg-white pb-16">
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} message={loginMsg} />
       {showToast && (
         <>
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center md:hidden pointer-events-none">

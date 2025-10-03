@@ -34,9 +34,9 @@ const CheckoutPage = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("mtn");
   
-  // Step management
+  // Step management - 2 step checkout
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   // Address data using the new structure
   const [addressData, setAddressData] = useState<AddressData>({
@@ -100,6 +100,18 @@ const CheckoutPage = () => {
             }
             if (userInfo.phone) {
               setCustomerPhone(userInfo.phone);
+            }
+            
+            // Auto-populate address information
+            if (userInfo.address) {
+              setAddressData({
+                province: userInfo.address.province || '',
+                district: userInfo.address.district || '',
+                sector: userInfo.address.sector || '',
+                cell: userInfo.address.cell || '',
+                village: userInfo.address.village || '',
+                street: '' // Street is not stored in registration, so leave empty
+              });
             }
           }
         } catch (error) {
@@ -224,19 +236,11 @@ const CheckoutPage = () => {
     0
   );
 
-  // Step validation functions - Now simplified since name/email are auto-populated
+  // Step validation functions - Now simplified since all info is auto-populated
   const validateCustomerInfo = () => {
     const errors: {name?: string, email?: string, phone?: string} = {};
     
-    // Validate phone number (only required field for logged-in users)
-    if (!customerPhone.trim()) errors.phone = "Phone number is required";
-    
-    // For guest users, ensure name and email are present
-    if (!isUserLoggedIn()) {
-      if (!customerName.trim()) errors.name = "Name is required";
-      if (!customerEmail.trim()) errors.email = "Email is required";
-      else if (!/\S+@\S+\.\S+/.test(customerEmail)) errors.email = "Invalid email format";
-    }
+    // All customer info is auto-populated, no validation needed
     
     setCustomerErrors(errors);
     return Object.keys(errors).length === 0;
@@ -245,11 +249,7 @@ const CheckoutPage = () => {
   const validateAddress = () => {
     const newAddressErrors: Partial<Record<keyof AddressData, string>> = {};
     
-    if (!addressData.province) newAddressErrors.province = "Province is required";
-    if (!addressData.district) newAddressErrors.district = "District is required";
-    if (!addressData.sector) newAddressErrors.sector = "Sector is required";
-    if (!addressData.cell) newAddressErrors.cell = "Cell is required";
-    if (!addressData.village) newAddressErrors.village = "Village is required";
+    // Only street address is required - all other address fields are auto-populated
     if (!addressData.street.trim()) newAddressErrors.street = "Street address is required";
     
     setAddressErrors(newAddressErrors);
@@ -271,23 +271,15 @@ const CheckoutPage = () => {
     setOrderStatus({}); // Clear any previous errors
     
     if (currentStep === 1) {
-      console.log('Validating customer info and address:', { customerName, customerEmail, customerPhone, addressData });
-      const customerValid = validateCustomerInfo();
+      console.log('Validating address:', { addressData });
       const addressValid = validateAddress();
       
-      if (customerValid && addressValid) {
-        console.log('Customer info and address valid, moving to payment step');
+      if (addressValid) {
+        console.log('Address valid, moving to payment step');
         setCurrentStep(2);
       } else {
-        if (!customerValid) {
-          setOrderStatus({ error: "Please fill in all customer information correctly." });
-        } else if (!addressValid) {
-          setOrderStatus({ error: "Please complete all delivery address fields." });
-        }
+        setOrderStatus({ error: "Please complete the delivery address field." });
       }
-    } else if (currentStep === 2) {
-      console.log('Moving to payment confirmation step');
-      setCurrentStep(3);
     }
   };
 
@@ -424,15 +416,15 @@ const CheckoutPage = () => {
         });
         
         // Clear cart after successful order creation
-        try {
-          if (isUserLoggedIn()) await clearCartServer();
-          else saveLocalCart([]);
-          setCartItems([]);
-        } catch {}
+              try {
+                if (isUserLoggedIn()) await clearCartServer();
+                else saveLocalCart([]);
+                setCartItems([]);
+              } catch {}
         
         // Store order details for reference
-        localStorage.setItem("pendingOrderId", String(orderId || ""));
-        localStorage.setItem("pendingOrderAmount", String(totalAmount));
+                localStorage.setItem("pendingOrderId", String(orderId || ""));
+                localStorage.setItem("pendingOrderAmount", String(totalAmount));
         localStorage.setItem("momoCode", "*182*8*1*079559#");
       } else if (orderResponse.status === 401) {
         const errorText = await orderResponse.text();
@@ -531,13 +523,13 @@ const CheckoutPage = () => {
                     <div className="mt-2 text-center">
                       <span className={`block text-sm font-semibold ${
                         isActive ? 'text-blue-700' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                      }`}>
-                        {stepNames[step - 1]}
-                      </span>
+                    }`}>
+                      {stepNames[step - 1]}
+                    </span>
                       <span className="block text-xs text-gray-500 mt-0.5">
                         {stepDescriptions[step - 1]}
-                      </span>
-                    </div>
+                    </span>
+                  </div>
                   </div>
                   {step < 3 && (
                     <div className={`w-8 md:w-16 h-1 mx-2 rounded-full transition-all duration-300 ${
@@ -606,7 +598,7 @@ const CheckoutPage = () => {
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Qty: {item.quantity || 1}</span>
                             <span className="text-xs text-gray-400">×</span>
                             <span className="text-xs text-gray-600">{formatRWF(item.price || 0)} RWF</span>
-                          </div>
+                        </div>
                         </div>
                         <div className="font-bold text-blue-600 text-sm whitespace-nowrap">
                           {formatRWF((item.price || 0) * (item.quantity || 1))} RWF
@@ -618,7 +610,7 @@ const CheckoutPage = () => {
                   {/* Price Summary */}
                   <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                     <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm">
                         <span className="text-gray-600 flex items-center">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -626,8 +618,8 @@ const CheckoutPage = () => {
                           Subtotal
                         </span>
                         <span className="font-semibold text-gray-700">{formatRWF(subtotal)} RWF</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
+                    </div>
+                    <div className="flex justify-between text-sm">
                         <span className="text-gray-600 flex items-center">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
@@ -640,9 +632,9 @@ const CheckoutPage = () => {
                           </svg>
                           Free
                         </span>
-                      </div>
+                    </div>
                       <div className="flex justify-between text-lg font-bold border-t-2 border-blue-100 pt-3 mt-2">
-                        <span className="text-gray-900">Total</span>
+                      <span className="text-gray-900">Total</span>
                         <span className="text-blue-600 text-xl">{formatRWF(subtotal)} RWF</span>
                       </div>
                     </div>
@@ -672,31 +664,142 @@ const CheckoutPage = () => {
             {/* Right: Step Content */}
             <div className="lg:w-3/5 p-6 bg-white">
               {cartItems.length > 0 && (
-                <form onSubmit={handleCheckout}>
-                  {/* Step 1: Phone & Delivery Address */}
+                <form onSubmit={handleCheckout} className="space-y-6">
+                  {/* Step 1: Street Address */}
                   {currentStep === 1 && (
+                    <div className="space-y-6">
+                      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <h2 className="text-xl font-semibold text-gray-950 mb-4">Delivery Address</h2>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-950 mb-2">
+                            Street Address *
+                          </label>
+                          <input
+                            type="text"
+                            value={addressData.street}
+                            onChange={(e) => {
+                              setAddressData(prev => ({ ...prev, street: e.target.value }));
+                              if (addressErrors.street) {
+                                setAddressErrors(prev => ({ ...prev, street: undefined }));
+                              }
+                            }}
+                            placeholder="Enter your street address"
+                            className={`w-full px-4 py-3 border rounded-lg outline-none transition-all ${
+                              addressErrors.street 
+                                ? 'border-red-400 bg-red-50 focus:border-red-500' 
+                                : 'border-gray-300 focus:border-blue-500'
+                            }`}
+                          />
+                          {addressErrors.street && (
+                            <p className="mt-1 text-sm text-red-600">{addressErrors.street}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Payment Method */}
+                  {currentStep === 2 && (
+                    <div className="space-y-6">
+                      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <h2 className="text-xl font-semibold text-gray-950 mb-4">Payment Method</h2>
+                        
+                        {/* Payment Options */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* MTN Mobile Money */}
+                          <div 
+                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                              paymentMethod === 'mtn' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => setPaymentMethod('mtn')}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="radio"
+                                name="payment"
+                                value="mtn"
+                                checked={paymentMethod === 'mtn'}
+                                onChange={() => setPaymentMethod('mtn')}
+                                className="w-4 h-4 text-blue-600"
+                              />
+                              <img src="/mtn.jpg" alt="MTN" className="w-8 h-8 rounded" />
+                              <span className="font-medium text-gray-950">MTN Mobile Money</span>
+                            </div>
+                          </div>
+
+                          {/* DPO Payment */}
+                          <div 
+                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                              paymentMethod === 'dpo' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => setPaymentMethod('dpo')}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="radio"
+                                name="payment"
+                                value="dpo"
+                                checked={paymentMethod === 'dpo'}
+                                onChange={() => setPaymentMethod('dpo')}
+                                className="w-4 h-4 text-blue-600"
+                              />
+                              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+                                <span className="text-white font-bold text-xs">DPO</span>
+                              </div>
+                              <span className="font-medium text-gray-950">DPO Payment</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Payment Instructions */}
+                        {paymentMethod === 'mtn' && (
+                          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <h4 className="font-semibold text-gray-950 mb-2">How to Pay:</h4>
+                            <div className="space-y-2 text-sm text-gray-950">
+                              <p>1. Dial <strong>*182*8*1*079559#</strong> on your phone</p>
+                              <p>2. Enter amount: <strong>{formatRWF(subtotal)} RWF</strong></p>
+                              <p>3. Enter your MTN Mobile Money PIN</p>
+                              <p>4. Confirm the transaction</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {paymentMethod === 'dpo' && (
+                          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-gray-950">You will be redirected to DPO payment gateway to complete your payment.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Old step content removed */}
+                  {false && (
                     <div className="space-y-6 animate-fade-in">
                       {/* Header */}
                       <div className="text-center mb-4">
-                        <h2 className="text-2xl font-bold text-blue-700 mb-2">Delivery Information</h2>
+                          <h2 className="text-2xl font-bold text-blue-700 mb-2">Delivery Information</h2>
                         {isUserLoggedIn() && customerName && customerEmail ? (
                           <div className="mt-3 inline-block">
                             <div className="bg-green-50 border border-green-400 rounded-lg p-2.5 px-4">
                               <div className="flex items-center justify-center text-sm">
                                 <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
+                            </svg>
                                 <span className="text-gray-700">
                                   <strong className="text-green-700">Delivering to:</strong> {customerName} • {customerEmail}
                                 </span>
-                              </div>
+                            </div>
                             </div>
                           </div>
                         ) : (
                           <p className="text-gray-600">Enter your contact details and delivery address</p>
-                        )}
-                      </div>
-                      
+                          )}
+                        </div>
+                        
                       {/* Guest User Fields - Name & Email */}
                       {!isUserLoggedIn() && (
                         <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5">
@@ -713,9 +816,9 @@ const CheckoutPage = () => {
                               <label className="block text-sm font-semibold text-gray-800 mb-2">
                                 Full Name <span className="text-red-500">*</span>
                               </label>
-                              <input
-                                type="text"
-                                value={customerName}
+                                <input
+                                  type="text"
+                                  value={customerName}
                                 onChange={(e) => {
                                   setCustomerName(e.target.value);
                                   if (customerErrors.name) {
@@ -729,19 +832,19 @@ const CheckoutPage = () => {
                                     : customerName.trim()
                                       ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
                                       : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                                }`}
-                              />
-                              {customerErrors.name && (
+                                  }`}
+                                />
+                                {customerErrors.name && (
                                 <p className="mt-1 text-xs text-red-600">{customerErrors.name}</p>
-                              )}
-                            </div>
+                                )}
+                              </div>
                             <div>
                               <label className="block text-sm font-semibold text-gray-800 mb-2">
                                 Email Address <span className="text-red-500">*</span>
                               </label>
-                              <input
-                                type="email"
-                                value={customerEmail}
+                                <input
+                                  type="email"
+                                  value={customerEmail}
                                 onChange={(e) => {
                                   setCustomerEmail(e.target.value);
                                   if (customerErrors.email) {
@@ -755,75 +858,78 @@ const CheckoutPage = () => {
                                     : customerEmail.trim() && /\S+@\S+\.\S+/.test(customerEmail)
                                       ? 'border-green-400 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-100'
                                       : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-                                }`}
-                              />
-                              {customerErrors.email && (
+                                  }`}
+                                />
+                                {customerErrors.email && (
                                 <p className="mt-1 text-xs text-red-600">{customerErrors.email}</p>
-                              )}
+                                )}
+                              </div>
                             </div>
-                          </div>
                         </div>
                       )}
                       
-                      {/* Phone Number - Compact */}
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-300">
-                        <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
-                          <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
-                          Phone Number <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {/* Phone Number - Hidden for all users */}
+                      {false && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-300">
+                          <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center">
+                            <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                             </svg>
-                          </div>
-                          <input
-                            type="tel"
-                            value={customerPhone}
-                            onChange={(e) => {
-                              setCustomerPhone(e.target.value);
-                              if (customerErrors.phone) {
-                                setCustomerErrors(prev => ({ ...prev, phone: undefined }));
-                              }
-                            }}
-                            placeholder="e.g., +250788123456"
-                            className={`w-full pl-10 pr-10 py-2.5 border-2 rounded-lg outline-none transition-all duration-200 ${
-                              customerErrors.phone 
-                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
-                                : customerPhone.trim()
-                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-                            }`}
-                          />
-                          {customerPhone.trim() && !customerErrors.phone && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
+                            Phone Number <span className="text-red-500 ml-1">*</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                  </svg>
+                                </div>
+                                <input
+                                  type="tel"
+                                  value={customerPhone}
+                              onChange={(e) => {
+                                setCustomerPhone(e.target.value);
+                                if (customerErrors.phone) {
+                                  setCustomerErrors(prev => ({ ...prev, phone: undefined }));
+                                }
+                              }}
+                              placeholder="e.g., +250788123456"
+                              className={`w-full pl-10 pr-10 py-2.5 border-2 rounded-lg outline-none transition-all duration-200 ${
+                                    customerErrors.phone 
+                                  ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                  : customerPhone.trim()
+                                    ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                    : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                                  }`}
+                                />
+                            {customerPhone.trim() && !customerErrors.phone && (
+                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                                {customerErrors.phone && (
+                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                                )}
+                              </div>
                           {customerErrors.phone && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <div className="mt-1.5 flex items-center text-xs text-red-600 bg-red-100 p-1.5 rounded">
+                              <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                               </svg>
+                              {customerErrors.phone}
                             </div>
                           )}
-                        </div>
-                        {customerErrors.phone && (
-                          <div className="mt-1.5 flex items-center text-xs text-red-600 bg-red-100 p-1.5 rounded">
-                            <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            {customerErrors.phone}
                           </div>
-                        )}
-                      </div>
+                      )}
                         
-                        {/* Delivery Address Section */}
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-300">
+                        {/* Delivery Address Section - Hidden for all users */}
+                        {false && (
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-300">
                           <AddressSelector
                             value={addressData}
                             onChange={setAddressData}
@@ -832,128 +938,46 @@ const CheckoutPage = () => {
                             disabled={isSubmitting}
                           />
                         </div>
-                    </div>
-                  )}
-                  
-                  {/* Step 2: MTN Mobile Money Payment */}
-                  {currentStep === 2 && (
-                    <div className="space-y-6 animate-fade-in">
-                      <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-blue-700 mb-2">MTN Mobile Money Payment</h2>
-                        <p className="text-gray-600">Send money using MTN Mobile Money</p>
-                      </div>
-                      
-                      {/* MTN Payment Instructions */}
-                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-xl text-white shadow-lg">
-                        <div className="flex items-center justify-center mb-4">
-                          <img src="/mtn.jpg" alt="MTN" className="w-10 h-10 rounded-lg mr-3" />
-                          <h3 className="text-xl font-bold">MTN Mobile Money</h3>
-                        </div>
-                        <div className="text-center">
-                          <div className="bg-white bg-opacity-20 rounded-lg p-4 mb-4">
-                            <div className="text-2xl font-bold mb-2">Amount to Send</div>
-                            <div className="text-3xl font-bold">{formatRWF(subtotal)} RWF</div>
-                          </div>
-                          <div className="bg-white bg-opacity-20 rounded-lg p-4">
-                            <div className="text-lg font-semibold mb-2">USSD Code</div>
-                            <div className="text-2xl font-mono font-bold bg-white bg-opacity-30 px-4 py-2 rounded-lg">
-                              *182*8*1*079559#
+                        )}
+                        
+                        {/* Street Address Input - Required for all users */}
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-300">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Street Address *
+                          </label>
+                          <input
+                            type="text"
+                            value={addressData.street}
+                            onChange={(e) => {
+                              setAddressData(prev => ({ ...prev, street: e.target.value }));
+                              if (addressErrors.street) {
+                                setAddressErrors(prev => ({ ...prev, street: undefined }));
+                              }
+                            }}
+                            placeholder="Enter your street address"
+                            className={`w-full px-4 py-2.5 border-2 rounded-lg outline-none transition-all duration-200 ${
+                              addressErrors.street 
+                                ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100' 
+                                : addressData.street.trim()
+                                  ? 'border-green-400 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                  : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                            }`}
+                          />
+                          {addressErrors.street && (
+                            <div className="mt-1.5 flex items-center text-xs text-red-600 bg-red-100 p-1.5 rounded">
+                              <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              {addressErrors.street}
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Payment Instructions */}
-                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                        <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-                          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          How to Pay
-                        </h3>
-                        <div className="space-y-3 text-sm text-blue-700">
-                          <div className="flex items-start">
-                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">1</span>
-                            <span>Dial <strong>*182*8*1*079559#</strong> on your phone</span>
-                          </div>
-                          <div className="flex items-start">
-                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">2</span>
-                            <span>Enter amount: <strong>{formatRWF(subtotal)} RWF</strong></span>
-                          </div>
-                          <div className="flex items-start">
-                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">3</span>
-                            <span>Enter your MTN Mobile Money PIN</span>
-                          </div>
-                          <div className="flex items-start">
-                            <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5">4</span>
-                            <span>Confirm the transaction</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Order Review */}
-                      <div className="bg-blue-50 p-6 rounded-xl border-2 border-blue-300 shadow-sm">
-                        <h3 className="font-bold text-gray-900 mb-4 text-lg flex items-center">
-                          <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
-                          Order Summary
-                        </h3>
-                        <div className="space-y-3">
-                          <div className="bg-white rounded-lg p-3 flex justify-between items-center shadow-sm">
-                            <span className="text-gray-600 flex items-center">
-                              <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                              Customer
-                            </span>
-                            <span className="font-semibold text-gray-900">{customerName}</span>
-                          </div>
-                          <div className="bg-white rounded-lg p-3 flex justify-between items-center shadow-sm">
-                            <span className="text-gray-600 flex items-center">
-                              <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
-                              Email
-                            </span>
-                            <span className="font-medium text-gray-900 text-sm">{customerEmail}</span>
-                          </div>
-                          <div className="bg-white rounded-lg p-3 flex justify-between items-center shadow-sm">
-                            <span className="text-gray-600 flex items-center">
-                              <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                              </svg>
-                              Phone
-                            </span>
-                            <span className="font-medium text-gray-900">{customerPhone}</span>
-                          </div>
-                          <div className="bg-white rounded-lg p-3 shadow-sm">
-                            <div className="flex items-start">
-                              <svg className="w-4 h-4 mr-2 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              <div className="flex-1">
-                                <span className="text-gray-600 block mb-1">Delivery Address</span>
-                                <span className="font-medium text-gray-900 text-sm">
-                                  {[addressData.street, addressData.village, addressData.cell, addressData.sector, addressData.district, addressData.province]
-                                    .filter(Boolean)
-                                    .join(', ') || 'Not specified'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-blue-600 rounded-lg p-4 flex justify-between items-center mt-4 shadow-md">
-                            <span className="font-bold text-white text-lg">Total Amount</span>
-                            <span className="font-bold text-white text-2xl">{formatRWF(subtotal)} RWF</span>
-                          </div>
-                        </div>
+                          )}
                       </div>
                     </div>
                   )}
                   
-                  {/* Step 3: Payment Confirmation */}
-                  {currentStep === 3 && (
+                  
+                  {/* Step 3: Payment Confirmation - REMOVED */}
+                  {false && (
                     <div className="space-y-6 animate-fade-in">
                       <div className="text-center mb-6">
                         <h2 className="text-2xl font-bold text-blue-700 mb-2">Payment Confirmation</h2>
@@ -974,7 +998,7 @@ const CheckoutPage = () => {
                              <label className="block text-sm font-semibold text-gray-800 mb-2">
                                Sender Name <span className="text-red-500">*</span>
                              </label>
-                             <input
+                          <input
                                type="text"
                                value={senderName}
                                onChange={(e) => {
@@ -995,9 +1019,9 @@ const CheckoutPage = () => {
                              {paymentErrors.senderName && (
                                <p className="mt-1 text-xs text-red-600">{paymentErrors.senderName}</p>
                              )}
-                           </div>
+                            </div>
                            
-                           <div>
+                            <div>
                              <label className="block text-sm font-semibold text-gray-800 mb-2">
                                Sender Address <span className="text-red-500">*</span>
                              </label>
@@ -1022,8 +1046,8 @@ const CheckoutPage = () => {
                              {paymentErrors.senderAddress && (
                                <p className="mt-1 text-xs text-red-600">{paymentErrors.senderAddress}</p>
                              )}
-                           </div>
-                         </div>
+                            </div>
+                          </div>
                       </div>
                       
                       {/* Order Summary */}
@@ -1052,18 +1076,18 @@ const CheckoutPage = () => {
                   )}
                   
                   {/* Navigation Buttons */}
-                  <div className="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
+                  <div className="flex justify-between items-center pt-6 border-t border-gray-200">
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className={`group flex items-center px-6 py-3 border-2 rounded-xl font-semibold transition-all duration-200 ${
-                        currentStep === 1 
-                          ? 'text-gray-400 border-gray-200 cursor-not-allowed bg-gray-50' 
-                          : 'text-gray-700 border-gray-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 shadow-sm hover:shadow-md'
+                      className={`flex items-center px-6 py-3 rounded-lg font-semibold transition-all ${
+                        currentStep === 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-950 border border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                       }`}
                       disabled={currentStep === 1}
                     >
-                      <svg className={`w-5 h-5 mr-2 transition-transform ${currentStep > 1 ? 'group-hover:-translate-x-1' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                       Previous
@@ -1073,43 +1097,27 @@ const CheckoutPage = () => {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="group flex items-center px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                        className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
                       >
-                        {currentStep === 2 ? 'Continue to Confirmation' : 'Continue to Payment'}
-                        <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        Next
+                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
                     ) : (
                       <button
                         type="submit"
-                        className={`group flex items-center px-8 py-3.5 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl ${
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                           isSubmitting
                             ? 'bg-gray-400 text-white cursor-not-allowed'
-                            : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105 hover:shadow-2xl'
+                            : 'bg-green-600 text-white hover:bg-green-700'
                         }`}
                         disabled={isSubmitting}
                       >
-                        {isSubmitting ? (
-                          <>
-                            <div className="animate-spin w-5 h-5 border-3 border-white border-t-transparent rounded-full mr-3"></div>
-                            <span>Processing Payment...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Complete Order
-                            <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                          </>
-                        )}
+                        {isSubmitting ? 'Processing...' : 'Complete Order'}
                       </button>
                     )}
                   </div>
-
                   
                   {/* Status Messages */}
                   {orderStatus.error && (
@@ -1118,7 +1126,7 @@ const CheckoutPage = () => {
                         <div className="flex-shrink-0">
                           <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
+                        </svg>
                         </div>
                         <div className="ml-3 flex-1">
                           <h3 className="text-sm font-bold text-red-800 mb-1">Error</h3>
@@ -1133,7 +1141,7 @@ const CheckoutPage = () => {
                         <div className="flex-shrink-0">
                           <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
+                        </svg>
                         </div>
                         <div className="ml-3 flex-1">
                           <h3 className="text-sm font-bold text-green-800 mb-1">Success!</h3>

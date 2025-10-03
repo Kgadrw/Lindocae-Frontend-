@@ -10,6 +10,13 @@ export interface UserInfo {
   email?: string;
   phone?: string;
   avatar?: string;
+  address?: {
+    province?: string;
+    district?: string;
+    sector?: string;
+    cell?: string;
+    village?: string;
+  };
 }
 
 // Get user information from localStorage
@@ -33,7 +40,14 @@ export function getUserInfoFromStorage(): UserInfo | null {
             : user.firstName || user.lastName || user.name,
           email: user.email,
           phone: user.phone || user.phoneNumber,
-          avatar: user.avatar || user.image
+          avatar: user.avatar || user.image,
+          address: {
+            province: user.province,
+            district: user.district,
+            sector: user.sector,
+            cell: user.cell,
+            village: user.village
+          }
         };
       }
     }
@@ -45,6 +59,11 @@ export function getUserInfoFromStorage(): UserInfo | null {
       const lastName = localStorage.getItem(`lastName:${email}`) || '';
       const userName = localStorage.getItem(`userName:${email}`) || '';
       const phone = localStorage.getItem(`userPhone:${email}`) || '';
+      const province = localStorage.getItem(`userProvince:${email}`) || '';
+      const district = localStorage.getItem(`userDistrict:${email}`) || '';
+      const sector = localStorage.getItem(`userSector:${email}`) || '';
+      const cell = localStorage.getItem(`userCell:${email}`) || '';
+      const village = localStorage.getItem(`userVillage:${email}`) || '';
       
       return {
         email,
@@ -53,7 +72,14 @@ export function getUserInfoFromStorage(): UserInfo | null {
         fullName: firstName && lastName 
           ? `${firstName} ${lastName}` 
           : userName || email.split('@')[0],
-        phone
+        phone,
+        address: {
+          province,
+          district,
+          sector,
+          cell,
+          village
+        }
       };
     }
 
@@ -113,7 +139,14 @@ export async function fetchUserInfoFromDatabase(): Promise<UserInfo | null> {
           : user.firstName || user.lastName || user.name,
         email: user.email,
         phone: user.phone || user.phoneNumber,
-        avatar: user.avatar || user.image
+        avatar: user.avatar || user.image,
+        address: {
+          province: user.province,
+          district: user.district,
+          sector: user.sector,
+          cell: user.cell,
+          village: user.village
+        }
       };
     }
 
