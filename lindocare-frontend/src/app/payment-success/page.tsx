@@ -15,8 +15,7 @@ const PaymentSuccessContent = () => {
   useEffect(() => {
     const verifyPayment = async () => {
       try {
-        // Get payment token and order details from localStorage
-        const paymentToken = localStorage.getItem('dpoPaymentToken');
+        // Get order details from localStorage and URL parameters
         const pendingAmount = localStorage.getItem('pendingOrderAmount');
         const pendingOrderId = localStorage.getItem('pendingOrderId');
         
@@ -24,65 +23,83 @@ const PaymentSuccessContent = () => {
         const urlOrderId = searchParams.get('orderId') || searchParams.get('order_id');
         const orderId = urlOrderId || pendingOrderId;
         
-        if (paymentToken) {
-          // Verify the payment with DPO
-          const verifyResponse = await fetch('https://lindo-project.onrender.com/dpo/verify/dpoPayment', {
-            method: 'POST',
-            headers: {
-              'accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token: paymentToken }),
-          });
-
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            console.log('Payment verification response:', verifyData);
+        // Get DPO token from URL parameters (if available)
+        const dpoToken = searchParams.get('token') || searchParams.get('TransToken');
+        
+        if (dpoToken && orderId) {
+          // Verify payment with DPO if token is available
+          console.log('Verifying DPO payment with token:', dpoToken);
+          
+          try {
+            // Get auth token for verification (if user is logged in)
+            const authToken = localStorage.getItem('authToken') || localStorage.getItem('token');
             
-            if (verifyData.success) {
-              setVerificationStatus('success');
-              setOrderDetails({
-                orderId: orderId || verifyData.details?.orderId || 'N/A',
-                paymentId: verifyData.details?.paymentId || paymentToken,
-                amount: pendingAmount,
-                status: 'success',
-                verificationDetails: verifyData.details
-              });
+            const verifyResponse = await fetch('https://lindo-project.onrender.com/dpo/verify/dpoPayment', {
+              method: 'POST',
+              headers: {
+                'accept': 'application/json',
+                'Content-Type': 'application/json',
+                ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+              },
+              body: JSON.stringify({ token: dpoToken }),
+            });
+
+            if (verifyResponse.ok) {
+              const verifyData = await verifyResponse.json();
+              console.log('Payment verification response:', verifyData);
               
-              // Clear stored payment data
-              localStorage.removeItem('dpoPaymentToken');
-              localStorage.removeItem('pendingOrderAmount');
-              localStorage.removeItem('pendingOrderId');
+              if (verifyData.success) {
+                setVerificationStatus('success');
+                setOrderDetails({
+                  orderId: orderId || 'N/A',
+                  paymentId: dpoToken,
+                  amount: pendingAmount,
+                  status: 'success',
+                  verificationDetails: verifyData.details
+                });
+              } else {
+                setVerificationStatus('failed');
+                setOrderDetails({
+                  orderId: orderId,
+                  paymentId: dpoToken,
+                  status: 'verification_failed',
+                  error: verifyData.message || 'Payment verification failed'
+                });
+              }
             } else {
               setVerificationStatus('failed');
+              const errorData = await verifyResponse.json().catch(() => ({}));
               setOrderDetails({
                 orderId: orderId,
-                paymentId: paymentToken,
+                paymentId: dpoToken,
                 status: 'verification_failed',
-                error: verifyData.message || 'Payment verification failed'
+                error: errorData.message || 'Payment verification failed'
               });
             }
-          } else {
+          } catch (verifyError) {
+            console.error('Payment verification error:', verifyError);
             setVerificationStatus('failed');
-            const errorData = await verifyResponse.json().catch(() => ({}));
             setOrderDetails({
               orderId: orderId,
-              paymentId: paymentToken,
-              status: 'verification_failed',
-              error: errorData.message || 'Payment verification failed'
+              paymentId: dpoToken,
+              status: 'verification_error',
+              error: 'Failed to verify payment'
             });
           }
         } else {
-          // Fallback: get details from URL parameters
-          if (orderId) {
-            setOrderDetails({
-              orderId,
-              paymentId: searchParams.get('paymentId') || searchParams.get('payment_id') || 'N/A',
-              status: 'success'
-            });
-          }
+          // No token available, just show success
+          setOrderDetails({
+            orderId: orderId || 'N/A',
+            paymentId: dpoToken || 'N/A',
+            amount: pendingAmount,
+            status: 'success'
+          });
           setVerificationStatus('success');
         }
+        
+        // Clear stored payment data
+        localStorage.removeItem('pendingOrderAmount');
+        localStorage.removeItem('pendingOrderId');
       } catch (error) {
         console.error('Payment verification error:', error);
         setVerificationStatus('failed');

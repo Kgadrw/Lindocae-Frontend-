@@ -193,7 +193,17 @@ export async function fetchUserInfoFromDatabase(): Promise<UserInfo | null> {
 
     if (response.ok) {
       const user = await response.json();
-      console.log('Fetched user by ID:', user);
+      console.log('=== API RESPONSE FROM getUserById ===');
+      console.log('Complete user object:', user);
+      console.log('User address fields:', {
+        province: user.province,
+        district: user.district,
+        sector: user.sector,
+        cell: user.cell,
+        village: user.village,
+        street: user.street
+      });
+      console.log('=====================================');
       
       return {
         id: user._id || user.id,

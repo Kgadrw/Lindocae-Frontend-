@@ -36,12 +36,22 @@ const LoginPage: React.FC = () => {
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 200 && data?.user) {
-        // Store user data in localStorage
+        // Store comprehensive user data in localStorage
         localStorage.setItem("userData", JSON.stringify(data));
         localStorage.setItem("userEmail", email);
+        
+        // Store user ID for easy access
+        if (data.user._id || data.user.id) {
+          localStorage.setItem("userId", data.user._id || data.user.id);
+        }
 
         const name = `${data.user.firstName || ""} ${data.user.lastName || ""}`.trim() || data.user.email || email;
         localStorage.setItem(`userName:${email}`, name);
+
+        // Store phone number if available
+        if (data.user.phone || data.user.phoneNumber) {
+          localStorage.setItem(`userPhone:${email}`, data.user.phone || data.user.phoneNumber);
+        }
 
         // Store profile picture if available
         if (data.user.image) {
@@ -63,6 +73,44 @@ const LoginPage: React.FC = () => {
         }
         if (data.user.village) {
           localStorage.setItem(`userVillage:${email}`, data.user.village);
+        }
+
+        // Fetch fresh user data using get user by id API for most up-to-date info
+        try {
+          if (data.user._id || data.user.id) {
+            const userId = data.user._id || data.user.id;
+            const token = data.token || localStorage.getItem('authToken') || localStorage.getItem('token');
+            
+            if (token) {
+              const freshUserResponse = await fetch(`https://lindo-project.onrender.com/user/getUserById/${userId}`, {
+                method: 'GET',
+                headers: {
+                  'accept': '*/*',
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+              
+              if (freshUserResponse.ok) {
+                const freshUserData = await freshUserResponse.json();
+                console.log('Fresh user data fetched:', freshUserData);
+                
+                // Update localStorage with fresh data
+                localStorage.setItem("userData", JSON.stringify({ user: freshUserData, token }));
+                
+                // Update individual fields with fresh data
+                if (freshUserData.phone || freshUserData.phoneNumber) {
+                  localStorage.setItem(`userPhone:${email}`, freshUserData.phone || freshUserData.phoneNumber);
+                }
+                if (freshUserData.province) localStorage.setItem(`userProvince:${email}`, freshUserData.province);
+                if (freshUserData.district) localStorage.setItem(`userDistrict:${email}`, freshUserData.district);
+                if (freshUserData.sector) localStorage.setItem(`userSector:${email}`, freshUserData.sector);
+                if (freshUserData.cell) localStorage.setItem(`userCell:${email}`, freshUserData.cell);
+                if (freshUserData.village) localStorage.setItem(`userVillage:${email}`, freshUserData.village);
+              }
+            }
+          }
+        } catch (fetchError) {
+          console.log('Could not fetch fresh user data (not critical):', fetchError);
         }
 
         // Trigger updates in other tabs/components
