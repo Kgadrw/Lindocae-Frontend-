@@ -194,18 +194,25 @@ export default function CheckoutPage() {
     }
 
       // Step 1: Create Order
+      // Extract name parts for backend compatibility
+      const nameParts = customerName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       const orderData = {
         paymentMethod: paymentMethod,
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim(),
+        // Address fields at root level (as expected by backend)
+        province: addressData.province,
+        district: addressData.district,
+        sector: addressData.sector,
+        cell: addressData.cell,
+        village: addressData.village,
+        // Customer info at root level (as expected by backend)
+        email: customerEmail.trim(),
         customerPhone: customerPhone.trim(),
-        shippingAddress: {
-          province: addressData.province,
-          district: addressData.district,
-          sector: addressData.sector,
-          cell: addressData.cell,
-          village: addressData.village
-        },
+        firstName: firstName,
+        lastName: lastName,
+        // Items and total (backend will calculate from cart, but we send for reference)
         items: cartItems.map(item => ({
           productId: String(item.id),
           quantity: item.quantity,
@@ -217,11 +224,22 @@ export default function CheckoutPage() {
       console.log("=== ORDER CREATION DEBUG ===");
       console.log("Creating order with data:", orderData);
       console.log("Address data being sent:", addressData);
-      console.log("Shipping address in orderData:", orderData.shippingAddress);
       console.log("Customer info being sent:", {
-        name: customerName.trim(),
+        firstName: firstName,
+        lastName: lastName,
         email: customerEmail.trim(),
         phone: customerPhone.trim()
+      });
+      console.log("Backend expects fields at root level:", {
+        province: orderData.province,
+        district: orderData.district,
+        sector: orderData.sector,
+        cell: orderData.cell,
+        village: orderData.village,
+        email: orderData.email,
+        customerPhone: orderData.customerPhone,
+        firstName: orderData.firstName,
+        lastName: orderData.lastName
       });
       console.log("=============================");
 
@@ -672,8 +690,8 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
             
-            {/* Customer Information Display */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            {/* Customer Information Display - Hidden but kept in code */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg" style={{ display: 'none' }}>
               <h3 className="text-lg font-medium text-gray-900 mb-3">Customer Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
@@ -691,8 +709,8 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
-            {/* Address Information Display */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            {/* Address Information Display - Hidden but kept in code */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg" style={{ display: 'none' }}>
               <h3 className="text-lg font-medium text-gray-900 mb-3">Delivery Address</h3>
               <div className="text-sm text-gray-900">
                 {addressData.province && addressData.district && addressData.sector && addressData.cell && addressData.village ? (
