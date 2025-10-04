@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { 
-  fetchUserCartWithProducts, 
+import {
+  fetchUserCartWithProducts,
   clearCartServer, 
-  getLocalCart, 
-  saveLocalCart, 
+  getLocalCart,
+  saveLocalCart,
   isUserLoggedIn,
   getAuthToken 
 } from "../../utils/serverStorage";
@@ -80,7 +80,7 @@ export default function CheckoutPage() {
         signal: AbortSignal.timeout(5000)
       });
       return response.ok || response.status < 500; // Accept any response that's not a server error
-    } catch (error) {
+        } catch (error) {
       console.log("Server connectivity test failed:", error);
       return false;
     }
@@ -114,22 +114,22 @@ export default function CheckoutPage() {
           image: item.image,
           quantity: item.quantity
         }));
-      } else {
+          } else {
         // Load from localStorage for guest users
-        const localCart = getLocalCart();
+          const localCart = getLocalCart();
         items = localCart.map(item => ({
           id: String(item.productId),
           name: item.name || 'Product',
-          price: item.price || 0,
+            price: item.price || 0,
           image: item.image || '/lindo.png',
           quantity: item.quantity
-        }));
-      }
-      
+          }));
+        }
+
       setCartItems(items);
       
       // Load user information if logged in
-      if (isUserLoggedIn()) {
+        if (isUserLoggedIn()) {
         const userInfo = await getUserInfo();
         if (userInfo) {
           setCustomerName(userInfo.fullName || "");
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
             };
             console.log("Setting address data:", newAddressData);
             setAddressData(newAddressData);
-          } else {
+        } else {
             console.log("No address data found in user info");
           }
         }
@@ -177,21 +177,21 @@ export default function CheckoutPage() {
       // Validate required fields
       if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
         setOrderStatus({ error: "Please fill in all required customer information." });
-        setIsSubmitting(false);
-        return;
-      }
+      setIsSubmitting(false);
+      return;
+    }
 
       if (!addressData.province || !addressData.district || !addressData.sector || !addressData.cell || !addressData.village) {
         setOrderStatus({ error: "Please fill in all address fields." });
-        setIsSubmitting(false);
-        return;
-      }
+      setIsSubmitting(false);
+      return;
+    }
 
-      if (cartItems.length === 0) {
+    if (cartItems.length === 0) {
         setOrderStatus({ error: "Your cart is empty." });
-        setIsSubmitting(false);
-        return;
-      }
+      setIsSubmitting(false);
+      return;
+    }
 
       // Step 1: Create Order
       const orderData = {
@@ -231,7 +231,7 @@ export default function CheckoutPage() {
         setIsSubmitting(false);
         return;
       }
-
+      
       console.log("Making order creation request to:", "https://lindo-project.onrender.com/orders/createOrder");
       console.log("Request data:", orderData);
       console.log("Auth token available:", !!token);
@@ -239,8 +239,8 @@ export default function CheckoutPage() {
       const orderResponse = await fetch("https://lindo-project.onrender.com/orders/createOrder", {
         method: "POST",
         headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json',
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(orderData)
@@ -255,16 +255,16 @@ export default function CheckoutPage() {
         setIsSubmitting(false);
         return;
       }
+      
+        const orderResult = await orderResponse.json();
+        const orderId = orderResult.order?._id || orderResult.orderId || orderResult._id;
 
-      const orderResult = await orderResponse.json();
-      const orderId = orderResult.order?._id || orderResult.orderId || orderResult._id;
-
-      if (!orderId) {
+        if (!orderId) {
         setOrderStatus({ error: "Order created but no order ID received. Please contact support." });
-        setIsSubmitting(false);
-        return;
-      }
-
+          setIsSubmitting(false);
+          return;
+        }
+          
       console.log("Order created successfully:", orderResult);
 
       // Step 2: Initialize DPO Payment (if DPO is selected)
@@ -279,13 +279,13 @@ export default function CheckoutPage() {
           return `${origin}/payment/success`;
         };
 
-        const dpoData = {
-          orderId: orderId,
+      const dpoData = {
+        orderId: orderId,
           totalAmount: total,
-          currency: "RWF",
-          serviceDescription: `Payment for order #${orderId}`,
+        currency: "RWF",
+        serviceDescription: `Payment for order #${orderId}`,
           callbackUrl: getCallbackUrl()
-        };
+      };
 
         console.log("Initializing DPO payment with data:", dpoData);
         console.log("Making DPO request to:", "https://lindo-project.onrender.com/dpo/initialize/dpoPayment");
@@ -305,12 +305,12 @@ export default function CheckoutPage() {
           throw new Error(`DPO network error: ${error.message}`);
         });
 
-        console.log("DPO response status:", dpoResponse.status);
-        console.log("DPO response headers:", Object.fromEntries(dpoResponse.headers.entries()));
+      console.log("DPO response status:", dpoResponse.status);
+      console.log("DPO response headers:", Object.fromEntries(dpoResponse.headers.entries()));
 
-        if (dpoResponse.ok) {
-          const dpoResult = await dpoResponse.json();
-          console.log("DPO payment initialized:", dpoResult);
+      if (dpoResponse.ok) {
+        const dpoResult = await dpoResponse.json();
+        console.log("DPO payment initialized:", dpoResult);
 
           if (dpoResult.redirectUrl) {
             // Clear cart after successful order creation
@@ -324,11 +324,11 @@ export default function CheckoutPage() {
             } catch (cartError) {
               console.log("Could not clear cart:", cartError);
             }
-
-            // Store order details for reference
+        
+        // Store order details for reference
             localStorage.setItem("pendingOrderId", String(orderId));
             localStorage.setItem("pendingOrderAmount", String(total));
-
+            
             // Redirect to DPO payment gateway
             window.location.href = dpoResult.redirectUrl;
             return;
@@ -386,7 +386,7 @@ export default function CheckoutPage() {
           } else if (dpoResponse.status === 403) {
             if (errorData.message?.includes("403")) {
               errorMessage = "DPO payment service configuration issue. Please contact support or try alternative payment methods.";
-            } else {
+          } else {
               errorMessage = "Access denied. Please check your permissions.";
             }
           } else if (dpoResponse.status === 500) {
@@ -400,8 +400,8 @@ export default function CheckoutPage() {
           } else {
             errorMessage = `Payment initialization failed (Status: ${dpoResponse.status})`;
           }
-
-          setOrderStatus({ 
+          
+          setOrderStatus({
             error: `${errorMessage}. Your order has been created successfully!`,
             orderId: orderId,
             showAlternativePayment: true
@@ -411,8 +411,8 @@ export default function CheckoutPage() {
         // Non-DPO payment method - just show success
         setOrderStatus({
           success: `Order created successfully! Order ID: ${orderId}. You can now proceed with payment.`,
-          orderId: orderId
-        });
+            orderId: orderId
+          });
       }
 
     } catch (error) {
@@ -426,7 +426,7 @@ export default function CheckoutPage() {
           errorMessage = "Network connection failed. Please check your internet connection and try again.";
         } else if (error.message.includes("Failed to fetch")) {
           errorMessage = "Unable to connect to the server. Please check your internet connection and try again.";
-        } else {
+          } else {
           errorMessage = error.message;
         }
       }
@@ -438,14 +438,14 @@ export default function CheckoutPage() {
   };
 
   if (loading) {
-    return (
+  return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+          <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading checkout...</p>
-        </div>
-      </div>
-    );
+            </div>
+                </div>
+              );
   }
 
   if (cartItems.length === 0) {
@@ -454,15 +454,15 @@ export default function CheckoutPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Your cart is empty</h1>
           <p className="text-gray-600 mb-6">Add some items to your cart before checking out.</p>
-          <button
+                  <button
             onClick={() => router.push("/")}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Continue Shopping
-          </button>
-        </div>
-      </div>
-    );
+                  >
+                    Continue Shopping
+                  </button>
+                </div>
+                              </div>
+                            );
   }
 
   return (
@@ -474,7 +474,7 @@ export default function CheckoutPage() {
           <p className="text-gray-600">Complete your order securely</p>
           
           {/* Connection Status */}
-        </div>
+                        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Checkout Form - Hidden but kept in code */}
@@ -498,7 +498,7 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter your full name"
                     />
-                  </div>
+                        </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email *
@@ -511,7 +511,7 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter your email"
                     />
-                  </div>
+                        </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone Number *
@@ -524,10 +524,10 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter your phone number"
                     />
+                        </div>
+                      </div>
                   </div>
-                </div>
-              </div>
-
+                  
               {/* Address Information */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Delivery Address</h3>
@@ -544,7 +544,7 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter province"
                     />
-                  </div>
+                    </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       District *
@@ -557,7 +557,7 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter district"
                     />
-                  </div>
+                    </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Sector *
@@ -570,7 +570,7 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter sector"
                     />
-                  </div>
+                      </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Cell *
@@ -583,7 +583,7 @@ export default function CheckoutPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter cell"
                     />
-                  </div>
+                    </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Village *
@@ -597,28 +597,28 @@ export default function CheckoutPage() {
                       placeholder="Enter village"
                     />
                   </div>
-                </div>
-              </div>
+            </div>
+                          </div>
 
               {/* Payment Method */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
                 <div className="space-y-3">
                   <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="dpo"
+                              <input
+                                type="radio"
+                                name="payment"
+                                value="dpo"
                       checked={paymentMethod === "dpo"}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="mr-3"
                     />
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
-                        <span className="text-white font-bold text-xs">DPO</span>
-                      </div>
+                                <span className="text-white font-bold text-xs">DPO</span>
+                              </div>
                       <span className="font-medium">DPO Payment Gateway</span>
-                    </div>
+                          </div>
                   </label>
                   
                   <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
@@ -633,9 +633,9 @@ export default function CheckoutPage() {
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center mr-3">
                         <span className="text-white font-bold text-xs">🏦</span>
-                      </div>
+                            </div>
                       <span className="font-medium">Bank Transfer</span>
-                    </div>
+                          </div>
                   </label>
                   
                   <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
@@ -654,8 +654,8 @@ export default function CheckoutPage() {
                       <span className="font-medium">Mobile Money</span>
                     </div>
                   </label>
-                </div>
-              </div>
+                            </div>
+                            </div>
 
               {/* Submit Button */}
               <button
@@ -666,8 +666,8 @@ export default function CheckoutPage() {
                 {isSubmitting ? "Processing..." : "Complete Order"}
               </button>
             </form>
-          </div>
-
+                        </div>
+                        
           {/* Order Summary - Left Side */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
@@ -679,17 +679,17 @@ export default function CheckoutPage() {
                 <div>
                   <span className="font-medium text-gray-700">Name:</span>
                   <p className="text-gray-900">{customerName || "Not provided"}</p>
-                </div>
-                <div>
+                          </div>
+                            <div>
                   <span className="font-medium text-gray-700">Email:</span>
                   <p className="text-gray-900">{customerEmail || "Not provided"}</p>
-                </div>
-                <div>
+                              </div>
+                            <div>
                   <span className="font-medium text-gray-700">Phone:</span>
                   <p className="text-gray-900">{customerPhone || "Not provided"}</p>
-                </div>
-              </div>
-            </div>
+                              </div>
+                            </div>
+                        </div>
 
             {/* Address Information Display */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -700,8 +700,8 @@ export default function CheckoutPage() {
                 ) : (
                   <p className="text-gray-500">Address not provided</p>
                 )}
-              </div>
-            </div>
+                              </div>
+                              </div>
 
             {/* Payment Method Display - Hidden but kept in code */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg" style={{ display: 'none' }}>
@@ -711,15 +711,15 @@ export default function CheckoutPage() {
                   <>
                     <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
                       <span className="text-white font-bold text-xs">DPO</span>
-                    </div>
+                            </div>
                     <span className="font-medium text-gray-900">DPO Payment Gateway</span>
                   </>
-                )}
+                          )}
                 {paymentMethod === "bank_transfer" && (
                   <>
                     <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center mr-3">
                       <span className="text-white font-bold text-xs">🏦</span>
-                    </div>
+                          </div>
                     <span className="font-medium text-gray-900">Bank Transfer</span>
                   </>
                 )}
@@ -731,9 +731,9 @@ export default function CheckoutPage() {
                     <span className="font-medium text-gray-900">Mobile Money</span>
                   </>
                 )}
-              </div>
-            </div>
-            
+                      </div>
+                            </div>
+                           
             {/* Cart Items */}
             <div className="space-y-4 mb-6">
               {cartItems.map((item) => (
@@ -751,45 +751,45 @@ export default function CheckoutPage() {
                         alt={item.name}
                         className="w-full h-full object-cover rounded-md"
                       />
-                    )}
-                  </div>
+                             )}
+                            </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900">{item.name}</h3>
                     <p className="text-sm text-gray-950">Qty: {item.quantity}</p>
-                  </div>
+                          </div>
                   <div className="text-right">
                     <p className="font-medium text-gray-900">{formatRWF(item.price * item.quantity)} RWF</p>
-                  </div>
-                </div>
+                      </div>
+                          </div>
               ))}
-            </div>
+                          </div>
 
             {/* Totals */}
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-950">Subtotal</span>
                 <span className="font-medium text-gray-950">{formatRWF(subtotal)} RWF</span>
-              </div>
+                        </div>
               <div className="flex justify-between">
                 <span className="text-gray-950">Shipping</span>
                 <span className="font-medium text-gray-950">Free</span>
-              </div>
+                      </div>
               <div className="flex justify-between text-lg font-semibold border-t pt-2">
                 <span className="text-gray-950">Total</span>
                 <span className="text-gray-950">{formatRWF(total)} RWF</span>
-              </div>
-            </div>
-
+                    </div>
+                  </div>
+                  
             {/* Order Status Messages */}
-            {orderStatus.error && (
+                  {orderStatus.error && (
               <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
                 <div className="flex">
-                  <div className="flex-shrink-0">
+                        <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3 flex-1">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        </div>
+                        <div className="ml-3 flex-1">
                     <h3 className="text-sm font-medium text-red-800">Error</h3>
                     <p className="text-sm text-red-700 mt-1">{orderStatus.error}</p>
                     {orderStatus.orderId && (
@@ -809,19 +809,19 @@ export default function CheckoutPage() {
                       {orderStatus.showAlternativePayment && (
                         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                           <h4 className="text-sm font-semibold text-blue-800 mb-2">Alternative Payment Options:</h4>
-                          <div className="space-y-2 text-sm text-blue-700">
-                            <p><strong>Order ID:</strong> {orderStatus.orderId}</p>
+                              <div className="space-y-2 text-sm text-blue-700">
+                                <p><strong>Order ID:</strong> {orderStatus.orderId}</p>
                             <p><strong>Amount:</strong> {formatRWF(total)} RWF</p>
                             <div className="mt-2 space-y-1">
-                              <p>1. <strong>Bank Transfer:</strong> Contact us for bank details</p>
-                              <p>2. <strong>Mobile Money:</strong> Use code *182*8*1*079559#</p>
-                              <p>3. <strong>Cash on Delivery:</strong> Pay when you receive your order</p>
-                            </div>
+                                  <p>1. <strong>Bank Transfer:</strong> Contact us for bank details</p>
+                                  <p>2. <strong>Mobile Money:</strong> Use code *182*8*1*079559#</p>
+                                  <p>3. <strong>Cash on Delivery:</strong> Pay when you receive your order</p>
+                                </div>
                             <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
-                              <p className="text-xs text-yellow-800">
-                                <strong>Note:</strong> Please include your Order ID when making payment and contact our support team to confirm.
-                              </p>
-                            </div>
+                                  <p className="text-xs text-yellow-800">
+                                    <strong>Note:</strong> Please include your Order ID when making payment and contact our support team to confirm.
+                                  </p>
+                                </div>
                             <div className="mt-2 p-2 bg-orange-100 border border-orange-300 rounded">
                               <p className="text-xs text-orange-800">
                                 <strong>Technical Info:</strong> DPO payment gateway is experiencing configuration issues. This is a backend configuration problem that needs to be resolved by the development team.
@@ -849,33 +849,33 @@ export default function CheckoutPage() {
                                 Complete Order
                               </button>
                             </div>
-                          </div>
-                        </div>
-                      )}
+                              </div>
+                            </div>
+                          )}
                     </div>
-                  </div>
-                </div>
-              </div>
-            )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-            {orderStatus.success && (
+                  {orderStatus.success && (
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
                 <div className="flex">
-                  <div className="flex-shrink-0">
+                        <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        </div>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-green-800">Success</h3>
                     <p className="text-sm text-green-700 mt-1">{orderStatus.success}</p>
                     {orderStatus.orderId && (
                       <p className="text-sm text-green-700 mt-1">Order ID: {orderStatus.orderId}</p>
                     )}
-                  </div>
-                </div>
-              </div>
-            )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
             {/* Complete Order Button - Within Order Summary */}
             <div className="mt-6">
@@ -903,7 +903,7 @@ export default function CheckoutPage() {
                       alt="MTN Logo"
                       className="w-full h-full object-cover rounded-full"
                     />
-                  </div>
+        </div>
                   <h3 className="text-lg font-semibold text-gray-900">MTN MoMo Pay</h3>
                 </div>
                 <p className="text-sm text-gray-700 mb-4">

@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 
 // ✅ Normal metadata
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.lindocare.store'),
   title: "Lindocare | Baby Essentials & Diapers Supplier",
   description:
     "Lindocare is your trusted supplier for high-quality baby essentials including diapers, wipes, and baby care products. Shop premium baby products with fast delivery.",
