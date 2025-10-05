@@ -216,19 +216,21 @@ const OrdersComponent: React.FC = () => {
     return (
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
-              <p className="text-gray-600 mt-1">Monitor and manage all customer orders</p>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <Package size={16} />
-                <span>{stats.total} total orders</span>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Orders Management</h1>
+                <p className="text-gray-600 mt-1">Monitor and manage all customer orders efficiently</p>
               </div>
-              <div className="flex items-center gap-2">
-                <CreditCard size={16} />
-                <span>Revenue: ${stats.totalRevenue.toFixed(2)}</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-sm">
+                <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg">
+                  <Package size={16} className="text-blue-600" />
+                  <span className="text-blue-700 font-semibold">{stats.total} total orders</span>
+                </div>
+                <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
+                  <CreditCard size={16} className="text-green-600" />
+                  <span className="text-green-700 font-semibold">Revenue: ${stats.totalRevenue.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -328,36 +330,48 @@ const OrdersComponent: React.FC = () => {
           )}
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 bg-white rounded-lg"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-              </select>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Orders</h3>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
 
-              <label className="text-sm font-medium text-gray-700 ml-4">Payment Method:</label>
-              <select
-                value={selectedPaymentMethod}
-                onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 bg-white rounded-lg"
-              >
-                <option value="all">All Methods</option>
-                <option value="card">Card</option>
-                <option value="mobile_money">Mobile Money</option>
-              </select>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                <select
+                  value={selectedPaymentMethod}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                  className="w-full border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="all">All Methods</option>
+                  <option value="card">Card</option>
+                  <option value="mobile_money">Mobile Money</option>
+                  <option value="cash">Cash</option>
+                  <option value="dpo">DPO</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Orders Table */}
-             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Customer Orders</h2>
-        </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Customer Orders</h2>
+              <p className="text-sm text-gray-600 mt-1">Manage and track order status updates</p>
+            </div>
         {loading ? (
           <div className="px-6 py-8 text-center text-gray-500">
             Loading orders...
@@ -369,50 +383,50 @@ const OrdersComponent: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm text-left border-separate border-spacing-0">
+            <table className="min-w-full text-sm text-left">
               <thead>
-                <tr className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white">
-                  <th className="px-6 py-3 font-semibold">Customer</th>
-                  <th className="px-6 py-3 font-semibold">Order Items</th>
-                  <th className="px-6 py-3 font-semibold">Total Amount</th>
-                  <th className="px-6 py-3 font-semibold">Status</th>
-                  <th className="px-6 py-3 font-semibold">Payment</th>
-                  <th className="px-6 py-3 font-semibold">Shipping</th>
-                  <th className="px-6 py-3 font-semibold">Date</th>
-                  <th className="px-6 py-3 font-semibold text-center">Actions</th>
+                <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left">Customer</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left hidden lg:table-cell">Items</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left">Amount</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left">Status</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left hidden md:table-cell">Payment</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left hidden lg:table-cell">Shipping</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-left hidden sm:table-cell">Date</th>
+                  <th className="px-4 lg:px-6 py-4 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
-       <tbody>
+              <tbody>
                 {filteredOrders.map((order, index) => (
-                  <tr key={order._id} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-cyan-50'}`}>
-                    <td className="px-6 py-4 align-middle">
+                  <tr key={order._id} className={`transition-colors hover:bg-blue-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <td className="px-4 lg:px-6 py-4 align-middle">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8">
+                        <div className="flex-shrink-0 h-10 w-10">
                           {order.user?.image && order.user.image.length > 0 ? (
                             <img
                               src={normalizeImageUrl(order.user.image[0])}
                               alt={order.user.name}
-                              className="h-8 w-8 rounded-full object-cover border border-gray-200"
+                              className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
                             />
                           ) : (
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-xs font-medium text-gray-500">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                              <span className="text-sm font-medium text-white">
                                 {order.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="ml-3">
-                          <div className="font-semibold text-gray-900">
-                            {order.user?.name || 'Unknown'}
+                        <div className="ml-3 min-w-0 flex-1">
+                          <div className="font-semibold text-gray-900 truncate">
+                            {order.user?.name || 'Unknown Customer'}
                           </div>
-                          <div className="text-gray-700">{order.user?.email}</div>
+                          <div className="text-gray-600 text-sm truncate">{order.user?.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-middle">
+                    <td className="px-4 lg:px-6 py-4 align-middle hidden lg:table-cell">
                       <div className="text-gray-900 font-semibold">{order.items.length} items</div>
-                      <div className="text-gray-700 max-w-xs truncate">
+                      <div className="text-gray-600 text-sm max-w-xs truncate">
                         {order.items.slice(0, 2).map(item => {
                             const productName = getItemProductName(item);
                             if (productName) return productName;
@@ -422,52 +436,55 @@ const OrdersComponent: React.FC = () => {
                         {order.items.length > 2 && ` +${order.items.length - 2} more`}
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-middle font-semibold text-gray-900">
-                      ${order.totalAmount.toFixed(2)}
+                    <td className="px-4 lg:px-6 py-4 align-middle">
+                      <div className="font-bold text-lg text-green-600">
+                        ${order.totalAmount.toFixed(2)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 align-middle">
+                    <td className="px-4 lg:px-6 py-4 align-middle">
                       <div className="flex items-center gap-2">
                         {getStatusIcon(order.status)}
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(order.status)}`}>
-                          {order.status}
+                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(order.status)}`}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-middle">
+                    <td className="px-4 lg:px-6 py-4 align-middle hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         {getPaymentMethodIcon(order.paymentMethod)}
-                        <span className="text-gray-900 capitalize">
+                        <span className="text-gray-700 capitalize font-medium">
                           {String(order.paymentMethod || '').replace('_', ' ')}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-middle">
+                    <td className="px-4 lg:px-6 py-4 align-middle hidden lg:table-cell">
                       <div className="flex items-center gap-2">
-                        <MapPin size={12} className="text-gray-400" />
-                        <span className="text-gray-700 max-w-xs truncate">
+                        <MapPin size={14} className="text-gray-400" />
+                        <span className="text-gray-600 text-sm max-w-xs truncate">
                           {formatShippingAddress(order.shippingAddress)}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-middle text-gray-700">
+                    <td className="px-4 lg:px-6 py-4 align-middle text-gray-700 hidden sm:table-cell">
                       <div className="flex items-center gap-2">
-                        <Calendar size={12} className="text-gray-400" />
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        <Calendar size={14} className="text-gray-400" />
+                        <span className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-middle text-center">
-                      <div className="flex items-center gap-2 justify-center">
+                    <td className="px-4 lg:px-6 py-4 align-middle">
+                      <div className="flex flex-col sm:flex-row items-center gap-2">
                         <button
                           className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 text-xs font-semibold rounded-lg shadow hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-1"
                           title="View Order Details"
                           onClick={() => setSelectedOrder(order)}
                         >
-                          <Eye size={12} /> View
+                          <Eye size={14} /> 
+                          <span className="hidden sm:inline">View</span>
                         </button>
                         <select
                           value={order.status}
                           onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                          className="text-xs border border-gray-300 text-blue-700 rounded-lg px-3 py-2 bg-white shadow-sm"
+                          className="text-xs border border-gray-300 text-blue-700 rounded-lg px-2 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="pending">Pending</option>
                           <option value="processing">Processing</option>
@@ -486,19 +503,19 @@ const OrdersComponent: React.FC = () => {
       </div>
           {/* Order Details Modal */}
           {selectedOrder && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-    <div className="bg-white w-full max-w-5xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="bg-white w-full max-w-6xl max-h-[90vh] rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       
       {/* Header */}
-      <div className="flex items-start justify-between p-4 border-b border-gray-200">
+      <div className="flex items-start justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
+          <h3 className="text-2xl font-bold text-gray-900">Order Details</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Order ID: <span className="font-mono">{selectedOrder._id}</span>
+            Order ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{selectedOrder._id}</span>
           </p>
         </div>
         <button
-          className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+          className="text-gray-500 hover:text-gray-700 text-3xl leading-none p-2 hover:bg-gray-100 rounded-full transition-colors"
           onClick={() => setSelectedOrder(null)}
           aria-label="Close"
         >
@@ -506,77 +523,93 @@ const OrdersComponent: React.FC = () => {
         </button>
       </div>
 
-      <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+      <div className="p-6 space-y-8 max-h-[80vh] overflow-y-auto">
 
         {/* Customer and Meta */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full bg-white shadow-lg flex items-center justify-center overflow-hidden border-2 border-blue-200">
                 {selectedOrder.user?.image?.[0] ? (
-                  <img src={normalizeImageUrl(selectedOrder.user.image[0])} alt="Customer" className="h-10 w-10 object-cover" />
+                  <img src={normalizeImageUrl(selectedOrder.user.image[0])} alt="Customer" className="h-14 w-14 object-cover" />
                 ) : (
-                  <span className="text-sm font-semibold text-gray-600">
+                  <span className="text-lg font-bold text-blue-600">
                     {selectedOrder.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </span>
                 )}
               </div>
               <div>
-                <div className="font-semibold text-gray-900">{selectedOrder.user?.name || 'Unknown'}</div>
-                <div className="text-gray-600 text-sm">{selectedOrder.user?.email}</div>
+                <div className="font-bold text-gray-900 text-lg">{selectedOrder.user?.name || 'Unknown Customer'}</div>
+                <div className="text-blue-600 text-sm">{selectedOrder.user?.email}</div>
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-            <div className="text-sm text-gray-600">Payment</div>
-            <div className="mt-1 flex items-center gap-2">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div className="text-sm text-green-600 font-semibold mb-2">Payment Method</div>
+            <div className="flex items-center gap-3 mb-4">
               {getPaymentMethodIcon(selectedOrder.paymentMethod)}
-              <div className="text-gray-900 capitalize">{String(selectedOrder.paymentMethod || '').replace('_', ' ')}</div>
+              <div className="text-gray-900 capitalize font-semibold">{String(selectedOrder.paymentMethod || '').replace('_', ' ')}</div>
             </div>
-            <div className="mt-2 text-sm text-gray-600">Status</div>
-            <div className={`mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${getStatusBadgeColor(selectedOrder.status)}`}>
+            <div className="text-sm text-green-600 font-semibold mb-2">Order Status</div>
+            <div className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full capitalize ${getStatusBadgeColor(selectedOrder.status)}`}>
               {selectedOrder.status}
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-            <div className="text-sm text-gray-600">Placed</div>
-            <div className="text-gray-900">{new Date(selectedOrder.createdAt).toLocaleString()}</div>
-            <div className="mt-2 text-sm text-gray-600">Updated</div>
-            <div className="text-gray-900">{new Date(selectedOrder.updatedAt).toLocaleString()}</div>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+            <div className="text-sm text-purple-600 font-semibold mb-2">Order Timeline</div>
+            <div className="text-gray-900 font-semibold mb-4">{new Date(selectedOrder.createdAt).toLocaleString()}</div>
+            <div className="text-sm text-purple-600 font-semibold mb-2">Last Updated</div>
+            <div className="text-gray-900 font-semibold">{new Date(selectedOrder.updatedAt).toLocaleString()}</div>
           </div>
         </div>
 
         {/* Shipping Address */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-            <MapPin size={16} className="text-gray-500" />
-            <h4 className="font-semibold text-gray-900">Shipping Address</h4>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
+          <div className="px-6 py-4 border-b border-orange-200 flex items-center gap-3">
+            <MapPin size={20} className="text-orange-600" />
+            <h4 className="font-bold text-gray-900 text-lg">Shipping Address</h4>
           </div>
-          <div className="px-4 py-4 text-gray-800 text-sm space-y-1">
-            <div>{formatShippingAddress(selectedOrder.shippingAddress) || 'N/A'}</div>
+          <div className="px-6 py-6 text-gray-800 space-y-3">
+            <div className="font-semibold text-lg">{formatShippingAddress(selectedOrder.shippingAddress) || 'N/A'}</div>
             {selectedOrder.shippingAddress?.customerName && (
-              <div><span className="font-medium">Name:</span> {selectedOrder.shippingAddress.customerName}</div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-orange-600">Name:</span> 
+                <span className="font-medium">{selectedOrder.shippingAddress.customerName}</span>
+              </div>
             )}
             {selectedOrder.shippingAddress?.customerPhone && (
-              <div><span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.customerPhone}</div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-orange-600">Phone:</span> 
+                <span className="font-medium">{selectedOrder.shippingAddress.customerPhone}</span>
+              </div>
             )}
             {selectedOrder.shippingAddress?.customerEmail && (
-              <div><span className="font-medium">Email:</span> {selectedOrder.shippingAddress.customerEmail}</div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-orange-600">Email:</span> 
+                <span className="font-medium">{selectedOrder.shippingAddress.customerEmail}</span>
+              </div>
             )}
           </div>
         </div>
 
         {/* Items Section */}
-        <div className="bg-white rounded-lg border border-gray-200 w-full p-6">
-          <h4 className="text-lg font-semibold mb-4 text-gray-700">Items</h4>
-          <div className="space-y-3">
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 w-full p-6">
+          <h4 className="text-xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+            <Package size={20} className="text-gray-600" />
+            Order Items ({selectedOrder.items.length})
+          </h4>
+          <div className="space-y-4">
             {selectedOrder.items.map((item, index) => (
-              <div key={index} className="flex items-center gap-3 border-b border-gray-200 pb-2">
-                
-                <div>
-                  <div className="font-semibold text-blue-700">{getItemProductName(item)}</div>
-                  <div className="text-gray-700 text-sm">Quantity: {item.quantity}</div>
-                  <div className="text-gray-900 font-semibold">Price : {item.price} Frw</div>
+              <div key={index} className="flex items-center gap-4 bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                <div className="flex-1">
+                  <div className="font-bold text-blue-700 text-lg">{getItemProductName(item)}</div>
+                  <div className="text-gray-600 text-sm mt-1">Quantity: {item.quantity}</div>
+                  <div className="text-green-600 font-bold text-lg mt-2">Price: {item.price} Frw</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-gray-900">
+                    Total: {(item.quantity * item.price).toFixed(2)} Frw
+                  </div>
                 </div>
               </div>
             ))}
@@ -585,17 +618,19 @@ const OrdersComponent: React.FC = () => {
 
         {/* Totals */}
         <div className="flex flex-col items-end">
-          <div className="w-full md:w-1/2 bg-white rounded-lg border border-gray-200">
-            <div className="px-4 py-3 border-b border-gray-200 font-semibold text-gray-900">Summary</div>
-            <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
-              <span>Subtotal</span>
-              <span>${selectedOrder.items.reduce((sum, it) => sum + (it.quantity || 1) * (it.price || 0), 0).toFixed(2)}</span>
+          <div className="w-full md:w-1/2 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+            <div className="px-6 py-4 border-b border-green-200 bg-green-200">
+              <h4 className="font-bold text-gray-900 text-lg">Order Summary</h4>
             </div>
-            <div className="px-4 py-3 text-sm text-gray-700 flex items-center justify-between">
-              <span>Shipping</span>
-              <span>—</span>
+            <div className="px-6 py-4 text-sm text-gray-700 flex items-center justify-between">
+              <span className="font-semibold">Subtotal</span>
+              <span className="font-bold">${selectedOrder.items.reduce((sum, it) => sum + (it.quantity || 1) * (it.price || 0), 0).toFixed(2)}</span>
             </div>
-            <div className="px-4 py-3 text-base font-bold text-green-600 flex items-center justify-between border-t border-gray-200">
+            <div className="px-6 py-4 text-sm text-gray-700 flex items-center justify-between">
+              <span className="font-semibold">Shipping</span>
+              <span className="font-bold">Free</span>
+            </div>
+            <div className="px-6 py-4 text-xl font-bold text-green-600 flex items-center justify-between border-t border-green-200 bg-green-100">
               <span>Total</span>
               <span>{selectedOrder.totalAmount} Frw</span>
             </div>
@@ -603,12 +638,21 @@ const OrdersComponent: React.FC = () => {
         </div>
 
         {/* Close Button */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-3 pt-4">
           <button
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-red-600 hover:text-white rounded-lg"
+            className="px-6 py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             onClick={() => setSelectedOrder(null)}
           >
             Close
+          </button>
+          <button
+            className="px-6 py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            onClick={() => {
+              // Add print functionality or other actions
+              window.print();
+            }}
+          >
+            Print Order
           </button>
         </div>
 

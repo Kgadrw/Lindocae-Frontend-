@@ -10,7 +10,7 @@ import PromoBanner from "../components/home/PromoBanner";
 import EmailSignupBanner from "../components/home/EmailSignupBanner";
 import AdsSection from "../components/home/AdsSection";
 import IconsRow from "../components/home/IconsRow";
-import NewArrivalsSection from "../components/home/NewArrivalsSection";
+import ProductShowcase from "../components/home/ProductShowcase";
 import SocialShareBar from "../components/SocialShareBar";
 import { motion } from "framer-motion";
 
@@ -229,14 +229,10 @@ export default function Home() {
         </motion.div>
 
         <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0.4}>
-          <NewArrivalsSection
-            filteredProducts={filteredProducts}
-            prodLoading={prodLoading}
-            prodError={prodError}
+          <ProductShowcase
             wishlist={wishlist}
-            toggleWishlist={toggleWishlist}
-            handleAddToCart={handleAddToCart}
-            iconsRow={<IconsRow icons={icons} iconsLoading={iconsLoading} iconsError={iconsError} />}
+            onToggleWishlist={toggleWishlist}
+            onAddToCart={handleAddToCart}
           />
         </motion.div>
 

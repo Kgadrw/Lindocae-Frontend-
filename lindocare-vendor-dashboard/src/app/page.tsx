@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { List, Box, ShoppingCart, Megaphone, Receipt, Image as ImageIcon } from 'lucide-react';
+import { List, Box, ShoppingCart, Megaphone, Receipt, Image as ImageIcon, Menu, X, PanelLeftClose, PanelLeft } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import StatsCards from '../components/StatsCards/Component';
 import CategoriesSection from '../components/CategoriesSection/Component';
@@ -37,6 +37,9 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState('stats');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogin = (userData: User) => {
     if (userData.role === 'vendor') {
@@ -72,6 +75,18 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    // Check screen size for mobile responsiveness
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+        setMobileMenuOpen(false);
+      }
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
     // Preferred: use unified `userData`
     const unified = localStorage.getItem('userData');
     if (unified) {
@@ -112,29 +127,113 @@ export default function AdminDashboard() {
         localStorage.removeItem('accessToken');
       }
     }
+
+    return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
   if (!isAuthenticated) {
     return <LoginForm onLogin={handleLogin} />;
   }
 
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setMobileMenuOpen(!mobileMenuOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile Overlay */}
+      {isMobile && mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={closeMobileMenu}
+        />
+      )}
+
+      {/* Sidebar */}
       <Sidebar
         SIDEBAR_SECTIONS={SIDEBAR_SECTIONS}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         handleLogout={handleLogout}
         user={user}
+        collapsed={sidebarCollapsed}
+        isMobile={isMobile}
+        mobileOpen={mobileMenuOpen}
+        onClose={closeMobileMenu}
       />
-      <main className="ml-64 p-4 md:p-8 space-y-8">
-        {activeSection === 'stats' && <StatsCards />}
-        {activeSection === 'categories' && <CategoriesSection />}
-        {activeSection === 'ads' && <AdList />}
-        {activeSection === 'banner' && <BannerSection />}
-        {activeSection === 'products' && <ProductsSection />}
-        {activeSection === 'orders' && <OrdersComponent />}
-      </main>
+
+      {/* Main Content */}
+      <div className={`flex-1 transition-all duration-300 ${
+        isMobile 
+          ? 'ml-0' 
+          : sidebarCollapsed 
+            ? 'ml-16' 
+            : 'ml-64'
+      }`}>
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors group"
+              aria-label={isMobile ? 'Toggle menu' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+            >
+              {isMobile ? (
+                mobileMenuOpen ? <X size={20} className="text-gray-600" /> : <Menu size={20} className="text-gray-600" />
+              ) : (
+                sidebarCollapsed ? <PanelLeft size={20} className="text-gray-600 group-hover:text-blue-600" /> : <PanelLeftClose size={20} className="text-gray-600 group-hover:text-blue-600" />
+              )}
+            </button>
+            
+            {!isMobile && !sidebarCollapsed && (
+              <div className="text-lg font-semibold text-gray-900 hidden lg:block">
+                Dashboard
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium text-gray-700 hidden sm:block">
+              {user ? `${user.firstName || 'User'} ${user.lastName || ''}` : 'Admin'}
+            </div>
+            {user?.image && user.image.length > 0 ? (
+              <img
+                src={user.image[0]}
+                alt="User"
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-white shadow-sm"
+              />
+            ) : (
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-sm font-semibold">
+                  {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <main className={`p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 transition-all duration-300 ${
+          isMobile ? '' : sidebarCollapsed ? 'lg:px-8' : 'lg:px-8'
+        }`}>
+          <div className="max-w-full">
+            {activeSection === 'stats' && <StatsCards />}
+            {activeSection === 'categories' && <CategoriesSection />}
+            {activeSection === 'ads' && <AdList />}
+            {activeSection === 'banner' && <BannerSection />}
+            {activeSection === 'products' && <ProductsSection />}
+            {activeSection === 'orders' && <OrdersComponent />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

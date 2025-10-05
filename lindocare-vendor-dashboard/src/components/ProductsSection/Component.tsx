@@ -605,39 +605,69 @@ const ProductsSection: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-6">
+    <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 md:p-6">
         {/* Filter/Sort/Search Bar */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <select className="border rounded px-3 py-2 text-sm text-gray-700" value={selectedCategory} onChange={e => { 
-            setSelectedCategory(e.target.value); 
-            setCurrentPage(1); 
-            console.log('Selected category:', e.target.value); // Debug log
-          }}>
-            <option value="">Category</option>
-            {categories.map(cat => (
-              <option key={cat._id} value={cat._id}>{cat.name}</option>
-            ))}
-          </select>
-          <select className="border rounded px-3 py-2 text-sm text-gray-700" value={selectedStatus} onChange={e => { setSelectedStatus(e.target.value); setCurrentPage(1); }}>
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <select className="border rounded px-3 py-2 text-sm text-gray-700" value={selectedPrice} onChange={e => { setSelectedPrice(e.target.value); setCurrentPage(1); }}>
-            <option value="">Price</option>
-            <option value="1">$0 - $50</option>
-            <option value="2">$50 - $100</option>
-          </select>
-          <select className="border rounded px-3 py-2 text-sm text-gray-700" value={selectedStore} onChange={e => { setSelectedStore(e.target.value); setCurrentPage(1); }}>
-            <option value="">All Stores</option>
-            <option value="store1">Store 1</option>
-            <option value="store2">Store 2</option>
-          </select>
-          <input type="text" placeholder="Search product..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="border rounded px-3 py-2 text-sm text-gray-700 flex-1 min-w-[180px]" />
-          <button className="ml-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2" onClick={openModal}>
-            <Plus size={16} /> Add Product
-          </button>
+        <div className="space-y-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <input 
+              type="text" 
+              placeholder="Search product..." 
+              value={searchTerm} 
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+              className="border rounded-lg px-4 py-3 text-sm text-gray-700 flex-1 min-w-[200px] focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+            />
+            <button className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors" onClick={openModal}>
+              <Plus size={18} /> Add Product
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <select 
+              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+              value={selectedCategory} 
+              onChange={e => { 
+                setSelectedCategory(e.target.value); 
+                setCurrentPage(1); 
+                console.log('Selected category:', e.target.value);
+              }}
+            >
+              <option value="">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat._id} value={cat._id}>{cat.name}</option>
+              ))}
+            </select>
+            
+            <select 
+              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+              value={selectedStatus} 
+              onChange={e => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            
+            <select 
+              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+              value={selectedPrice} 
+              onChange={e => { setSelectedPrice(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">All Prices</option>
+              <option value="1">$0 - $50</option>
+              <option value="2">$50 - $100</option>
+            </select>
+            
+            <select 
+              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+              value={selectedStore} 
+              onChange={e => { setSelectedStore(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">All Stores</option>
+              <option value="store1">Store 1</option>
+              <option value="store2">Store 2</option>
+            </select>
+          </div>
         </div>
         {/* Table */}
         <div className="overflow-x-auto rounded-xl border border-gray-100 mt-4">
@@ -651,14 +681,16 @@ const ProductsSection: React.FC = () => {
           )}
           <table className="min-w-full text-sm text-left">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3"><input type="checkbox" /></th>
-                <th className="px-4 py-3">Product Name</th>
-                <th className="px-4 py-3">Purchase Unit Price</th>
-                <th className="px-4 py-3">Products</th>
-                <th className="px-4 py-3">Views</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Action</th>
+              <tr className="bg-gradient-to-r from-purple-600 to-purple-700 text-white">
+                <th className="px-4 py-4 hidden sm:table-cell">
+                  <input type="checkbox" className="rounded" />
+                </th>
+                <th className="px-4 py-4 font-semibold">Product</th>
+                <th className="px-4 py-4 font-semibold hidden md:table-cell">Price</th>
+                <th className="px-4 py-4 font-semibold hidden lg:table-cell">Stock</th>
+                <th className="px-4 py-4 font-semibold hidden lg:table-cell">Views</th>
+                <th className="px-4 py-4 font-semibold">Status</th>
+                <th className="px-4 py-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

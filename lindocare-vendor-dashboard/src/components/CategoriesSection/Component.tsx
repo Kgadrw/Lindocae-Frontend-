@@ -627,12 +627,16 @@ const CategoriesSection: React.FC = () => {
   });
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-6">
+    <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 md:p-6">
         {/* Filter/Sort/Search Bar */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <input type="text" placeholder="Search category..." className="border rounded px-3 py-2 text-sm text-gray-700 flex-1 min-w-[180px]" />
-          <button className="ml-auto bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2" onClick={openCreateModal}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+          <input 
+            type="text" 
+            placeholder="Search category..." 
+            className="border rounded-lg px-4 py-3 text-sm text-gray-700 flex-1 min-w-[200px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+          />
+          <button className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors" onClick={openCreateModal}>
             + Create Category
           </button>
         </div>
@@ -640,13 +644,15 @@ const CategoriesSection: React.FC = () => {
         <div className="overflow-x-auto rounded-xl border border-gray-100">
           <table className="min-w-full text-sm text-left">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3"><input type="checkbox" /></th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3">Products</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3 text-center">Action</th>
+              <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                <th className="px-4 py-4 hidden sm:table-cell">
+                  <input type="checkbox" className="rounded" />
+                </th>
+                <th className="px-4 py-4 font-semibold">Category</th>
+                <th className="px-4 py-4 font-semibold hidden lg:table-cell">Description</th>
+                <th className="px-4 py-4 font-semibold">Products</th>
+                <th className="px-4 py-4 font-semibold hidden md:table-cell">Created</th>
+                <th className="px-4 py-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

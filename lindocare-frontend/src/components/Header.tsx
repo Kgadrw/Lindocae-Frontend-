@@ -565,27 +565,27 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       {/* Simple Modern Mobile Header - Fixed */}
       <div className="block md:hidden bg-white border-b border-gray-100">
         {/* Main Header Row */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-3 py-2.5">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <Image
               src="/lindo.png"
               alt="Lindo Logo"
-              width={100}
-              height={40}
+              width={90}
+              height={36}
               className="focus:outline-none hover:opacity-80 transition-opacity"
               style={{ width: 'auto', height: 'auto' }}
             />
           </Link>
           
           {/* Action Icons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {/* Wishlist */}
             <Link href="/wishlist">
-              <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                <Heart size={22} className="stroke-gray-600" strokeWidth={2} />
+              <button className="relative p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
+                <Heart size={20} className="stroke-gray-600" strokeWidth={2} />
                 {wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs font-bold rounded-full px-1 py-0.5 min-w-[16px] text-center">
                     {wishlistCount > 99 ? '99+' : wishlistCount}
                   </span>
                 )}
@@ -594,10 +594,10 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             
             {/* Cart */}
             <Link href="/cart">
-              <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                <ShoppingCart size={22} className="stroke-gray-600" strokeWidth={2} />
+              <button className="relative p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
+                <ShoppingCart size={20} className="stroke-gray-600" strokeWidth={2} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                  <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-xs font-bold rounded-full px-1 py-0.5 min-w-[16px] text-center">
                     {cartCount > 99 ? '99+' : cartCount}
                   </span>
                 )}
@@ -614,19 +614,19 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                   <Image
                     src={user.avatar}
                     alt={user.name}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full object-cover"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm font-semibold">
+                  <div className="w-7 h-7 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs font-semibold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
               </button>
             ) : (
               <Link href="/login">
-                <button className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+                <button className="px-2 py-1 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors">
                   Login
                 </button>
               </Link>
@@ -635,10 +635,10 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             {/* Menu */}
             <button
               onClick={() => setNavOpen(true)}
-              className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors"
               aria-label="Menu"
             >
-              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-600">
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-600">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
@@ -648,9 +648,9 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         </div>
 
         {/* Fixed Search Bar */}
-        <div className="px-4 pb-3">
+        <div className="px-3 pb-2.5">
           <form onSubmit={handleSearch} autoComplete="off">
-            <div className="relative flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
+            <div className="relative flex items-center bg-gray-50 rounded-lg border border-gray-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
               <input
                 type="text"
                 value={search}
@@ -658,16 +658,16 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 onFocus={() => { if (search) setShowSuggestions(true); }}
                 onBlur={handleBlur}
                 ref={searchInputRef}
-                placeholder="Search for baby products..."
-                className="w-full bg-transparent text-gray-900 px-4 py-3 pr-12 focus:outline-none text-sm placeholder:text-gray-500 rounded-xl"
+                placeholder="Search products..."
+                className="w-full bg-transparent text-gray-900 px-3 py-2.5 pr-10 focus:outline-none text-sm placeholder:text-gray-500 rounded-lg"
                 onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
               />
               <button 
                 type="submit" 
-                className="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+                className="absolute right-1.5 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-md transition-colors"
                 aria-label="Search"
               >
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8"/>
                   <path d="M21 21l-4.35-4.35"/>
                 </svg>
@@ -696,7 +696,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
       </div>
 
       {/* Main Nav (logo, icons, search for desktop) */}
-      <div className="hidden md:flex items-center justify-between px-2 py-1 gap-2 md:px-4 md:py-1">
+      <div className="hidden md:flex items-center justify-between px-2 py-1 gap-2 md:px-4 md:py-1 lg:px-6">
         {/* Logo */}
         <div className="flex items-center gap-1 flex-shrink-0">
           <Link href="/">
@@ -705,7 +705,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         </div>
         {/* Category Navigation */}
         {propCategories && propCategories.length > 0 && (
-          <nav className="flex gap-2 ml-4 relative">
+          <nav className="hidden lg:flex gap-2 ml-4 relative">
             {(propCategories.length > 4
               ? [
                   ...propCategories.slice(0, 4).map(cat => (
@@ -862,7 +862,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
 
         
         {/* Search Bar (desktop only) */}
-        <div className="hidden md:flex flex-1 justify-center max-w-xl w-full">
+        <div className="hidden md:flex flex-1 justify-center max-w-md lg:max-w-xl w-full mx-2">
           <div className="relative w-full">
             <form onSubmit={handleSearch} autoComplete="off" className="relative">
   {/* Gradient border: blue shades */}
@@ -876,7 +876,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
         onBlur={handleBlur}
         ref={searchInputRef}
         placeholder="Find babycare essentials..."
-        className="w-full rounded-full bg-white text-blue-700 px-4 py-2 pr-28 focus:outline-none text-base
+        className="w-full rounded-full bg-white text-blue-700 px-3 lg:px-4 py-2 pr-20 lg:pr-28 focus:outline-none text-sm lg:text-base
                    placeholder:text-gray-500 bg-clip-text"
         style={{
           backgroundImage: 'linear-gradient(to right, #3B82F6, #1D4ED8, #3B82F6)' // blue-500 → blue-700 → blue-500
@@ -886,22 +886,22 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
 
       <button
         type="submit"
-        className="absolute right-1 top-1/2 -translate-y-1/2 bg-blue-700 text-white px-3 py-1 rounded-full cursor-pointer flex items-center space-x-1 transition-all duration-300 overflow-hidden max-w-[40px] hover:max-w-[120px]"
+        className="absolute right-1 top-1/2 -translate-y-1/2 bg-blue-700 text-white px-2 lg:px-3 py-1 rounded-full cursor-pointer flex items-center space-x-1 transition-all duration-300 overflow-hidden max-w-[36px] lg:max-w-[40px] hover:max-w-[100px] lg:hover:max-w-[120px]"
         aria-label="Search"
       >
         <svg
-          width="20"
-          height="20"
+          width="18"
+          height="18"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
           viewBox="0 0 24 24"
-          className="flex-shrink-0"
+          className="flex-shrink-0 lg:w-5 lg:h-5"
         >
           <circle cx="11" cy="11" r="8"/>
           <path d="M21 21l-4.35-4.35"/>
         </svg>
-        <span className="opacity-0 hover:opacity-100 whitespace-nowrap transition-opacity duration-300">
+        <span className="opacity-0 hover:opacity-100 whitespace-nowrap transition-opacity duration-300 text-sm">
           Search
         </span>
       </button>
@@ -927,9 +927,9 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           </div>
         </div>
         {/* Icons (desktop only) */}
-        <div className="hidden md:flex items-center gap-2 text-xl px-4 relative">
+        <div className="hidden md:flex items-center gap-1 lg:gap-2 text-xl px-2 lg:px-4 relative">
           {/* Location */}
-          <div className="flex items-center gap-1 text-sm font-medium text-black group cursor-pointer">
+          <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-black group cursor-pointer">
   <MapPin
     size={16}
     className="stroke-white fill-blue-600 transition-colors group-hover:stroke-white group-hover:fill-blue-800"
@@ -938,26 +938,26 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
 </div>
 
 {/* Currency */}
-<div className="text-black text-sm font-medium">RWF</div>
+<div className="hidden lg:block text-black text-sm font-medium">RWF</div>
 
           {/* Wishlist */}
           {/* Wishlist */}
 <Link href="/wishlist">
   <button
     aria-label="Wishlist"
-    className="rounded-full p-2 transition-colors flex flex-col items-center relative cursor-pointer group"
+    className="rounded-full p-1.5 lg:p-2 transition-colors flex flex-col items-center relative cursor-pointer group"
   >
     <Heart
-      size={22}
+      size={20}
       strokeWidth={2.5}
-      className={`cursor-pointer transition-colors ${
+      className={`cursor-pointer transition-colors lg:w-[22px] lg:h-[22px] ${
         pathname === '/wishlist'
           ? 'stroke-blue-600 fill-blue-600'
           : 'stroke-black fill-none group-hover:stroke-blue-600 group-hover:fill-blue-600'
       }`}
     />
     {wishlistCount > 0 && (
-      <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+      <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] lg:min-w-[20px] text-center border-2 border-white shadow">
         {wishlistCount}
       </span>
     )}
@@ -968,19 +968,19 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
 <Link href="/cart">
   <button
     aria-label="Cart"
-    className="rounded-full p-2 transition-colors flex flex-col items-center relative cursor-pointer group"
+    className="rounded-full p-1.5 lg:p-2 transition-colors flex flex-col items-center relative cursor-pointer group"
   >
     <ShoppingCart
-      size={22}
+      size={20}
       strokeWidth={2.5}
-      className={`cursor-pointer transition-colors ${
+      className={`cursor-pointer transition-colors lg:w-[22px] lg:h-[22px] ${
         pathname === '/cart'
           ? 'stroke-blue-600 fill-blue-600'
           : 'stroke-black fill-none group-hover:stroke-blue-600 group-hover:fill-blue-600'
       }`}
     />
     {cartCount > 0 && (
-      <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center border-2 border-white shadow">
+      <span className="absolute -top-1 -right-1 bg-yellow-400 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] lg:min-w-[20px] text-center border-2 border-white shadow">
         {cartCount}
       </span>
     )}
@@ -991,12 +991,12 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
 <Link href="/checkout">
   <button
     aria-label="Checkout"
-    className="rounded-full p-2 transition-colors flex flex-col items-center cursor-pointer group"
+    className="rounded-full p-1.5 lg:p-2 transition-colors flex flex-col items-center cursor-pointer group"
   >
     <Lock
-      size={22}
+      size={20}
       strokeWidth={2.5}
-      className={`cursor-pointer transition-colors ${
+      className={`cursor-pointer transition-colors lg:w-[22px] lg:h-[22px] ${
         pathname === '/checkout'
           ? 'stroke-blue-600 fill-blue-600'
           : 'stroke-black fill-none group-hover:stroke-blue-600 group-hover:fill-blue-600'
@@ -1010,39 +1010,40 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
             {user ? (
               <button
                 aria-label="User"
-                className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-2 transition-colors flex flex-col items-center cursor-pointer`}
+                className={`hover:text-[#FFE600] focus:text-[#FFE600] rounded-full p-1.5 lg:p-2 transition-colors flex flex-col items-center cursor-pointer`}
                 onClick={() => setDropdownOpen(v => !v)}
               >
                 {user.avatar ? (
                   <Image
                     src={user.avatar}
                     alt={user.name}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7 lg:w-8 lg:h-8 rounded-full object-cover border-2 border-gray-200"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm font-bold border-2 border-gray-200">
+                  <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs lg:text-sm font-bold border-2 border-gray-200">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
                 {pathname === '/account' && (
-                  <span className="block h-0.5 bg-black w-6 rounded-full mt-1" />
+                  <span className="block h-0.5 bg-black w-5 lg:w-6 rounded-full mt-1" />
                 )}
               </button>
             ) : (
               <div className="flex gap-1">
                 <Link href="/login">
                   <button
-                    className="px-2 py-1 rounded-md bg-black text-white text-xs font-semibold hover:shadow transition cursor-pointer"
+                    className="px-1.5 lg:px-2 py-1 rounded-md bg-black text-white text-xs font-semibold hover:shadow transition cursor-pointer"
                     style={{ minWidth: 0 }}
                   >
-                    Create Account
+                    <span className="hidden lg:inline">Create Account</span>
+                    <span className="lg:hidden">Sign Up</span>
                   </button>
                 </Link>
                 <Link href="/login">
                   <button
-                    className="px-2 py-1 rounded-md bg-[#FFE600] text-[#2056A7] hover:shadow text-xs font-semibold transition cursor-pointer"
+                    className="px-1.5 lg:px-2 py-1 rounded-md bg-[#FFE600] text-[#2056A7] hover:shadow text-xs font-semibold transition cursor-pointer"
                     style={{ minWidth: 0 }}
                   >
                     Sign In

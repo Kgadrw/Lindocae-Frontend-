@@ -155,9 +155,10 @@ export async function fetchUserCart(): Promise<CartItem[]> {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
-        errorData
+        errorData,
       });
-      throw new Error(errorData.message || `Failed to fetch cart from server (${response.status}: ${response.statusText})`);
+      const errorMessage = errorData.message || `Failed to fetch cart from server (${response.status}: ${response.statusText})`;
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
