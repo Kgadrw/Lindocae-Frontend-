@@ -488,7 +488,7 @@ export default function CheckoutPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
+          <h1 className="text-3xl font-bold text-blue-700 mb-2">Checkout</h1>
           <p className="text-gray-600">Complete your order securely</p>
           
           {/* Connection Status */}
@@ -938,12 +938,12 @@ export default function CheckoutPage() {
                     <li>Follow the voice prompts</li>
                     <li>Enter the amount: <strong>{formatRWF(total)} RWF</strong></li>
                     <li>Enter your PIN to confirm</li>
-                    <li>Contact us with your order ID for confirmation</li>
+                    <li>Contact us <span className="font-bold">: 0795575622 </span> for confirmation</li>
                   </ol>
                 </div>
                 <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded">
                   <p className="text-xs text-blue-800">
-                    <strong>Note:</strong> This is a manual payment option. Please include your Order ID when making payment.
+                    <strong>Note:</strong> This is a manual payment option. Please Ignore DPO payment option after completing order 
                   </p>
                 </div>
               </div>
