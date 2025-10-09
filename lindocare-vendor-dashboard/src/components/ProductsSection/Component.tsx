@@ -8,7 +8,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  category: string;
+  category: string | { _id: string; name: string };
   stockType: 'in_store' | 'online';
   quantity: number;
   shippingInfo: {
@@ -180,11 +180,17 @@ const ProductsSection: React.FC = () => {
 
   const openEditModal = (product: Product) => {
     setEditProduct(product);
+    
+    // Extract category ID if it's an object
+    const categoryId = typeof product.category === 'object' 
+      ? (product.category as any)._id || '' 
+      : product.category || '';
+    
     setProductForm({
       name: product.name,
       description: product.description,
       price: product.price.toString(),
-      category: product.category,
+      category: categoryId,
       stockType: product.stockType,
       quantity: product.quantity.toString(),
       shippingProvider: product.shippingInfo.provider,
@@ -300,7 +306,17 @@ const ProductsSection: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {categories.find(c => c._id === product.category)?.name || product.category}
+                      {(() => {
+                        // If category is an object, extract the name
+                        if (typeof product.category === 'object' && product.category) {
+                          return (product.category as any).name || 'N/A';
+                        }
+                        // If category is a string ID, find it in categories array
+                        if (typeof product.category === 'string') {
+                          return categories.find(c => c._id === product.category)?.name || product.category;
+                        }
+                        return 'N/A';
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       RWF {product.price.toLocaleString()}
