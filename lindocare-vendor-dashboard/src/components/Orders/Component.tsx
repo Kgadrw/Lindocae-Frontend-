@@ -127,9 +127,16 @@ const OrdersComponent: React.FC = () => {
     ? orders 
     : orders.filter(o => o.status === selectedStatus);
 
-  const normalizeImageUrl = (url: string) => {
+  const normalizeImageUrl = (url: any) => {
     if (!url) return '';
-    return url.startsWith('http') ? url : `https://lindo-project.onrender.com/${url}`;
+    // Handle array of images
+    if (Array.isArray(url)) {
+      url = url[0];
+    }
+    // Convert to string if not already
+    const urlString = typeof url === 'string' ? url : String(url);
+    if (!urlString) return '';
+    return urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
   };
 
   return (

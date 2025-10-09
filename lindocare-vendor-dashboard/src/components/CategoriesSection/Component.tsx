@@ -22,10 +22,10 @@ const CategoriesSection: React.FC = () => {
     try {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
       let openLock: string | null = null;
-      if (stored) {
+        if (stored) {
         const parsed = JSON.parse(stored);
-        openLock = parsed?.user?.tokens?.accessToken || null;
-      }
+          openLock = parsed?.user?.tokens?.accessToken || null;
+        }
       const headers: Record<string, string> = {};
       if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
       const res = await fetch(`${API_URL}/getAllCategories`, { headers });
@@ -74,10 +74,10 @@ const CategoriesSection: React.FC = () => {
       const res = await fetch(url, { method, body: formData });
       
       if (res.ok) {
-        setShowModal(false);
-        setEditCategory(null);
-        setForm({ name: '', description: '', image: null });
-        fetchCategories();
+          setShowModal(false);
+          setEditCategory(null);
+          setForm({ name: '', description: '', image: null });
+          fetchCategories();
         setSuccessMessage(editCategory ? 'Category updated!' : 'Category created!');
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -102,7 +102,7 @@ const CategoriesSection: React.FC = () => {
       if (res.ok) {
         fetchCategories();
         setSuccessMessage('Category deleted!');
-        setTimeout(() => setSuccessMessage(''), 3000);
+          setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -126,9 +126,16 @@ const CategoriesSection: React.FC = () => {
     setShowModal(true);
   };
 
-  const normalizeImageUrl = (url: string) => {
+  const normalizeImageUrl = (url: any) => {
     if (!url) return '';
-    return url.startsWith('http') ? url : `https://lindo-project.onrender.com/${url}`;
+    // Handle array of images
+    if (Array.isArray(url)) {
+      url = url[0];
+    }
+    // Convert to string if not already
+    const urlString = typeof url === 'string' ? url : String(url);
+    if (!urlString) return '';
+    return urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
   };
 
   return (
@@ -139,14 +146,14 @@ const CategoriesSection: React.FC = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Categories</h1>
           <p className="text-sm text-gray-500 mt-1">Manage product categories</p>
         </div>
-        <button
+                        <button
           onClick={openAddModal}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
         >
           <Plus size={18} />
           Add Category
-        </button>
-      </div>
+                                      </button>
+                                    </div>
 
       {/* Success Message */}
       {successMessage && (
@@ -182,13 +189,13 @@ const CategoriesSection: React.FC = () => {
                 )}
                 {/* Action Buttons Overlay */}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
+                      <button
                     onClick={() => openEditModal(cat)}
                     className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                  >
+                      >
                     <Edit2 size={18} className="text-gray-700" />
-                  </button>
-                  <button
+                      </button>
+                      <button
                     onClick={() => {
                       setCategoryToDelete(cat);
                       setShowDeleteModal(true);
@@ -196,7 +203,7 @@ const CategoriesSection: React.FC = () => {
                     className="p-2 bg-white rounded-lg hover:bg-red-50 transition-colors"
                   >
                     <Trash2 size={18} className="text-red-600" />
-                  </button>
+                      </button>
                 </div>
               </div>
               {/* Content */}
@@ -206,8 +213,8 @@ const CategoriesSection: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-      )}
+          </div>
+        )}
 
       {/* Add/Edit Modal */}
       {showModal && (
@@ -229,9 +236,9 @@ const CategoriesSection: React.FC = () => {
                 </div>
               )}
 
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
+                  <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -248,22 +255,22 @@ const CategoriesSection: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                   rows={3}
                   placeholder="Category description"
-                />
-              </div>
+                  />
+                </div>
 
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
-                <input
+                    <input
                   ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
+                      type="file"
+                      accept="image/*"
                   onChange={(e) => setForm({ ...form, image: e.target.files?.[0] || null })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
                 {form.image && (
                   <p className="text-xs text-gray-500 mt-1">Selected: {form.image.name}</p>
                 )}
-              </div>
+            </div>
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -283,8 +290,8 @@ const CategoriesSection: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      )}
+          </div>
+        )}
 
       {/* Delete Modal */}
       {showDeleteModal && (
@@ -301,18 +308,18 @@ const CategoriesSection: React.FC = () => {
               >
                 Cancel
               </button>
-              <button
+                  <button
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
-              </button>
+                  </button>
+            </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };
 
-export default CategoriesSection;
+export default CategoriesSection; 
