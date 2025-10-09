@@ -424,9 +424,11 @@ const ProductsSection: React.FC = () => {
                     required
                   >
                     <option value="">Select category</option>
-                    {categories.map(cat => (
-                      <option key={cat._id} value={cat._id}>{cat.name}</option>
-                    ))}
+                  {categories.map(cat => (
+                    <option key={cat._id || 'cat-' + Math.random()} value={cat._id}>
+                      {typeof cat.name === 'string' ? cat.name : String(cat.name || 'Category')}
+                    </option>
+                  ))}
                   </select>
                 </div>
 

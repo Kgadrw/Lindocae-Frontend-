@@ -142,10 +142,16 @@ const BannerSection: React.FC = () => {
 
   const openEditModal = (banner: any) => {
     setEditBanner(banner);
+    
+    // Extract category ID if it's an object
+    const categoryId = typeof banner.categoryId === 'object' 
+      ? (banner.categoryId as any)._id || '' 
+      : banner.categoryId || '';
+    
     setForm({ 
       title: banner.title, 
       subTitle: banner.subTitle, 
-      categoryId: banner.categoryId || '', 
+      categoryId: categoryId, 
       image: null 
     });
     setFormError('');
@@ -319,7 +325,9 @@ const BannerSection: React.FC = () => {
                 >
                   <option value="">Select category</option>
                   {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    <option key={cat._id || cat.id} value={cat._id || cat.id}>
+                      {typeof cat.name === 'string' ? cat.name : String(cat.name || 'Category')}
+                    </option>
                   ))}
                 </select>
               </div>

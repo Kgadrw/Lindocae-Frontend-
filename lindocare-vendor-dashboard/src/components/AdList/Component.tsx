@@ -141,12 +141,18 @@ const AdList: React.FC = () => {
 
   const openEditModal = (ad: any) => {
     setEditAd(ad);
+    
+    // Extract category ID if it's an object
+    const categoryId = typeof ad.categoryId === 'object' 
+      ? (ad.categoryId as any)._id || '' 
+      : ad.categoryId || '';
+    
     setForm({ 
       title: ad.title, 
       content: ad.content, 
       buttonLabel: ad.buttonLabel, 
       link: ad.link, 
-      categoryId: ad.categoryId || '', 
+      categoryId: categoryId, 
       image: null 
     });
     setFormError('');
@@ -234,7 +240,9 @@ const AdList: React.FC = () => {
                       {ad.buttonLabel}
                     </span>
                     {ad.categoryId && (
-                      <span className="text-xs text-gray-500">Category: {ad.categoryId}</span>
+                      <span className="text-xs text-gray-500">
+                        Category: {typeof ad.categoryId === 'object' ? (ad.categoryId as any).name || 'N/A' : String(ad.categoryId)}
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -341,7 +349,9 @@ const AdList: React.FC = () => {
                 >
                   <option value="">Select category</option>
                   {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    <option key={cat._id || cat.id} value={cat._id || cat.id}>
+                      {typeof cat.name === 'string' ? cat.name : String(cat.name || 'Category')}
+                    </option>
                   ))}
                 </select>
               </div>
