@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit, Trash2, Upload, X, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, Package } from 'lucide-react';
 
 interface Product {
   _id: string;
-  id?: string;
   name: string;
   description: string;
   price: number;
@@ -17,9 +16,7 @@ interface Product {
     estimatedDeliveryDays: number;
   };
   images?: string[];
-  image?: string;
   isActive?: boolean;
-  views?: number; // Add this line
 }
 
 interface Category {
@@ -27,17 +24,7 @@ interface Category {
   name: string;
 }
 
-const PAGE_SIZE = 10;
-
 const ProductsSection: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedPrice, setSelectedPrice] = useState('');
-  const [selectedStore, setSelectedStore] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [sortBy, setSortBy] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -45,9 +32,8 @@ const ProductsSection: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
-  const [imagePreview, setImagePreview] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
 
@@ -63,94 +49,30 @@ const ProductsSection: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchProducts(currentPage);
+    fetchProducts();
     fetchCategories();
-  }, [currentPage]);
+  }, []);
 
-  // Debounce search input
-  useEffect(() => {
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      fetchProducts(currentPage);
-    }, 400);
-    return () => {
-      if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    };
-    // eslint-disable-next-line
-  }, [searchTerm]);
-
-  // In useEffect, trigger fetchProducts on any filter change except searchTerm:
-  useEffect(() => {
-    fetchProducts(currentPage);
-    // eslint-disable-next-line
-  }, [currentPage, selectedCategory, selectedStatus, selectedPrice, selectedStore, sortBy]);
-
-  const fetchProducts = async (page = 1) => {
+  const fetchProducts = async () => {
     setLoading(true);
     try {
-      // passing The Token in The Local Storage
       const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
       let openLock: string | null = null;
-      try {
-        if (stored) {
-          const parsed = JSON.parse(stored); // back to object
-          openLock = parsed?.user?.tokens?.accessToken || null;
-          if (openLock) {
-            console.log(openLock);
-            console.log(openLock);
-          }
-        }
-      } catch {}
-
-      let url = `https://lindo-project.onrender.com/product/getAllProduct?page=${page}&limit=${PAGE_SIZE}`;
-      if (selectedCategory) url += `&category=${selectedCategory}`;
-      if (selectedStatus) url += `&status=${selectedStatus}`;
-      if (selectedPrice) url += `&priceRange=${selectedPrice}`;
-      if (selectedStore) url += `&store=${selectedStore}`;
-      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
-      if (sortBy) url += `&sort=${sortBy}`;
-      console.log('Fetching products with URL:', url); // Debug log
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        openLock = parsed?.user?.tokens?.accessToken || null;
+      }
       const headers: Record<string, string> = {};
       if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
-      const response = await fetch(url, { headers });
+      
+      const response = await fetch(`https://lindo-project.onrender.com/product/getAllProduct`, { headers });
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched products data:', data); // Debug log
-        
-        // Get products array
-        let allProducts = [];
-        if (Array.isArray(data.products)) {
-          allProducts = data.products;
-        } else if (Array.isArray(data)) {
-          allProducts = data;
-        }
-        
-        // Apply frontend filtering by category if selected
-        let filteredProducts = allProducts;
-        if (selectedCategory) {
-          filteredProducts = allProducts.filter((product: any) => {
-            // Handle different category field formats
-            const productCategory = product.category;
-            if (typeof productCategory === 'string') {
-              return productCategory === selectedCategory;
-            } else if (productCategory && typeof productCategory === 'object') {
-              return productCategory._id === selectedCategory || productCategory.id === selectedCategory;
-            }
-            return false;
-          });
-          console.log('Filtered products by category:', selectedCategory, 'Result count:', filteredProducts.length);
-        }
-        
-        setProducts(filteredProducts);
-        setTotalProducts(filteredProducts.length);
-      } else {
-        setProducts([]);
-        setTotalProducts(0);
+        const productsArray = Array.isArray(data) ? data : data.products || [];
+        setProducts(productsArray);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts([]);
-      setTotalProducts(0);
     } finally {
       setLoading(false);
     }
@@ -158,420 +80,79 @@ const ProductsSection: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      // passing The Token in The Local Storage
       const stored = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
       let openLock: string | null = null;
-      try {
-        if (stored) {
-          const parsed = JSON.parse(stored); // back to object
-          openLock = parsed?.user?.tokens?.accessToken || null;
-        }
-      } catch {}
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        openLock = parsed?.user?.tokens?.accessToken || null;
+      }
       const headers: Record<string, string> = {};
       if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
+      
       const response = await fetch('https://lindo-project.onrender.com/category/getAllCategories', { headers });
       if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json();
-          console.log('Fetched categories:', data);
-          if (Array.isArray(data)) {
-            setCategories(data);
-          } else if (data && Array.isArray(data.categories)) {
-            setCategories(data.categories);
-          } else {
-            setCategories([]);
-          }
-        } else {
-          const text = await response.text();
-          console.error('Expected JSON but got:', text);
-          setCategories([]);
-        }
-      } else {
-        setCategories([]);
+        const data = await response.json();
+        const categoriesArray = Array.isArray(data) ? data : data.categories || [];
+        setCategories(categoriesArray);
       }
     } catch (error) {
-      setCategories([]);
+      console.error('Error fetching categories:', error);
     }
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setProductForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      setUploadedImages(Array.from(files));
-      setImagePreview(Array.from(files).map(file => URL.createObjectURL(file)));
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreview(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
+    
     try {
       const formData = new FormData();
-      if (uploadedImages.length > 0) {
-        uploadedImages.forEach(file => formData.append('image', file));
-      }
       formData.append('name', productForm.name);
       formData.append('description', productForm.description);
       formData.append('price', productForm.price);
       formData.append('category', productForm.category);
       formData.append('stockType', productForm.stockType);
       formData.append('quantity', productForm.quantity);
-      formData.append('shippingInfo', JSON.stringify({ provider: productForm.shippingProvider, estimatedDeliveryDays: productForm.estimatedDeliveryDays }));
-
-      if (editProduct) {
-        // Try multiple endpoint patterns for updating products
-        const updateEndpoints = [
-          { url: `https://lindo-project.onrender.com/product/updateProductById/${editProduct._id}`, method: 'PUT' },
-          { url: `https://lindo-project.onrender.com/product/updateProduct/${editProduct._id}`, method: 'PUT' },
-          { url: `https://lindo-project.onrender.com/product/update/${editProduct._id}`, method: 'PUT' },
-          { url: `https://lindo-project.onrender.com/product/${editProduct._id}`, method: 'PUT' },
-          { url: `https://lindo-project.onrender.com/product/updateProductById/${editProduct._id}`, method: 'PATCH' },
-          { url: `https://lindo-project.onrender.com/product/updateProduct/${editProduct._id}`, method: 'PATCH' },
-          { url: `https://lindo-project.onrender.com/product/update/${editProduct._id}`, method: 'PATCH' }
-        ];
-        
-        console.log('Trying multiple product update endpoints...');
-        let updateSuccess = false;
-        
-        for (const endpoint of updateEndpoints) {
-          try {
-            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-            
-            // Try both FormData and JSON formats
-            const attempts = [
-              { body: formData, headers: {} as Record<string, string> },
-              { 
-                body: JSON.stringify({
-                  name: productForm.name,
-                  description: productForm.description,
-                  price: parseFloat(productForm.price),
-                  category: productForm.category,
-                  stockType: productForm.stockType,
-                  quantity: parseInt(productForm.quantity),
-                  shippingInfo: {
-                    provider: productForm.shippingProvider,
-                    estimatedDeliveryDays: parseInt(productForm.estimatedDeliveryDays)
-                  }
-                }), 
-                headers: { 'Content-Type': 'application/json' } as Record<string, string>
-              }
-            ];
-            
-            let endpointSuccess = false;
-            
-            for (const attempt of attempts) {
-              try {
-                console.log(`Trying with ${attempt.body instanceof FormData ? 'FormData' : 'JSON'}`);
-                if (attempt.body instanceof FormData) {
-                  console.log('FormData contents:');
-                  for (let [key, value] of attempt.body.entries()) {
-                    console.log(`${key}:`, value);
-                  }
-                } else {
-                  console.log('JSON body:', attempt.body);
-                }
-                
-                const response = await fetch(endpoint.url, { 
-                  method: endpoint.method, 
-                  body: attempt.body,
-                  headers: attempt.headers
-                });
-                
-                console.log(`Response status: ${response.status}`);
-                console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
-                
-                // Try to read response content for debugging
-                let responseText = '';
-                try {
-                  responseText = await response.text();
-                  console.log(`Response body:`, responseText.substring(0, 500));
-                } catch (readError) {
-                  console.log('Could not read response body:', readError);
-                }
-                
-                if (response.status === 200 || response.status === 201) {
-                  console.log(`Product update successful with: ${endpoint.method} ${endpoint.url} using ${attempt.body instanceof FormData ? 'FormData' : 'JSON'}`);
-                  updateSuccess = true;
-                  endpointSuccess = true;
-                  break;
-                } else if (response.status === 404) {
-                  console.log(`404 with: ${endpoint.method} ${endpoint.url}`);
-                  continue; // Try next format
-                } else {
-                  console.log(`Error ${response.status} with: ${endpoint.method} ${endpoint.url}`);
-                  console.log(`Error response:`, responseText);
-                  // Try next format
-                }
-              } catch (formatError) {
-                console.log(`Format error with ${attempt.body instanceof FormData ? 'FormData' : 'JSON'}:`, formatError);
-                continue; // Try next format
-              }
-            }
-            
-            if (endpointSuccess) break;
-            
-          } catch (error) {
-            console.log(`Network error with: ${endpoint.method} ${endpoint.url}`, error);
-            continue; // Try next endpoint
-          }
-        }
-        
-        if (updateSuccess) {
-          setShowModal(false);
-          setEditProduct(null);
-          resetForm();
-          fetchProducts(currentPage); // Re-fetch current page after save
-          setSuccessMessage('Product updated successfully!');
-          setTimeout(() => setSuccessMessage(''), 3000);
-          return;
-        }
-        
-        // If all update endpoints failed, try create+delete fallback
-        console.log('All product update endpoints failed, trying create+delete fallback...');
-        
-        try {
-          console.log('Creating new product...');
-          const createRes = await fetch('https://lindo-project.onrender.com/product/createProduct', { 
-            method: 'POST', 
-            body: formData 
-          });
-          
-          console.log('Create response status:', createRes.status);
-          
-          if (createRes.status === 200 || createRes.status === 201) {
-            console.log('New product created successfully');
-            
-            // Try to delete the old product
-            try {
-              console.log('Deleting old product...');
-              await fetch(`https://lindo-project.onrender.com/product/deleteProduct/${editProduct._id}`, { 
-                method: 'DELETE' 
-              });
-              console.log('Old product deleted successfully');
-            } catch (deleteError) {
-              console.log('Could not delete old product:', deleteError);
-              // Don't fail the operation if delete fails
-            }
-            
-            setShowModal(false);
-            setEditProduct(null);
-            resetForm();
-            fetchProducts(currentPage);
-            setSuccessMessage('Product updated successfully! (Used create+delete method)');
-            setTimeout(() => setSuccessMessage(''), 3000);
-            return;
-          } else {
-            const createResponseText = await createRes.text();
-            console.error('Create failed:', createResponseText.substring(0, 500));
-            throw new Error(`Create failed. Status: ${createRes.status}`);
-          }
-        } catch (createError: any) {
-          console.error('Create fallback also failed:', createError);
-          
-          // Final fallback: Update locally and show warning
-          console.log('Using client-side update as final fallback...');
-          const updatedProducts = products.map(prod => {
-            if (prod._id === editProduct._id) {
-              return {
-                ...prod,
-                name: productForm.name,
-                description: productForm.description,
-                price: parseFloat(productForm.price),
-                category: productForm.category,
-                stockType: productForm.stockType,
-                quantity: parseInt(productForm.quantity),
-                shippingInfo: {
-                  provider: productForm.shippingProvider,
-                  estimatedDeliveryDays: parseInt(productForm.estimatedDeliveryDays)
-                },
-                images: uploadedImages.length > 0 ? uploadedImages.map(file => URL.createObjectURL(file)) : prod.images
-              };
-            }
-            return prod;
-          });
-          
-          setProducts(updatedProducts);
-          setShowModal(false);
-          setEditProduct(null);
-          resetForm();
-          setSuccessMessage('Product updated locally (server endpoints unavailable)');
-          setTimeout(() => setSuccessMessage(''), 3000);
-          return;
-        }
-        
-      } else {
-        // Creating new product
-        console.log('Creating new product...');
-        const response = await fetch('https://lindo-project.onrender.com/product/createProduct', {
-          method: 'POST',
-          body: formData
-        });
-
-        console.log('Create response status:', response.status);
-
-        if (response.status === 201 || response.status === 200) {
-          setShowModal(false);
-          setEditProduct(null);
-          resetForm();
-          fetchProducts(currentPage);
-          setSuccessMessage('Product created successfully!');
-          setTimeout(() => setSuccessMessage(''), 3000);
-        } else {
-          const errorData = await response.json();
-          console.error('API Error Response:', errorData);
-          alert(errorData.message || `Error creating product. Status: ${response.status}`);
-        }
-      }
-    } catch (error: any) {
-      console.error('Network error details:', error);
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
+      formData.append('shippingInfo', JSON.stringify({
+        provider: productForm.shippingProvider,
+        estimatedDeliveryDays: Number(productForm.estimatedDeliveryDays)
+      }));
       
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        alert('Network connectivity issue. Please check your internet connection and try again.');
-      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        alert('Backend server is not responding. Please try again later.');
-      } else {
-        alert(`Network error: ${error.message || 'Unknown error occurred'}`);
+      uploadedImages.forEach((file) => formData.append('images', file));
+
+      const url = editProduct 
+        ? `https://lindo-project.onrender.com/product/updateProduct/${editProduct._id}`
+        : 'https://lindo-project.onrender.com/product/createProduct';
+      const method = editProduct ? 'PUT' : 'POST';
+
+      const response = await fetch(url, { method, body: formData });
+
+      if (response.ok) {
+        setShowModal(false);
+        resetForm();
+        fetchProducts();
+        setSuccessMessage(editProduct ? 'Product updated!' : 'Product created!');
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error saving product:', error);
     }
   };
 
-  const handleEdit = (product: Product) => {
-    setEditProduct(product);
-    setProductForm({
-      name: product.name || '',
-      description: product.description || '',
-      price: (product.price || 0).toString(),
-      category: typeof product.category === 'string' ? product.category : (product.category as any)?._id || (product.category as any)?.id || '',
-      stockType: product.stockType || 'in_store',
-      quantity: (product.quantity || 0).toString(),
-      shippingProvider: product.shippingInfo?.provider || '',
-      estimatedDeliveryDays: (product.shippingInfo?.estimatedDeliveryDays || 0).toString()
-    });
-    setShowModal(true);
-  };
-
-  const handleDeleteClick = (product: Product) => {
-    setProductToDelete(product);
-    setShowDeleteModal(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    setLoading(true);
-    console.log('Attempting to delete product with ID:', id);
+  const handleDelete = async () => {
+    if (!productToDelete) return;
 
     try {
-      // Try multiple endpoint patterns for deleting products
-      const deleteEndpoints = [
-        { url: `https://lindo-project.onrender.com/product/deleteProduct/${id}`, method: 'DELETE' },
-        { url: `https://lindo-project.onrender.com/product/delete/${id}`, method: 'DELETE' },
-        { url: `https://lindo-project.onrender.com/product/${id}`, method: 'DELETE' },
-        { url: `https://lindo-project.onrender.com/product/remove/${id}`, method: 'DELETE' },
-        { url: `https://lindo-project.onrender.com/product/removeProduct/${id}`, method: 'DELETE' },
-        { url: `https://lindo-project.onrender.com/product/deleteProductById/${id}`, method: 'DELETE' },
-        { url: `https://lindo-project.onrender.com/product/deleteById/${id}`, method: 'DELETE' },
-        // Try POST method for some endpoints
-        { url: `https://lindo-project.onrender.com/product/deleteProduct/${id}`, method: 'POST' },
-        { url: `https://lindo-project.onrender.com/product/delete/${id}`, method: 'POST' }
-      ];
+      const response = await fetch(`https://lindo-project.onrender.com/product/deleteProduct/${productToDelete._id}`, {
+        method: 'DELETE',
+      });
 
-      console.log('Trying multiple product delete endpoints...');
-      let deleteSuccess = false;
-      let lastError = '';
-
-      for (const endpoint of deleteEndpoints) {
-        try {
-          console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-          
-          const response = await fetch(endpoint.url, { 
-            method: endpoint.method,
-            headers: {
-              'Accept': 'application/json'
-            }
-          });
-          
-          console.log(`Response status: ${response.status}`);
-          console.log(`Response status text: ${response.statusText}`);
-          
-          // Try to read response content for debugging
-          let responseText = '';
-          try {
-            responseText = await response.text();
-            console.log(`Response body:`, responseText.substring(0, 500));
-          } catch (readError) {
-            console.log('Could not read response body:', readError);
-          }
-          
-          if (response.status === 200 || response.status === 201 || response.status === 204) {
-            console.log(`✅ Product delete successful with: ${endpoint.method} ${endpoint.url}`);
-            deleteSuccess = true;
-            break;
-          } else if (response.status === 404) {
-            console.log(`❌ 404 with: ${endpoint.method} ${endpoint.url}`);
-            lastError = `Endpoint not found: ${endpoint.url}`;
-            continue; // Try next endpoint
-          } else {
-            console.log(`❌ Error ${response.status} with: ${endpoint.method} ${endpoint.url}`);
-            console.log(`Error response:`, responseText);
-            lastError = `Server error ${response.status}: ${responseText}`;
-            // Don't break, try other endpoints
-          }
-        } catch (error) {
-          console.log(`❌ Network error with: ${endpoint.method} ${endpoint.url}`, error);
-          lastError = `Network error: ${error}`;
-          continue; // Try next endpoint
-        }
-      }
-
-      if (deleteSuccess) {
-        // Remove from local state immediately for better UX
-        setProducts(prev => prev.filter(product => product._id !== id));
-        setSuccessMessage('Product deleted successfully!');
-        setTimeout(() => setSuccessMessage(''), 3000);
-        
-        // Refresh from server to ensure consistency
-        fetchProducts(currentPage);
-      } else {
-        // If all server endpoints failed, remove locally and show warning
-        console.log('❌ All delete endpoints failed, removing locally...');
-        console.log('Last error:', lastError);
-        setProducts(prev => prev.filter(product => product._id !== id));
-        setSuccessMessage('Product removed locally (server endpoints unavailable)');
+      if (response.ok) {
+        fetchProducts();
+        setSuccessMessage('Product deleted!');
         setTimeout(() => setSuccessMessage(''), 3000);
       }
-
-    } catch (error: any) {
-      console.error('❌ Network error details:', error);
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        alert('Network connectivity issue. Please check your internet connection and try again.');
-      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        alert('Backend server is not responding. Please try again later.');
-      } else {
-        alert(`Network error: ${error.message || 'Unknown error occurred'}`);
-      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
     } finally {
-      setLoading(false);
       setShowDeleteModal(false);
       setProductToDelete(null);
     }
@@ -589,436 +170,332 @@ const ProductsSection: React.FC = () => {
       estimatedDeliveryDays: ''
     });
     setUploadedImages([]);
-    setImagePreview([]);
+    setEditProduct(null);
   };
 
-  const openModal = () => {
+  const openAddModal = () => {
+    resetForm();
     setShowModal(true);
-    setEditProduct(null);
-    resetForm();
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setEditProduct(null);
-    resetForm();
+  const openEditModal = (product: Product) => {
+    setEditProduct(product);
+    setProductForm({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      category: product.category,
+      stockType: product.stockType,
+      quantity: product.quantity.toString(),
+      shippingProvider: product.shippingInfo.provider,
+      estimatedDeliveryDays: product.shippingInfo.estimatedDeliveryDays.toString()
+    });
+    setUploadedImages([]);
+    setShowModal(true);
   };
+
+  const normalizeImageUrl = (url: string) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `https://lindo-project.onrender.com/${url}`;
+  };
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-4 md:p-6">
-        {/* Filter/Sort/Search Bar */}
-        <div className="space-y-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <input 
-              type="text" 
-              placeholder="Search product..." 
-              value={searchTerm} 
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
-              className="border rounded-lg px-4 py-3 text-sm text-gray-700 flex-1 min-w-[200px] focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
-            />
-            <button className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors" onClick={openModal}>
-              <Plus size={18} /> Add Product
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <select 
-              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
-              value={selectedCategory} 
-              onChange={e => { 
-                setSelectedCategory(e.target.value); 
-                setCurrentPage(1); 
-                console.log('Selected category:', e.target.value);
-              }}
-            >
-              <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat._id} value={cat._id}>{cat.name}</option>
-              ))}
-            </select>
-            
-            <select 
-              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
-              value={selectedStatus} 
-              onChange={e => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            
-            <select 
-              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
-              value={selectedPrice} 
-              onChange={e => { setSelectedPrice(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="">All Prices</option>
-              <option value="1">$0 - $50</option>
-              <option value="2">$50 - $100</option>
-            </select>
-            
-            <select 
-              className="border rounded-lg px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
-              value={selectedStore} 
-              onChange={e => { setSelectedStore(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="">All Stores</option>
-              <option value="store1">Store 1</option>
-              <option value="store2">Store 2</option>
-            </select>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Products</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your product inventory</p>
         </div>
-        {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-gray-100 mt-4">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
-              <svg className="animate-spin h-8 w-8 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-              </svg>
-            </div>
-          )}
-          <table className="min-w-full text-sm text-left">
-            <thead>
-              <tr className="bg-gradient-to-r from-purple-600 to-purple-700 text-white">
-                <th className="px-4 py-4 hidden sm:table-cell">
-                  <input type="checkbox" className="rounded" />
-                </th>
-                <th className="px-4 py-4 font-semibold">Product</th>
-                <th className="px-4 py-4 font-semibold hidden md:table-cell">Price</th>
-                <th className="px-4 py-4 font-semibold hidden lg:table-cell">Stock</th>
-                <th className="px-4 py-4 font-semibold hidden lg:table-cell">Views</th>
-                <th className="px-4 py-4 font-semibold">Status</th>
-                <th className="px-4 py-4 font-semibold text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {products.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-400">No products found for this category.</td></tr>
-              ) : (products as Product[]).map((product) => {
-                let imageUrl = null;
-                if (Array.isArray(product.images) && product.images.length > 0 && product.images[0]) {
-                  imageUrl = product.images[0].startsWith('http')
-                    ? product.images[0]
-                    : `https://lindo-project.onrender.com/${product.images[0]}`;
-                } else if (typeof product.image === 'string' && product.image) {
-                  imageUrl = product.image.startsWith('http')
-                    ? product.image
-                    : `https://lindo-project.onrender.com/${product.image}`;
-                }
-                // Debug log
-                console.log('Product:', product, 'Image URL:', imageUrl);
-                return (
-                  <tr key={product._id || product.id || Math.random()} className="hover:bg-gray-50">
-                    <td className="px-4 py-2"><input type="checkbox" /></td>
-                    <td className="px-4 py-2 flex items-center gap-3">
-                      {product.image?.[0] || product.image ? (
-                        <img src={product.image?.[0] || product.image} alt={product.name} className="w-10 h-10 object-cover rounded" />
-                      ) : (
-                        <div className="w-10 h-10 flex items-center justify-center text-gray-300 text-xl bg-gray-100 rounded">?</div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-gray-900">{product.name}</div>
-                        <div className="text-xs text-gray-400">SKU: {product._id?.slice(-6) || product.id?.slice(-6)}</div>
+        <button
+          onClick={openAddModal}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        >
+          <Plus size={18} />
+          Add Product
+        </button>
+      </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+        />
+      </div>
+
+      {/* Products Table */}
+      {loading ? (
+        <div className="text-center py-12 text-gray-500">Loading products...</div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <Package className="mx-auto mb-3 text-gray-400" size={48} />
+          <p>No products found</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredProducts.map((product) => (
+                  <tr key={product._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {product.images && product.images.length > 0 ? (
+                          <img
+                            src={normalizeImageUrl(product.images[0])}
+                            alt={product.name}
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <Package size={20} className="text-gray-400" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium text-gray-900">{product.name}</div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-gray-700">${product.price}</td>
-                    <td className="px-4 py-2 text-gray-700">{product.quantity}</td>
-                    <td className="px-4 py-2 text-gray-700">{product.views || Math.floor(Math.random() * 10000)}</td>
-                    <td className="px-4 py-2">
-                      <select className="border rounded px-2 py-1 text-xs text-gray-700 bg-white">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {categories.find(c => c._id === product.category)?.name || product.category}
                     </td>
-                    <td className="px-4 py-2">
-                      <div className="flex gap-2">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      RWF {product.price.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{product.quantity}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-block px-2 py-1 rounded text-xs ${
+                        product.stockType === 'online' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-600'
+                      }`}>
+                        {product.stockType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleEdit(product)}
-                          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                          onClick={() => openEditModal(product)}
+                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                         >
-                          <Edit size={14} /> Edit
+                          <Edit2 size={16} className="text-gray-600" />
                         </button>
                         <button
-                          onClick={() => handleDeleteClick(product)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                          onClick={() => {
+                            setProductToDelete(product);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
                         >
-                          <Trash2 size={14} /> Delete
+                          <Trash2 size={16} className="text-red-600" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination */}
-        <div className="flex justify-between items-center mt-6">
-          <div className="text-sm text-gray-500">Showing 1 to {products.length} of {totalProducts} products</div>
-          <div className="flex gap-1">
-            <button className="w-8 h-8 rounded bg-gray-200 text-gray-700 font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>&lt;</button>
-            {Array.from({ length: Math.ceil(totalProducts / PAGE_SIZE) }, (_, i) => (
-              <button
-                key={i + 1}
-                className={`w-8 h-8 rounded font-bold ${currentPage === i + 1 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button className="w-8 h-8 rounded bg-gray-200 text-gray-700 font-bold" onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalProducts / PAGE_SIZE), p + 1))} disabled={currentPage === Math.ceil(totalProducts / PAGE_SIZE)}>&gt;</button>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        {/* Modal (unchanged) */}
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white p-6 shadow-md w-full max-w-md relative">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-                onClick={closeModal}
-                aria-label="Close"
-              >
-                ×
+      )}
+
+      {/* Add/Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {editProduct ? 'Edit Product' : 'Add Product'}
+              </h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
               </button>
-              <h4 className="text-lg font-semibold mb-4">{editProduct ? 'Edit Product' : 'Create Product'}</h4>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Product Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={productForm.name}
-                      onChange={handleFormChange}
-                      required
-                      placeholder="e.g. iPhone 15 Pro Max"
-                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                    />
-                  </div>
+            </div>
 
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Category</label>
-                    <select
-                      name="category"
-                      value={productForm.category}
-                      onChange={handleFormChange}
-                      required
-                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900"
-                    >
-                      <option value="" disabled>Select category</option>
-                      {categories.map(cat => (
-                        <option key={cat._id} value={cat._id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Price</label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={productForm.price}
-                      onChange={handleFormChange}
-                      required
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Quantity</label>
-                    <input
-                      type="number"
-                      name="quantity"
-                      value={productForm.quantity}
-                      onChange={handleFormChange}
-                      required
-                      min="0"
-                      placeholder="0"
-                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Stock Type</label>
-                    <select
-                      name="stockType"
-                      value={productForm.stockType}
-                      onChange={handleFormChange}
-                      required
-                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900"
-                    >
-                      <option value="in_store">In Store</option>
-                      <option value="online">Online</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Estimated Delivery Days</label>
-                    <input
-                      type="number"
-                      name="estimatedDeliveryDays"
-                      value={productForm.estimatedDeliveryDays}
-                      onChange={handleFormChange}
-                      required
-                      min="1"
-                      placeholder="3"
-                      className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-700 mb-1">Shipping Provider</label>
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
                   <input
                     type="text"
-                    name="shippingProvider"
-                    value={productForm.shippingProvider}
-                    onChange={handleFormChange}
+                    value={productForm.name}
+                    onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                     required
-                    placeholder="e.g., DHL, FedEx"
-                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs text-gray-700 mb-1">Description</label>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
-                    name="description"
                     value={productForm.description}
-                    onChange={handleFormChange}
+                    onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                    rows={3}
                     required
-                    rows={2}
-                    placeholder="e.g. Latest Apple smartphone with advanced features"
-                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900 placeholder-gray-400 resize-y"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-700 mb-1">
-                    Product Image <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (RWF)</label>
                   <input
+                    type="number"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    value={productForm.quantity}
+                    onChange={(e) => setProductForm({ ...productForm, quantity: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={productForm.category}
+                    onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select category</option>
+                    {categories.map(cat => (
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock Type</label>
+                  <select
+                    value={productForm.stockType}
+                    onChange={(e) => setProductForm({ ...productForm, stockType: e.target.value as 'in_store' | 'online' })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="in_store">In Store</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Provider</label>
+                  <input
+                    type="text"
+                    value={productForm.shippingProvider}
+                    onChange={(e) => setProductForm({ ...productForm, shippingProvider: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Days</label>
+                  <input
+                    type="number"
+                    value={productForm.estimatedDeliveryDays}
+                    onChange={(e) => setProductForm({ ...productForm, estimatedDeliveryDays: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+                  <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="border border-gray-300 px-3 py-2 w-full text-xs font-medium text-gray-900"
-                    required={!editProduct}
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setUploadedImages(files);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                   />
-                  {imagePreview.length > 0 && (
-                    <div className="flex gap-2 mt-2">
-                      {imagePreview.map((src, idx) => (
-                        <img key={idx} src={src} alt="Preview" className="w-16 h-16 object-cover rounded" />
-                      ))}
-                    </div>
+                  {uploadedImages.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">{uploadedImages.length} file(s) selected</p>
                   )}
                 </div>
+              </div>
 
-                {/* Image Preview */}
-                {imagePreview.length > 0 && (
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Uploaded Images</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {imagePreview.map((preview, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-12 object-cover border border-gray-200"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                          >
-                            <X size={8} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow hover:bg-blue-800 transition-all mt-2"
-                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  {loading ? (editProduct ? 'Saving...' : 'Creating...') : (editProduct ? 'Save Changes' : 'Create Product')}
+                  {editProduct ? 'Update' : 'Create'}
                 </button>
-              </form>
-            </div>
-          </div>
-        )}
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && productToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white p-6 shadow-md w-full max-w-md relative rounded-lg">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setProductToDelete(null);
-                }}
-                aria-label="Close"
-              >
-                ×
-              </button>
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                  <Trash2 className="h-6 w-6 text-red-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product</h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  Are you sure you want to delete <strong>"{productToDelete.name}"</strong>? 
-                  This action cannot be undone.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowDeleteModal(false);
-                      setProductToDelete(null);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(productToDelete._id)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                        </svg>
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 size={14} />
-                        Delete Product
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-sm w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product</h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to delete "{productToDelete?.name}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ProductsSection; 
+export default ProductsSection;

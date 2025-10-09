@@ -176,77 +176,10 @@ export default function AdminDashboard() {
           ? 'ml-0' 
           : sidebarCollapsed 
             ? 'ml-20' 
-            : 'ml-72'
+            : 'ml-64'
       }`}>
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-lg border-b border-slate-700/50 sticky top-0 z-30">
-          <div className="px-4 md:px-8 py-4 md:py-5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleSidebar}
-                className="p-2.5 rounded-xl hover:bg-slate-700/50 transition-all duration-200 group"
-                aria-label={isMobile ? 'Toggle menu' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-              >
-                {isMobile ? (
-                  mobileMenuOpen ? <X size={22} className="text-slate-300" /> : <Menu size={22} className="text-slate-300" />
-                ) : (
-                  sidebarCollapsed ? <PanelLeft size={22} className="text-slate-300 group-hover:text-blue-400" /> : <PanelLeftClose size={22} className="text-slate-300 group-hover:text-blue-400" />
-                )}
-              </button>
-              
-              <div className="hidden md:block">
-                <h1 className="text-xl font-bold text-white">
-                  {SIDEBAR_SECTIONS.find(s => s.key === activeSection)?.label || 'Dashboard'}
-                </h1>
-                <p className="text-sm text-slate-400 mt-0.5">Welcome back, {user?.firstName || 'Admin'}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-3 px-4 py-2 bg-slate-700/50 rounded-xl border border-slate-600/50">
-                <div className="text-sm">
-                  <span className="font-medium text-white">{user ? `${user.firstName || 'User'} ${user.lastName || ''}` : 'Admin'}</span>
-                  <div className="text-xs text-slate-400 mt-0.5">{user?.role || 'Vendor'}</div>
-                </div>
-                {user?.image && user.image.length > 0 ? (
-                  <img
-                    src={user.image[0]}
-                    alt="User"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-blue-500 shadow-lg"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border-2 border-blue-400/30">
-                    <span className="text-white text-sm font-bold">
-                      {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Mobile avatar only */}
-              <div className="lg:hidden">
-                {user?.image && user.image.length > 0 ? (
-                  <img
-                    src={user.image[0]}
-                    alt="User"
-                    className="w-9 h-9 rounded-full object-cover border-2 border-blue-500 shadow-lg"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border-2 border-blue-400/30">
-                    <span className="text-white text-sm font-bold">
-                      {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content Area */}
-        <main className={`p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 transition-all duration-300 ${
-          isMobile ? '' : sidebarCollapsed ? 'lg:px-8' : 'lg:px-8'
-        }`}>
+        <main className="min-h-screen p-6 md:p-8 lg:p-10">
           <div className="max-w-full">
             {activeSection === 'stats' && <StatsCards />}
             {activeSection === 'categories' && <CategoriesSection />}
