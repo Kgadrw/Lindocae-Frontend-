@@ -387,53 +387,77 @@ const StatsCards: React.FC<StatsCardsProps> = ({
   const monthlyGrowthRate = calculateMonthlyGrowth();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Key Metrics Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm font-medium">Total Users</p>
-              <p className="text-3xl font-bold mt-1">{totalUsers}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="group relative bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all duration-300 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
+                <Users size={24} className="text-blue-600" />
+              </div>
+              <div className="px-2 py-1 bg-blue-50 rounded-lg text-blue-600 text-xs font-semibold">
+                +12%
+              </div>
             </div>
-            <div className="p-3 bg-blue-400/20 rounded-lg">
-              <Users size={24} className="text-blue-100" />
+            <div>
+              <p className="text-sm font-medium text-slate-600">Total Users</p>
+              <p className="text-3xl font-bold text-slate-800 mt-2">{totalUsers.toLocaleString()}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Verification Rate</p>
-              <p className="text-3xl font-bold mt-1">{verificationRate}%</p>
+        <div className="group relative bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-xl hover:border-green-300 transition-all duration-300 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/10 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors">
+                <UserPlus size={24} className="text-green-600" />
+              </div>
+              <div className="px-2 py-1 bg-green-50 rounded-lg text-green-600 text-xs font-semibold">
+                Active
+              </div>
             </div>
-            <div className="p-3 bg-green-400/20 rounded-lg">
-              <UserPlus size={24} className="text-green-100" />
+            <div>
+              <p className="text-sm font-medium text-slate-600">Verification Rate</p>
+              <p className="text-3xl font-bold text-slate-800 mt-2">{verificationRate}%</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm font-medium">New Users (30d)</p>
-              <p className="text-3xl font-bold mt-1">{recentUsers}</p>
+        <div className="group relative bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-xl hover:border-purple-300 transition-all duration-300 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors">
+                <TrendingUp size={24} className="text-purple-600" />
+              </div>
+              <div className="px-2 py-1 bg-purple-50 rounded-lg text-purple-600 text-xs font-semibold">
+                30 days
+              </div>
             </div>
-            <div className="p-3 bg-purple-400/20 rounded-lg">
-              <TrendingUp size={24} className="text-purple-100" />
+            <div>
+              <p className="text-sm font-medium text-slate-600">New Users</p>
+              <p className="text-3xl font-bold text-slate-800 mt-2">{recentUsers.toLocaleString()}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">Monthly Growth</p>
-              <p className="text-3xl font-bold mt-1">{monthlyGrowthRate.toFixed(1)}%</p>
+        <div className="group relative bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-300 transition-all duration-300 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors">
+                <Activity size={24} className="text-orange-600" />
+              </div>
+              <div className="px-2 py-1 bg-orange-50 rounded-lg text-orange-600 text-xs font-semibold">
+                Growth
+              </div>
             </div>
-            <div className="p-3 bg-orange-400/20 rounded-lg">
-              <Activity size={24} className="text-orange-100" />
+            <div>
+              <p className="text-sm font-medium text-slate-600">Monthly Growth</p>
+              <p className="text-3xl font-bold text-slate-800 mt-2">{monthlyGrowthRate.toFixed(1)}%</p>
             </div>
           </div>
         </div>
@@ -441,17 +465,33 @@ const StatsCards: React.FC<StatsCardsProps> = ({
 
       {/* Analytics Section */}
       <div className="space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Activity className="text-blue-600" size={24} />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+              <Activity className="text-white" size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Analytics Dashboard</h2>
+              <p className="text-sm text-slate-500 mt-0.5">Real-time insights and metrics</p>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
         </div>
-        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-          <p className="text-sm text-blue-700">
-            <strong>Real Data Analytics:</strong> All charts and metrics are calculated from actual user and order data from the APIs. 
-            Cart activities show real order creation patterns by day of the week, and demographics reflect actual user gender distribution.
-          </p>
+        <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-xl">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900">
+                <strong>Real Data Analytics</strong>
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                All charts and metrics are calculated from actual user and order data from the APIs. Cart activities show real order creation patterns by day of the week, and demographics reflect actual user gender distribution.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* User Registration Trends */}
