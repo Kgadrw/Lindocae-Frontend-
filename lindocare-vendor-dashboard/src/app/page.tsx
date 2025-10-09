@@ -148,7 +148,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-white flex">
       {/* Mobile Overlay */}
       {isMobile && mobileMenuOpen && (
         <div 
@@ -179,43 +179,43 @@ export default function AdminDashboard() {
             : 'ml-72'
       }`}>
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200 sticky top-0 z-30">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-lg border-b border-slate-700/50 sticky top-0 z-30">
           <div className="px-4 md:px-8 py-4 md:py-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleSidebar}
-                className="p-2.5 rounded-xl hover:bg-slate-100 transition-all duration-200 group"
+                className="p-2.5 rounded-xl hover:bg-slate-700/50 transition-all duration-200 group"
                 aria-label={isMobile ? 'Toggle menu' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
               >
                 {isMobile ? (
-                  mobileMenuOpen ? <X size={22} className="text-slate-600" /> : <Menu size={22} className="text-slate-600" />
+                  mobileMenuOpen ? <X size={22} className="text-slate-300" /> : <Menu size={22} className="text-slate-300" />
                 ) : (
-                  sidebarCollapsed ? <PanelLeft size={22} className="text-slate-600 group-hover:text-blue-600" /> : <PanelLeftClose size={22} className="text-slate-600 group-hover:text-blue-600" />
+                  sidebarCollapsed ? <PanelLeft size={22} className="text-slate-300 group-hover:text-blue-400" /> : <PanelLeftClose size={22} className="text-slate-300 group-hover:text-blue-400" />
                 )}
               </button>
               
               <div className="hidden md:block">
-                <h1 className="text-xl font-bold text-slate-800">
+                <h1 className="text-xl font-bold text-white">
                   {SIDEBAR_SECTIONS.find(s => s.key === activeSection)?.label || 'Dashboard'}
                 </h1>
-                <p className="text-sm text-slate-500 mt-0.5">Welcome back, {user?.firstName || 'Admin'}</p>
+                <p className="text-sm text-slate-400 mt-0.5">Welcome back, {user?.firstName || 'Admin'}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-sm text-slate-600">
-                  <span className="font-medium text-slate-800">{user ? `${user.firstName || 'User'} ${user.lastName || ''}` : 'Admin'}</span>
-                  <div className="text-xs text-slate-500 mt-0.5">{user?.role || 'Vendor'}</div>
+              <div className="hidden lg:flex items-center gap-3 px-4 py-2 bg-slate-700/50 rounded-xl border border-slate-600/50">
+                <div className="text-sm">
+                  <span className="font-medium text-white">{user ? `${user.firstName || 'User'} ${user.lastName || ''}` : 'Admin'}</span>
+                  <div className="text-xs text-slate-400 mt-0.5">{user?.role || 'Vendor'}</div>
                 </div>
                 {user?.image && user.image.length > 0 ? (
                   <img
                     src={user.image[0]}
                     alt="User"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-blue-500 shadow-lg"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-md border-2 border-white">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border-2 border-blue-400/30">
                     <span className="text-white text-sm font-bold">
                       {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                     </span>
@@ -229,10 +229,10 @@ export default function AdminDashboard() {
                   <img
                     src={user.image[0]}
                     alt="User"
-                    className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-md"
+                    className="w-9 h-9 rounded-full object-cover border-2 border-blue-500 shadow-lg"
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-md border-2 border-white">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border-2 border-blue-400/30">
                     <span className="text-white text-sm font-bold">
                       {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                     </span>

@@ -65,26 +65,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           : 'w-72'
       }
     `}>
-      {/* Logo & Brand Section */}
-      <div className={`flex items-center ${collapsed ? 'justify-center px-3' : 'px-6'} py-6 border-b border-slate-700/50`}>
-        {collapsed ? (
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Store className="text-white" size={20} />
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <Image
-              src="/lindo.png"
-              alt="Lindo"
-              width={120}
-              height={48}
-              className="brightness-0 invert"
-              style={{ width: 'auto', height: 'auto' }}
-            />
-          </div>
-        )}
-      </div>
-
       {/* User Profile Section */}
       <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'flex-col px-6'} py-6 border-b border-slate-700/50`}>
         <div className="relative">
