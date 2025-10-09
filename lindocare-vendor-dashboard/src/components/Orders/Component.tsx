@@ -81,7 +81,9 @@ const OrdersComponent: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setOrders(Array.isArray(data) ? data : data?.orders || []);
+        const ordersData = Array.isArray(data) ? data : data?.orders || [];
+        console.log('Fetched orders:', ordersData);
+        setOrders(ordersData);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -148,25 +150,55 @@ const OrdersComponent: React.FC = () => {
     return urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
   };
 
-    return (
-        <div className="space-y-6">
-          {/* Header */}
+  // Helper to get product name safely
+  const getProductName = (item: OrderItem): string => {
+    if (!item.product) return 'Unknown Product';
+    
+    if (typeof item.product === 'object') {
+      const prod = item.product as Product;
+      return prod.name || 'Unknown Product';
+    }
+    
+    if (typeof item.product === 'string') {
+      return item.product;
+    }
+    
+    return 'Unknown Product';
+  };
+
+  // Helper to get product image safely
+  const getProductImage = (item: OrderItem): string | null => {
+    if (!item.product || typeof item.product !== 'object') return null;
+    
+    const prod = item.product as Product;
+    if (!prod.image) return null;
+    
+    if (Array.isArray(prod.image) && prod.image.length > 0) {
+      return prod.image[0];
+    }
+    
+    return null;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-              <div>
+        <div>
           <h1 className="text-2xl font-semibold text-gray-900">Orders</h1>
           <p className="text-sm text-gray-500 mt-1">Manage customer orders</p>
-            </div>
-          </div>
+        </div>
+      </div>
 
       {/* Success Message */}
-          {successMessage && (
+      {successMessage && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
           {successMessage}
-            </div>
-          )}
+        </div>
+      )}
 
       {/* Filter */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
           <button
             key={status}
@@ -180,102 +212,107 @@ const OrdersComponent: React.FC = () => {
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </button>
         ))}
-              </div>
+      </div>
 
       {/* Orders List */}
-        {loading ? (
+      {loading ? (
         <div className="text-center py-12 text-gray-500">Loading orders...</div>
-        ) : filteredOrders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <Package className="mx-auto mb-3 text-gray-400" size={48} />
-            <p>No orders found</p>
-          </div>
-        ) : (
+          <p>No orders found</p>
+        </div>
+      ) : (
         <div className="space-y-3">
-          {filteredOrders.map((order) => (
-            <div key={order._id} className="bg-white rounded-lg border border-gray-100 p-5 hover:shadow-sm transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-gray-900">Order #{order._id ? order._id.slice(-8) : 'N/A'}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
-                      {order.status}
-                              </span>
-                            </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
-                        </div>
-                    <div className="flex items-center gap-1">
-                      <CreditCard size={14} />
-                      {order.paymentMethod || 'N/A'}
-                          </div>
-                        </div>
+          {filteredOrders.map((order) => {
+            const orderId = order._id ? String(order._id) : 'N/A';
+            const orderIdShort = orderId !== 'N/A' ? orderId.slice(-8) : 'N/A';
+            
+            return (
+              <div key={orderId} className="bg-white rounded-lg border border-gray-100 p-5 hover:shadow-sm transition-shadow">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-gray-900">Order #{orderIdShort}</h3>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status || 'pending')}`}>
+                        {order.status || 'pending'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        <span>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</span>
                       </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold text-gray-900">
-                    RWF {(order.totalAmount || 0).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500">{order.items?.length || 0} items</p>
+                      <div className="flex items-center gap-1">
+                        <CreditCard size={14} />
+                        <span>{order.paymentMethod || 'N/A'}</span>
                       </div>
-                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold text-gray-900">
+                      RWF {(order.totalAmount || 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500">{order.items?.length || 0} items</p>
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <div className="text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <MapPin size={14} />
-                    <span>{order.shippingAddress?.province || 'N/A'}, {order.shippingAddress?.district || 'N/A'}</span>
-                      </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm"
-                        >
-                          <Eye size={14} /> 
-                    View
-                        </button>
-                        <select
-                          value={order.status}
-                    onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <div className="text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <MapPin size={14} />
+                      <span>{order.shippingAddress?.province || 'N/A'}, {order.shippingAddress?.district || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedOrder(order)}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                    >
+                      <Eye size={14} />
+                      <span>View</span>
+                    </button>
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(orderId, e.target.value)}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-            </div>
-                ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+      )}
 
-          {/* Order Details Modal */}
-          {selectedOrder && (
+      {/* Order Details Modal */}
+      {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Order Details</h2>
               <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
-        </button>
-      </div>
+              </button>
+            </div>
 
             <div className="space-y-4">
               {/* Order Info */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Order ID</p>
-                  <p className="text-sm font-medium text-gray-900">{selectedOrder._id || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-900">{String(selectedOrder._id || 'N/A')}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
-                    {selectedOrder.status || 'N/A'}
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(selectedOrder.status || 'pending')}`}>
+                    {selectedOrder.status || 'pending'}
                   </span>
                 </div>
                 <div>
@@ -283,28 +320,28 @@ const OrdersComponent: React.FC = () => {
                   <p className="text-sm font-medium text-gray-900">
                     {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleDateString() : 'N/A'}
                   </p>
-              </div>
-              <div>
+                </div>
+                <div>
                   <p className="text-xs text-gray-500 mb-1">Payment</p>
-                  <p className="text-sm font-medium text-gray-900">{selectedOrder.paymentMethod || 'N/A'}</p>
-          </div>
-        </div>
+                  <p className="text-sm font-medium text-gray-900">{String(selectedOrder.paymentMethod || 'N/A')}</p>
+                </div>
+              </div>
 
-        {/* Shipping Address */}
+              {/* Shipping Address */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Shipping Address</h3>
                 <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-700 space-y-1">
                   {selectedOrder.shippingAddress?.customerName && (
-                    <p><span className="font-medium">Name:</span> {selectedOrder.shippingAddress.customerName}</p>
+                    <p><span className="font-medium">Name:</span> {String(selectedOrder.shippingAddress.customerName)}</p>
                   )}
                   {selectedOrder.shippingAddress?.customerPhone && (
-                    <p><span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.customerPhone}</p>
+                    <p><span className="font-medium">Phone:</span> {String(selectedOrder.shippingAddress.customerPhone)}</p>
                   )}
                   <p>
-                    <span className="font-medium">Location:</span> {selectedOrder.shippingAddress?.province || 'N/A'}, {selectedOrder.shippingAddress?.district || 'N/A'}
-                    {selectedOrder.shippingAddress?.sector && `, ${selectedOrder.shippingAddress.sector}`}
+                    <span className="font-medium">Location:</span> {String(selectedOrder.shippingAddress?.province || 'N/A')}, {String(selectedOrder.shippingAddress?.district || 'N/A')}
+                    {selectedOrder.shippingAddress?.sector && `, ${String(selectedOrder.shippingAddress.sector)}`}
                   </p>
-          </div>
+                </div>
               </div>
 
               {/* Order Items */}
@@ -312,23 +349,25 @@ const OrdersComponent: React.FC = () => {
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Items ({selectedOrder.items?.length || 0})</h3>
                 <div className="space-y-2">
                   {(selectedOrder.items || []).map((item, idx) => {
-                    const product = typeof item.product === 'object' ? item.product : null;
+                    const productName = getProductName(item);
+                    const productImage = getProductImage(item);
+                    
                     return (
                       <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        {product?.image && product.image[0] ? (
+                        {productImage ? (
                           <img
-                            src={normalizeImageUrl(product.image[0])}
-                            alt={product.name}
+                            src={normalizeImageUrl(productImage)}
+                            alt={productName}
                             className="w-12 h-12 rounded-lg object-cover"
                           />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">
                             <Package size={20} className="text-gray-400" />
-              </div>
-            )}
+                          </div>
+                        )}
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">
-                            {product?.name || 'Product'}
+                            {productName}
                           </p>
                           <p className="text-xs text-gray-500">
                             Qty: {item.quantity || 0} × RWF {(item.price || 0).toLocaleString()}
