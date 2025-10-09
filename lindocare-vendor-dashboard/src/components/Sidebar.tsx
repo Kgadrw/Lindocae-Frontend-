@@ -54,13 +54,22 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const normalizeImageUrl = (src?: any) => {
     if (!src) return '';
+    
     // Handle array of images
     if (Array.isArray(src)) {
       src = src[0];
+      if (!src) return '';
     }
+    
+    // Handle object with url property
+    if (typeof src === 'object' && src.url) {
+      src = src.url;
+    }
+    
     // Convert to string if not already
     const urlString = typeof src === 'string' ? src : String(src);
-    if (!urlString) return '';
+    if (!urlString || urlString === 'undefined' || urlString === 'null') return '';
+    
     return urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
   };
 

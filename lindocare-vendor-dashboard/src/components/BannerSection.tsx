@@ -31,8 +31,11 @@ const BannerSection: React.FC = () => {
       if (openLock) headers['Authorization'] = `Bearer ${openLock}`;
       const res = await fetch(`${API_URL}/getAllBanners`, { headers });
       const data = await res.json();
-      setBanners(data.banners || []);
-    } catch {
+      const bannersData = data.banners || data || [];
+      console.log('Fetched banners:', bannersData);
+      setBanners(bannersData);
+    } catch (error) {
+      console.error('Error fetching banners:', error);
       setBanners([]);
     } finally {
       setLoading(false);
@@ -151,14 +154,29 @@ const BannerSection: React.FC = () => {
 
   const normalizeImageUrl = (url: any) => {
     if (!url) return '';
+    
     // Handle array of images
     if (Array.isArray(url)) {
       url = url[0];
+      if (!url) return '';
     }
+    
+    // Handle object with url property
+    if (typeof url === 'object' && url.url) {
+      url = url.url;
+    }
+    
     // Convert to string if not already
     const urlString = typeof url === 'string' ? url : String(url);
-    if (!urlString) return '';
-    return urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
+    if (!urlString || urlString === 'undefined' || urlString === 'null') return '';
+    
+    console.log('Normalizing URL:', urlString);
+    
+    // Return full URL or prepend base URL
+    const normalizedUrl = urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
+    console.log('Normalized to:', normalizedUrl);
+    
+    return normalizedUrl;
   };
 
   return (
@@ -195,47 +213,58 @@ const BannerSection: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {banners.map((banner) => (
-            <div key={banner._id} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow group">
-              {/* Image */}
-              <div className="aspect-[2/1] bg-gray-100 relative overflow-hidden">
-                {banner.image ? (
-                  <img
-                    src={normalizeImageUrl(banner.image)}
-                    alt={banner.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="text-gray-300" size={40} />
+          {banners.map((banner) => {
+            console.log('Rendering banner:', banner);
+            const imageUrl = banner.image || banner.images || banner.imageUrl;
+            console.log('Banner image URL:', imageUrl);
+            
+            return (
+              <div key={banner._id} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow group">
+                {/* Image */}
+                <div className="aspect-[2/1] bg-gray-100 relative overflow-hidden">
+                  {imageUrl ? (
+                    <img
+                      src={normalizeImageUrl(imageUrl)}
+                      alt={banner.title || 'Banner'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Image failed to load:', imageUrl);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="text-gray-300" size={40} />
+                    </div>
+                  )}
+                  {/* Action Buttons Overlay */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => openEditModal(banner)}
+                      className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <Edit2 size={18} className="text-gray-700" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBannerToDelete(banner);
+                        setShowDeleteModal(true);
+                      }}
+                      className="p-2 bg-white rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={18} className="text-red-600" />
+                    </button>
                   </div>
-                )}
-                {/* Action Buttons Overlay */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => openEditModal(banner)}
-                    className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <Edit2 size={18} className="text-gray-700" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setBannerToDelete(banner);
-                      setShowDeleteModal(true);
-                    }}
-                    className="p-2 bg-white rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 size={18} className="text-red-600" />
-                  </button>
+                </div>
+                {/* Content */}
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-900 mb-1">{banner.title || 'Untitled'}</h3>
+                  <p className="text-sm text-gray-600">{banner.subTitle || ''}</p>
+                  <p className="text-xs text-gray-400 mt-2">Image: {imageUrl ? 'Available' : 'Not set'}</p>
                 </div>
               </div>
-              {/* Content */}
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-900 mb-1">{banner.title}</h3>
-                <p className="text-sm text-gray-600">{banner.subTitle}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

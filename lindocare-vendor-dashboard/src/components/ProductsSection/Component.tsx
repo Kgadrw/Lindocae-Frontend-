@@ -196,13 +196,22 @@ const ProductsSection: React.FC = () => {
 
   const normalizeImageUrl = (url: any) => {
     if (!url) return '';
+    
     // Handle array of images
     if (Array.isArray(url)) {
       url = url[0];
+      if (!url) return '';
     }
+    
+    // Handle object with url property
+    if (typeof url === 'object' && url.url) {
+      url = url.url;
+    }
+    
     // Convert to string if not already
     const urlString = typeof url === 'string' ? url : String(url);
-    if (!urlString) return '';
+    if (!urlString || urlString === 'undefined' || urlString === 'null') return '';
+    
     return urlString.startsWith('http') ? urlString : `https://lindo-project.onrender.com/${urlString}`;
   };
 
