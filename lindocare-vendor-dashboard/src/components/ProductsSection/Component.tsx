@@ -11,11 +11,12 @@ interface Product {
   category: string | { _id: string; name: string };
   stockType: 'in_store' | 'online';
   quantity: number;
-  shippingInfo: {
+  shippingInfo?: {
     provider: string;
     estimatedDeliveryDays: number;
   };
   images?: string[];
+  image?: string | string[];
   isActive?: boolean;
 }
 
@@ -69,6 +70,8 @@ const ProductsSection: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         const productsArray = Array.isArray(data) ? data : data.products || [];
+        console.log('Fetched products:', productsArray);
+        console.log('First product:', productsArray[0]);
         setProducts(productsArray);
       }
     } catch (error) {
@@ -187,14 +190,14 @@ const ProductsSection: React.FC = () => {
       : product.category || '';
     
     setProductForm({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price ? product.price.toString() : '',
       category: categoryId,
-      stockType: product.stockType,
-      quantity: product.quantity.toString(),
-      shippingProvider: product.shippingInfo.provider,
-      estimatedDeliveryDays: product.shippingInfo.estimatedDeliveryDays.toString()
+      stockType: product.stockType || 'in_store',
+      quantity: product.quantity ? product.quantity.toString() : '',
+      shippingProvider: product.shippingInfo?.provider || '',
+      estimatedDeliveryDays: product.shippingInfo?.estimatedDeliveryDays ? product.shippingInfo.estimatedDeliveryDays.toString() : ''
     });
     setUploadedImages([]);
     setShowModal(true);
@@ -284,27 +287,37 @@ const ProductsSection: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredProducts.map((product) => (
-                  <tr key={product._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {product.images && product.images.length > 0 ? (
-                          <img
-                            src={normalizeImageUrl(product.images[0])}
-                            alt={product.name}
-                            className="w-10 h-10 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                {filteredProducts.map((product) => {
+                  // Get product image - check both images array and image field
+                  const productImage = product.images && product.images.length > 0 
+                    ? product.images[0] 
+                    : (product as any).image;
+                  
+                  return (
+                    <tr key={product._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          {productImage ? (
+                            <img
+                              src={normalizeImageUrl(productImage)}
+                              alt={product.name}
+                              className="w-10 h-10 rounded-lg object-cover"
+                              onError={(e) => {
+                                console.error('Product image failed to load:', productImage);
+                                e.currentTarget.style.display = 'none';
+                                (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center ${productImage ? 'hidden' : ''}`}>
                             <Package size={20} className="text-gray-400" />
                           </div>
-                        )}
-                        <div>
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
+                          <div>
+                            <div className="font-medium text-gray-900">{product.name}</div>
+                            <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {(() => {
                         // If category is an object, extract the name
@@ -349,7 +362,8 @@ const ProductsSection: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
