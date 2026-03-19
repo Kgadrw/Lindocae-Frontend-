@@ -167,13 +167,16 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({
           </div>
 
           {/* Top Ranking Products */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center md:justify-items-stretch">
             {topRankingProducts.map((product, index) => {
               const productId = getProductId(product);
               const imageUrl = getProductImage(product);
               
               return (
-                <div key={productId} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                <div
+                  key={productId}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden w-full max-w-sm md:max-w-none"
+                >
                   <Link href={`/product/${productId}`} className="block">
                     <div className="relative h-48 overflow-hidden">
                       {imageUrl && (
@@ -286,13 +289,16 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({
             )}
 
             {/* Products Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center md:justify-items-stretch">
               {getCurrentNewArrivals().map((product) => {
                 const productId = getProductId(product);
                 const imageUrl = getProductImage(product);
                 
                 return (
-                  <div key={productId} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                  <div
+                    key={productId}
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden w-full max-w-sm md:max-w-none"
+                  >
                     <Link href={`/product/${productId}`} className="block">
                       <div className="relative h-48 overflow-hidden">
                         {imageUrl && (

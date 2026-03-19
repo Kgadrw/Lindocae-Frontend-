@@ -166,7 +166,6 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
   const [user, setUser] = useState<null | { name: string; avatar?: string }>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [navOpen, setNavOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<{type: 'product'|'category', id?: number|string, name:string}[]>([]);
@@ -625,32 +624,27 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 )}
               </button>
             ) : (
-              <Link href="/login">
-                <button className="px-2 py-1 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors">
-                  Login
-                </button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/login">
+                  <button className="px-3 py-2 rounded-full bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors">
+                    Login
+                  </button>
+                </Link>
+                <Link href="/register">
+                  <button className="px-3 py-2 rounded-full bg-yellow-400 text-blue-900 text-xs font-semibold hover:bg-yellow-500 transition-colors">
+                    Sign up
+                  </button>
+                </Link>
+              </div>
             )}
             
-            {/* Menu */}
-            <button
-              onClick={() => setNavOpen(true)}
-              className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors"
-              aria-label="Menu"
-            >
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-600">
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <line x1="3" y1="18" x2="21" y2="18"/>
-              </svg>
-            </button>
           </div>
         </div>
 
         {/* Fixed Search Bar */}
         <div className="px-3 pb-2.5">
           <form onSubmit={handleSearch} autoComplete="off">
-            <div className="relative flex items-center bg-gray-50 rounded-lg border border-gray-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
+            <div className="flex items-center bg-gray-50 rounded-full border border-gray-200 focus-within:border-blue-500 focus-within:bg-white transition-all p-1.5">
               <input
                 type="text"
                 value={search}
@@ -659,12 +653,12 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
                 onBlur={handleBlur}
                 ref={searchInputRef}
                 placeholder="Search products..."
-                className="w-full bg-transparent text-gray-900 px-3 py-2.5 pr-10 focus:outline-none text-sm placeholder:text-gray-500 rounded-lg"
+                className="flex-1 bg-transparent text-gray-900 px-3 py-2.5 focus:outline-none text-sm placeholder:text-gray-500 rounded-full"
                 onKeyDown={e => { if (e.key === 'Enter') handleSearch(e); }}
               />
               <button 
                 type="submit" 
-                className="absolute right-1.5 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-md transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors flex-shrink-0"
                 aria-label="Search"
               >
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1109,141 +1103,7 @@ const Header = ({ categories: propCategories, loading, onCategoryClick }: Header
           )}
         </div>
       </div>
-      {/* Mobile Nav Drawer */}
-      <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 transition-opacity duration-200 ${navOpen ? 'block md:hidden' : 'hidden'}`} onClick={() => setNavOpen(false)} />
-      <nav className={`fixed top-0 left-0 h-full w-80 bg-white shadow-lg z-50 transform transition-transform duration-200 ${navOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden`}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <Link href="/" onClick={() => setNavOpen(false)}>
-            <Image src="/lindo.png" alt="Lindo Logo" width={80} height={32} priority className="focus:outline-none" style={{ width: 'auto', height: 'auto' }} />
-          </Link>
-          <button className="p-2 hover:text-[#FFE600] transition-colors" onClick={() => setNavOpen(false)} aria-label="Close navigation">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        
-        <div className="flex flex-col h-full">
-          {/* User Section */}
-          <div className="p-4 border-b border-gray-100">
-            {user ? (
-              <div className="flex items-center gap-3">
-                {user.avatar ? (
-                  <Image
-                    src={user.avatar}
-                    alt={user.name}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm font-bold border border-gray-200">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <div className="font-semibold text-gray-900">Welcome back, {user.name}</div>
-                  <button 
-                    onClick={() => { handleSignOut(); setNavOpen(false); }}
-                    className="text-red-600 text-sm hover:text-red-700"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Link href="/login" onClick={() => setNavOpen(false)}>
-                  <button className="px-4 py-2 rounded-md bg-[#FFE600] text-[#2056A7] text-sm font-semibold hover:shadow transition w-full">
-                    Sign In
-                  </button>
-                </Link>
-              </div>
-            )}
-          </div>
-          
-          {/* Navigation Links */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4">
-              <div className="space-y-1">
-                <Link href="/" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
-                  <Home size={20} />
-                  <span>Home</span>
-                </Link>
-                
-                <Link href="/all-products" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
-                  <List size={20} />
-                  <span>All Products</span>
-                </Link>
-                
-                <Link href="/cart" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
-                  <ShoppingCart size={20} />
-                  <span>Cart</span>
-                  {cartCount > 0 && (
-                    <span className="ml-auto bg-yellow-400 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[20px] text-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
-                
-                <Link href="/wishlist" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
-                  <Heart size={20} />
-                  <span>Wishlist</span>
-                  {wishlistCount > 0 && (
-                    <span className="ml-auto bg-yellow-400 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[20px] text-center">
-                      {wishlistCount}
-                    </span>
-                  )}
-                </Link>
-                
-                <Link href="/checkout" onClick={() => setNavOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium">
-                  <Lock size={20} />
-                  <span>Checkout</span>
-                </Link>
-              </div>
-            </div>
-            
-            {/* Categories Section */}
-            <div className="border-t border-gray-100">
-              <div className="p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Categories</h3>
-                {loading ? (
-                  <div className="space-y-2">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="bg-gray-200 h-4 rounded w-3/4"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (propCategories && propCategories.length > 0) ? (
-                  <div className="space-y-1">
-                    {propCategories.map(cat => (
-                      <Link 
-                        key={cat._id || cat.name} 
-                        href={cat._id ? `/all-products?category=${encodeURIComponent(cat.name)}` : `/all-products`} 
-                        onClick={() => setNavOpen(false)}
-                        className="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
-                      >
-                        {cat.name}
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-gray-500 text-sm">No categories available</div>
-                )}
-              </div>
-            </div>
-            
-            {/* Footer Links Section */}
-            
-            
-          </div>
-          </div>
-   
-
-                
-              </nav>
+      {/* Mobile Nav Drawer removed */}
             </header>
 
     </>

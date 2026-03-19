@@ -93,7 +93,7 @@
             </div>
             {/* Content */}
             <div className="relative z-10">
-              <div className="text-center lg:text-left space-y-4">
+              <div className="text-left space-y-4">
                 <div className="space-y-3">
                   <h1
                     className="text-3xl sm:text-4xl md:text-5xl lg:text-4xl font-bold leading-tight transition-transform duration-500 group-hover:-translate-y-1"
@@ -112,16 +112,16 @@
                   </p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mt-4">
+                <div className="flex flex-col sm:flex-row gap-3 justify-start items-start sm:items-center mt-4">
                   <Link 
                     href="/all-products"
-                    className="bg-blue-600 hover:text-white px-6 py-3 rounded-full font-bold text-base transition-all duration-300 transform hover:bg-white/20 backdrop-blur-md text-white hover:scale-105"
+                    className="w-fit bg-blue-600 hover:text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-bold text-sm md:text-base transition-all duration-300 transform hover:bg-white/20 backdrop-blur-md text-white hover:scale-105"
                   >
                     Shop Now 
                   </Link>
                   <Link 
                     href="/all-products"
-                    className="bg-yellow-400 hover:text-white px-6 py-3 rounded-full font-semibold text-base transition-all duration-300 transform hover:bg-white/20 backdrop-blur-md text-white hover:scale-105"
+                    className="w-fit bg-yellow-400 hover:text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-semibold text-sm md:text-base transition-all duration-300 transform hover:bg-white/20 backdrop-blur-md text-white hover:scale-105"
                   >
                     View Categories 
                   </Link>
