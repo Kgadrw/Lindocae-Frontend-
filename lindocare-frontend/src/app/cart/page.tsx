@@ -171,17 +171,6 @@ export default function CartPage() {
   // Calculate subtotal
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
-  // Debug logging
-  console.log('Cart page state:', {
-    loading,
-    error,
-    userEmail,
-    cartItems: cartItems.length,
-    subtotal,
-    isUserLoggedIn: isUserLoggedIn(),
-    hasAccessToken: !!getAccessToken()
-  });
-
   // Free shipping logic
   const freeShippingThreshold = 50;
   const remaining = Math.max(0, freeShippingThreshold - subtotal);
