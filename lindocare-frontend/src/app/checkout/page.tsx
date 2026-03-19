@@ -168,30 +168,42 @@ export default function CheckoutPage() {
   const total = subtotal + shipping;
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    // Early validation checks
+    if (cartItems.length === 0) {
+      setOrderStatus({ error: "Your cart is empty. Please add items before checking out." });
+      return;
+    }
+
+    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+      setOrderStatus({ error: "Please fill in all required customer information (Name, Email, Phone)." });
+      return;
+    }
+
+    if (!addressData.province || !addressData.district || !addressData.sector || !addressData.cell || !addressData.village) {
+      setOrderStatus({ error: "Please fill in all address fields (Province, District, Sector, Cell, Village)." });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail.trim())) {
+      setOrderStatus({ error: "Please enter a valid email address." });
+      return;
+    }
+
+    // Phone validation (basic)
+    if (customerPhone.trim().length < 9) {
+      setOrderStatus({ error: "Please enter a valid phone number." });
+      return;
+    }
+
     setIsSubmitting(true);
     setOrderStatus({});
 
     try {
-      // Validate required fields
-      if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
-        setOrderStatus({ error: "Please fill in all required customer information." });
-      setIsSubmitting(false);
-      return;
-    }
-
-      if (!addressData.province || !addressData.district || !addressData.sector || !addressData.cell || !addressData.village) {
-        setOrderStatus({ error: "Please fill in all address fields." });
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (cartItems.length === 0) {
-        setOrderStatus({ error: "Your cart is empty." });
-      setIsSubmitting(false);
-      return;
-    }
 
       // Step 1: Create Order
       // Extract name parts for backend compatibility
@@ -899,12 +911,29 @@ export default function CheckoutPage() {
             <div className="mt-6">
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || cartItems.length === 0}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-lg text-lg font-bold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {isSubmitting ? "Processing..." : "Complete Order"}
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Processing Order...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Complete Order - {formatRWF(total)} RWF</span>
+                  </>
+                )}
               </button>
-              
+              {cartItems.length === 0 && (
+                <p className="text-sm text-red-600 mt-2 text-center">Your cart is empty</p>
+              )}
             </div>
           </div>
 

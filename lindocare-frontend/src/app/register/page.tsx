@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { Eye, EyeOff, CheckCircle, XCircle, Upload, User, MapPin, Phone, Mail, Lock, UserPlus } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Eye, EyeOff, CheckCircle, XCircle, Upload, User, MapPin, Phone, Mail, Lock, UserPlus, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const RegisterPage: React.FC = () => {
@@ -13,11 +13,16 @@ const RegisterPage: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [customerPhone, setCustomerPhone] = useState<string>("");
+  const [role, setRole] = useState<string>("");
   const [image, setImage] = useState<File | null>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  
+  // Available roles state
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState<boolean>(true);
 
   // Address state
   const [selectedProvince, setSelectedProvince] = useState<string>("");
@@ -27,14 +32,56 @@ const RegisterPage: React.FC = () => {
   const [selectedVillage, setSelectedVillage] = useState<string>("");
   const [street, setStreet] = useState<string>("");
 
+  // Fetch available roles from backend
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        // Try to fetch roles from backend API
+        const response = await fetch("https://lindo-project.onrender.com/user/getRoles", {
+          method: "GET",
+          headers: {
+            'accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Handle different response formats
+          if (Array.isArray(data)) {
+            setAvailableRoles(data);
+          } else if (data.roles && Array.isArray(data.roles)) {
+            setAvailableRoles(data.roles);
+          } else if (data.data && Array.isArray(data.data)) {
+            setAvailableRoles(data.data);
+          } else {
+            // Fallback to default roles
+            setAvailableRoles(["user", "supplier", "admin"]);
+          }
+        } else {
+          // Fallback to default roles if endpoint doesn't exist
+          setAvailableRoles(["user", "supplier", "admin"]);
+        }
+      } catch (error) {
+        console.log("Could not fetch roles from API, using defaults:", error);
+        // Fallback to default roles
+        setAvailableRoles(["user", "supplier", "admin"]);
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     // Validation
-    if (!firstName || !lastName || !email || !password || !gender || !customerPhone) {
-      setError("All required fields must be filled.");
+    if (!firstName || !lastName || !email || !password || !gender || !customerPhone || !role) {
+      setError("All required fields must be filled, including role selection.");
       setLoading(false);
       return;
     }
@@ -53,7 +100,7 @@ const RegisterPage: React.FC = () => {
       formData.append("password", password);
       formData.append("gender", gender);
       formData.append("customerPhone", customerPhone);
-      formData.append("role", "user");
+      formData.append("role", role);
       formData.append("province", selectedProvince);
       formData.append("district", selectedDistrict);
       formData.append("sector", selectedSector);
@@ -91,6 +138,7 @@ const RegisterPage: React.FC = () => {
         setPassword("");
         setGender("");
         setCustomerPhone("");
+        setRole("");
         setImage(null);
         setSelectedProvince("");
         setSelectedDistrict("");
@@ -181,6 +229,34 @@ const RegisterPage: React.FC = () => {
                       <option value="male">Male</option>
                       <option value="female">Female</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Account Role *
+                    </label>
+                    <div className="relative">
+                      <Shield size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <select
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        disabled={loadingRoles}
+                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        required
+                      >
+                        <option value="">
+                          {loadingRoles ? "Loading roles..." : "Select Your Role"}
+                        </option>
+                        {availableRoles.map((roleOption) => (
+                          <option key={roleOption} value={roleOption}>
+                            {roleOption.charAt(0).toUpperCase() + roleOption.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Choose the role that best describes your account type
+                    </p>
                   </div>
 
                   <div>

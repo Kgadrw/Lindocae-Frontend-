@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
-import { Heart } from "lucide-react";
+import React, { useState } from "react";
+import { Heart, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { normalizeImageUrl } from "../../utils/image";
+import { addToCart } from "../../utils/cartHelpers";
+import { useRouter } from "next/navigation";
 
 interface Product {
   _id?: string;
@@ -39,6 +41,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   formatPrice,
 }) => {
+  const router = useRouter();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const productId = getProductId(product);
   const isInWishlist = wishlist.includes(productId);
   
@@ -51,6 +55,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const imageUrl = getProductImage();
+
+  const handleAddToCartClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isAddingToCart) return;
+    
+    setIsAddingToCart(true);
+    try {
+      const result = await addToCart(product, 1);
+      
+      if (result.success) {
+        // Call parent handler if provided (for toast notifications)
+        if (onAddToCart) {
+          onAddToCart(product);
+        }
+      } else {
+        if (result.requiresLogin) {
+          router.push('/login');
+        } else {
+          alert(result.message);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Failed to add to cart. Please try again.');
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200 group cursor-pointer overflow-hidden flex flex-col h-[320px]">
@@ -149,14 +183,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
         
         {/* Add to Cart Button - Push to bottom */}
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onAddToCart(product);
-          }}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-lg transition-colors duration-200 active:bg-blue-800 mt-auto"
+          onClick={handleAddToCartClick}
+          disabled={isAddingToCart}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-lg transition-all duration-200 active:bg-blue-800 mt-auto flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
         >
-          Add to Cart
+          {isAddingToCart ? (
+            <>
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Adding...</span>
+            </>
+          ) : (
+            <>
+              <ShoppingCart size={16} />
+              <span>Add to Cart</span>
+            </>
+          )}
         </button>
       </div>
     </div>

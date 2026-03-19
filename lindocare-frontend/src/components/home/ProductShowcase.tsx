@@ -238,7 +238,7 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({
                           e.stopPropagation();
                           onAddToCart(product);
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:bg-blue-800"
                       >
                         Add to Cart
                       </button>
@@ -367,7 +367,7 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({
                           e.stopPropagation();
                           onAddToCart(product);
                         }}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md text-sm font-medium transition-colors"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-md text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:bg-blue-800"
                       >
                         Add to Cart
                       </button>
