@@ -87,18 +87,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200 group cursor-pointer overflow-hidden flex flex-col h-[320px]">
+    <div className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200 group cursor-pointer overflow-hidden flex flex-col h-full">
       {/* Product Image */}
       <Link href={`/product/${productId}`} className="block relative flex-shrink-0">
-        <div className="relative h-36 overflow-hidden bg-gray-50">
+        <div className="relative w-full aspect-[4/3] overflow-hidden bg-gray-50">
           {imageUrl && (
             <Image
               src={normalizeImageUrl(imageUrl)}
               alt={product.name}
-              width={300}
-              height={300}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
+          )}
+          {!imageUrl && (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+              No image
+            </div>
           )}
           
           {/* Wishlist Heart */}
@@ -139,17 +144,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </Link>
       
       {/* Product Info */}
-      <div className="p-3 flex-1 flex flex-col">
+      <div className="p-4 flex-1 flex flex-col gap-2">
         <Link href={`/product/${productId}`} className="block">
-          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1 min-h-[40px] leading-tight">
+          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px] leading-tight">
             {product.name}
           </h3>
         </Link>
         
         {/* Price Section */}
-        <div className="mb-2">
+        <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-gray-900">
+            <span className="text-base font-bold text-gray-900">
               {formatPrice(product.price)}
             </span>
             {product.oldPrice && product.oldPrice > product.price && (
@@ -161,7 +166,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Rating Section */}
-        <div className="flex items-center gap-1 mb-3">
+        <div className="flex items-center gap-1 mb-2">
           <div className="flex items-center">
             {[...Array(5)].map((_, i) => (
               <svg
